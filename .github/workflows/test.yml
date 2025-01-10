@@ -24,7 +24,7 @@ jobs:
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
+          terraform_version: 1.10.4
 
       - name: Tflint Setup
         uses: terraform-linters/setup-tflint@v4
