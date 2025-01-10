@@ -1,0 +1,40 @@
+version: ">= 0.14.0"
+
+formatter: markdown table
+
+content: |-
+  # Cisco Catalyst Center Site Example
+
+  Set environment variables pointing to Catalyst Center:
+
+  ```bash
+  export CC_USERNAME=admin
+  export CC_PASSWORD=Cisco123
+  export CC_URL=https://10.1.1.1
+  ```
+
+  To run this example you need to execute:
+
+  ```bash
+  $ terraform init
+  $ terraform plan
+  $ terraform apply
+  ```
+
+  Note that this example will create resources. Resources can be destroyed with `terraform destroy`.
+
+  #### `area.yaml`
+
+  ```yaml
+  {{ include "./area.yaml" }}
+  ```
+
+  #### `main.tf`
+
+  ```hcl
+  {{ include "./main.tf" }}
+  ```
+
+output:
+  file: README.md
+  mode: replace

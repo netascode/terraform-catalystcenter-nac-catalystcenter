@@ -1,0 +1,60 @@
+name: Tests
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  static:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency: testing_environment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python Setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Tflint Setup
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Terraform Docs Setup
+        run: |
+          mkdir terraform-docs && cd terraform-docs
+          curl -sSLo terraform-docs.tar.gz https://terraform-docs.io/dl/v0.16.0/terraform-docs-v0.16.0-linux-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz
+          chmod +x terraform-docs
+          echo "$GITHUB_WORKSPACE/terraform-docs" >> $GITHUB_PATH
+
+      - name: Pre-commit Checks
+        uses: pre-commit/action@v3.0.1
+
+      - name: Terraform Init
+        run: terraform init -input=false -no-color
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      - name: Webex Notification
+        if: always() && github.event_name != 'pull_request'
+        uses: qsnyder/action-wxt@master
+        env:
+          TOKEN: ${{ secrets.WEBEX_TOKEN }}
+          ROOMID: ${{ secrets.WEBEX_ROOM_ID }}
+          MESSAGE: |
+            [**[${{ job.status }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            * Commit: [${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})[${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
+            * Author: ${{ github.event.sender.login }}
+            * Branch: ${{ github.ref }} ${{ github.head_ref }}
+            * Event: ${{ github.event_name }}

@@ -1,0 +1,6 @@
+---
+catalyst_center:
+  sites:
+    areas:
+      - name: Site1
+        parent_name: Global

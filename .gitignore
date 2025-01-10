@@ -1,0 +1,7 @@
+*.log
+.terraform
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+.envrc
+tflint.hcl

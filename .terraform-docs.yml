@@ -1,0 +1,41 @@
+version: ">= 0.14.0"
+
+formatter: markdown table
+
+content: |-
+  # Terraform Network-as-Code Cisco Catalyst Center Module
+
+  A Terraform module to configure Cisco Catalyst Center.
+
+  ## Usage
+
+  This module supports an inventory driven approach, where a complete Catalyst Center configuration or parts of it are either modeled in one or more YAML files or natively using Terraform variables.
+
+  ## Examples
+
+  Configuring an area under `Design -> Network Hierarchy` using YAML:
+
+  #### `area.yaml`
+
+  ```yaml
+  {{ include "./examples/site/area.yaml" }}
+  ```
+
+  #### `main.tf`
+
+  ```hcl
+  {{ include "./examples/site/main.tf" }}
+  ```
+
+  {{ .Requirements }}
+  {{ .Inputs }}
+  {{ .Outputs }}
+  {{ .Resources }}
+  {{ .Modules }}
+output:
+  file: README.md
+  mode: replace
+
+sort:
+  enabled: true
+  by: required
