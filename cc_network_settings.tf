@@ -111,27 +111,29 @@ locals {
 resource "catalystcenter_network" "network_settings" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null }
 
-  site_id                          = local.site_id_list[each.key]
-  network_aaa_server_type          = try(local.network_settings[each.value].network_aaa.server_type, local.defaults.catalyst_center.network_settings.network.network_aaa.server_type, null)
-  network_aaa_server_protocol      = try(local.network_settings[each.value].network_aaa.protocol, local.defaults.catalyst_center.network_settings.network.network_aaa.protocol, null)
-  network_aaa_server_primary_ip    = try(local.network_settings[each.value].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.primary_ip, null)
-  network_aaa_server_secondary_ip  = try(local.network_settings[each.value].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.secondary_ip, null)
-  endpoint_aaa_server_type         = try(local.network_settings[each.value].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.server_type, null)
-  endpoint_aaa_server_protocol     = try(local.network_settings[each.value].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.protocol, null)
-  endpoint_aaa_server_primary_ip   = try(local.network_settings[each.value].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.primary_ip, null)
-  endpoint_aaa_server_secondary_ip = try(local.network_settings[each.value].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.secondary_ip, null)
-  dhcp_servers                     = try(local.network_settings[each.value].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
-  domain_name                      = try(local.network_settings[each.value].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
-  primary_dns_server               = try(local.network_settings[each.value].primary_dns, local.defaults.catalyst_center.network_settings.network.primary_dns, null)
-  secondary_dns_server             = try(local.network_settings[each.value].secondary_dns, local.defaults.catalyst_center.network_settings.network.secondary_dns, null)
-  snmp_servers                     = try(local.network_settings[each.value].snmp_servers, local.defaults.catalyst_center.network_settings.network.snmp_servers, null)
-  catalyst_center_as_syslog_server = try(local.network_settings[each.value].catalyst_center_as_syslog_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_syslog_server, null)
-  syslog_servers                   = try(local.network_settings[each.value].syslog_servers, local.defaults.catalyst_center.network_settings.network.syslog_servers, null)
-  catalyst_center_as_snmp_server   = try(local.network_settings[each.value].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_snmp_server, null)
-  netflow_collector                = try(local.network_settings[each.value].netflow_collector, local.defaults.catalyst_center.network_settings.network.netflow_collector, null)
-  netflow_collector_port           = try(local.network_settings[each.value].netflow_collector_port, local.defaults.catalyst_center.network_settings.network.netflow_collector_port, null)
-  ntp_servers                      = try(local.network_settings[each.value].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
-  timezone                         = try(local.network_settings[each.value].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
+  site_id                           = local.site_id_list[each.key]
+  network_aaa_server_type           = try(local.network_settings[each.value].network_aaa.server_type, local.defaults.catalyst_center.network_settings.network.network_aaa.server_type, null)
+  network_aaa_server_protocol       = try(local.network_settings[each.value].network_aaa.protocol, local.defaults.catalyst_center.network_settings.network.network_aaa.protocol, null)
+  network_aaa_server_primary_ip     = try(local.network_settings[each.value].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.primary_ip, null)
+  network_aaa_server_secondary_ip   = try(local.network_settings[each.value].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.secondary_ip, null)
+  network_aaa_server_shared_secret  = try(local.network_settings[each.value].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.network_aaa.shared_secret, null)
+  endpoint_aaa_server_type          = try(local.network_settings[each.value].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.server_type, null)
+  endpoint_aaa_server_protocol      = try(local.network_settings[each.value].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.protocol, null)
+  endpoint_aaa_server_primary_ip    = try(local.network_settings[each.value].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.primary_ip, null)
+  endpoint_aaa_server_secondary_ip  = try(local.network_settings[each.value].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.secondary_ip, null)
+  endpoint_aaa_server_shared_secret = try(local.network_settings[each.value].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.shared_secret, null)
+  dhcp_servers                      = try(local.network_settings[each.value].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
+  domain_name                       = try(local.network_settings[each.value].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
+  primary_dns_server                = try(local.network_settings[each.value].primary_dns, local.defaults.catalyst_center.network_settings.network.primary_dns, null)
+  secondary_dns_server              = try(local.network_settings[each.value].secondary_dns, local.defaults.catalyst_center.network_settings.network.secondary_dns, null)
+  snmp_servers                      = try(local.network_settings[each.value].snmp_servers, local.defaults.catalyst_center.network_settings.network.snmp_servers, null)
+  catalyst_center_as_syslog_server  = try(local.network_settings[each.value].catalyst_center_as_syslog_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_syslog_server, null)
+  syslog_servers                    = try(local.network_settings[each.value].syslog_servers, local.defaults.catalyst_center.network_settings.network.syslog_servers, null)
+  catalyst_center_as_snmp_server    = try(local.network_settings[each.value].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_snmp_server, null)
+  netflow_collector                 = try(local.network_settings[each.value].netflow_collector, local.defaults.catalyst_center.network_settings.network.netflow_collector, null)
+  netflow_collector_port            = try(local.network_settings[each.value].netflow_collector_port, local.defaults.catalyst_center.network_settings.network.netflow_collector_port, null)
+  ntp_servers                       = try(local.network_settings[each.value].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
+  timezone                          = try(local.network_settings[each.value].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
@@ -171,8 +173,22 @@ locals {
   }
 }
 
-resource "catalystcenter_ip_pool" "ip_pool" {
-  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool }
+resource "catalystcenter_ip_pool" "ip_pool_v4" {
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv4" }
+
+  name             = each.key
+  ip_address_space = try(each.value.ip_address_space, local.defaults.catalyst_center.network_settings.ip_pools.ip_address_space, null)
+  type             = try(each.value.type, local.defaults.catalyst_center.network_settings.ip_pools.type, null)
+  ip_subnet        = try(each.value.ip_pool_cidr, local.defaults.catalyst_center.network_settings.ip_pools.ip_pool_cidr, null)
+  gateway          = try(each.value.gateway, local.defaults.catalyst_center.network_settings.ip_pools.gateway, null)
+  dhcp_server_ips  = try(each.value.dhcp_servers, local.defaults.catalyst_center.network_settings.ip_pools.dhcp_servers, null)
+  dns_server_ips   = try(each.value.dns_servers, local.defaults.catalyst_center.network_settings.ip_pools.dns_servers, null)
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
+
+resource "catalystcenter_ip_pool" "ip_pool_v6" {
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv6" }
 
   name             = each.key
   ip_address_space = try(each.value.ip_address_space, local.defaults.catalyst_center.network_settings.ip_pools.ip_address_space, null)
@@ -191,14 +207,21 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   site_id            = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name               = each.key
   type               = try(join("", [upper(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
-  ipv6_address_space = try(each.value.ipv6_address_space, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6_address_space, null)
-  ipv4_global_pool   = catalystcenter_ip_pool.ip_pool[local.ip_pools_reservations[each.key].global_pool].ip_subnet
-  ipv4_prefix        = try(local.ip_pools_reservations[each.key].ipv4_prefix, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4_prefix, null)
-  ipv4_prefix_length = try(local.ip_pools_reservations[each.key].prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.prefix_length, null)
-  ipv4_subnet        = try(local.ip_pools_reservations[each.key].subnet, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4_subnet, null)
-  ipv4_gateway       = try(local.ip_pools_reservations[each.key].ipv4_gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4_gateway, null)
-  ipv4_dhcp_servers  = try(local.ip_pools_reservations[each.key].dhcp_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.dhcp_servers, null)
-  ipv4_dns_servers   = try(local.ip_pools_reservations[each.key].dns_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.dns_servers, null)
+  ipv4_global_pool   = catalystcenter_ip_pool.ip_pool_v4[local.ip_pools_reservations[each.key].ipv4.global_pool].ip_subnet
+  ipv4_prefix = try(local.ip_pools_reservations[each.key].ipv4.prefix, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix, null)
+  ipv4_prefix_length = try(local.ip_pools_reservations[each.key].ipv4.prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix_length, null)
+  ipv4_gateway = try(local.ip_pools_reservations[each.key].ipv4.gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.gateway, null)
+  ipv4_dhcp_servers = try(local.ip_pools_reservations[each.key].ipv4.dhcp_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.dhcp_servers, null)
+  ipv4_dns_servers = try(local.ip_pools_reservations[each.key].ipv4.dns_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.dns_servers, null)
+  ipv4_subnet = try(local.ip_pools_reservations[each.key].ipv4.subnet, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.subnet, null)
+  ipv6_address_space =  try(local.ip_pools_reservations[each.key].ipv6, null) != null ? true : false
+  ipv6_global_pool = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? catalystcenter_ip_pool.ip_pool_v4[local.ip_pools_reservations[each.key].ipv6.global_pool].ip_subnet : false
+  ipv6_prefix = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? try(local.ip_pools_reservations[each.key].ipv6.prefix, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.prefix, null) : null
+  ipv6_prefix_length = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? try(local.ip_pools_reservations[each.key].ipv6.prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.prefix_length, null) : null
+  ipv6_gateway = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? try(local.ip_pools_reservations[each.key].ipv6.gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.gateway, null) : null
+  ipv6_dhcp_servers = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? try(local.ip_pools_reservations[each.key].ipv6.dhcp_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.dhcp_servers, null) : null
+  ipv6_dns_servers = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? try(local.ip_pools_reservations[each.key].ipv6.dns_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.dns_servers, null) : null
+  ipv6_subnet = try(local.ip_pools_reservations[each.key].ipv6, null) != null ? try(local.ip_pools_reservations[each.key].ipv6.subnet, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.subnet, null) : null
 
-  depends_on = [catalystcenter_ip_pool.ip_pool]
+  depends_on = [catalystcenter_ip_pool.ip_pool_v4, catalystcenter_ip_pool.ip_pool_v6]
 }

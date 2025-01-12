@@ -1,39 +1,4 @@
 locals {
-  # hierarchy_sites = {
-  #   for site in concat(
-  #     [
-  #       for area in local.catalyst_center.sites.areas : {
-  #         name                = area.name
-  #         site_name_hierarchy = "${area.parent_name}/${area.name}"
-  #       } if area.parent_name == "Global"
-  #     ],
-  #     [
-  #       for area in try(local.catalyst_center.sites.areas, []) : {
-  #         name                = area.name
-  #         site_name_hierarchy = "${area.parent_name}/${area.name}"
-  #       } if length(regexall("\\/", area.parent_name)) == 1
-  #     ],
-  #     [
-  #       for area in try(local.catalyst_center.sites.areas, []) : {
-  #         name                = area.name
-  #         site_name_hierarchy = "${area.parent_name}/${area.name}"
-  #       } if length(regexall("\\/", area.parent_name)) == 2
-  #     ],
-  #     [
-  #       for building in try(local.catalyst_center.sites.buildings, []) : {
-  #         name                = building.name
-  #         site_name_hierarchy = "${building.parent_name}/${building.name}"
-  #       }
-  #     ],
-  #     [
-  #       for floor in try(local.catalyst_center.sites.floors, []) : {
-  #         name                = "${floor.parent_name}/${floor.name}"
-  #         site_name_hierarchy = "${floor.parent_name}/${floor.name}"
-  #       }
-  #     ]
-  #   ) : site.name => site.site_name_hierarchy
-  # }
-
   l2_virtual_networks = flatten([
     for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
       for vn in try(fabric_site.l2_virtual_networks, []) : merge(

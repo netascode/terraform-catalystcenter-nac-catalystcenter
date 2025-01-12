@@ -29,10 +29,13 @@ defaults:
     network_settings:
       ip_pools:
         type: generic
+        ip_address_space: IPv4
         ip_pools_reservations:
           type: Generic
-          ipv4_prefix: true
-          ipv6_address_space: false      
+          ipv4:
+            prefix: true
+          ipv6:
+            address_space: false
     fabric:
       transits:
         type: IP_BASED
