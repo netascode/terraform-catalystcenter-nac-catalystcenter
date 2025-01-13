@@ -106,38 +106,58 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
 
 locals {
   network_settings = { for settings in try(local.catalyst_center.network_settings.network, []) : settings.name => settings }
+  aaa_settings     = { for settings in try(local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
 }
 
 resource "catalystcenter_network" "network_settings" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.network, null) != null }
 
   site_id                           = local.site_id_list[each.key]
-  network_aaa_server_type           = try(local.network_settings[each.value].network_aaa.server_type, local.defaults.catalyst_center.network_settings.network.network_aaa.server_type, null)
-  network_aaa_server_protocol       = try(local.network_settings[each.value].network_aaa.protocol, local.defaults.catalyst_center.network_settings.network.network_aaa.protocol, null)
-  network_aaa_server_primary_ip     = try(local.network_settings[each.value].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.primary_ip, null)
-  network_aaa_server_secondary_ip   = try(local.network_settings[each.value].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.secondary_ip, null)
-  network_aaa_server_shared_secret  = try(local.network_settings[each.value].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.network_aaa.shared_secret, null)
-  endpoint_aaa_server_type          = try(local.network_settings[each.value].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.server_type, null)
-  endpoint_aaa_server_protocol      = try(local.network_settings[each.value].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.protocol, null)
-  endpoint_aaa_server_primary_ip    = try(local.network_settings[each.value].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.primary_ip, null)
-  endpoint_aaa_server_secondary_ip  = try(local.network_settings[each.value].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.secondary_ip, null)
-  endpoint_aaa_server_shared_secret = try(local.network_settings[each.value].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.shared_secret, null)
-  dhcp_servers                      = try(local.network_settings[each.value].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
-  domain_name                       = try(local.network_settings[each.value].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
-  primary_dns_server                = try(local.network_settings[each.value].primary_dns, local.defaults.catalyst_center.network_settings.network.primary_dns, null)
-  secondary_dns_server              = try(local.network_settings[each.value].secondary_dns, local.defaults.catalyst_center.network_settings.network.secondary_dns, null)
-  snmp_servers                      = try(local.network_settings[each.value].snmp_servers, local.defaults.catalyst_center.network_settings.network.snmp_servers, null)
-  catalyst_center_as_syslog_server  = try(local.network_settings[each.value].catalyst_center_as_syslog_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_syslog_server, null)
-  syslog_servers                    = try(local.network_settings[each.value].syslog_servers, local.defaults.catalyst_center.network_settings.network.syslog_servers, null)
-  catalyst_center_as_snmp_server    = try(local.network_settings[each.value].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_snmp_server, null)
-  netflow_collector                 = try(local.network_settings[each.value].netflow_collector, local.defaults.catalyst_center.network_settings.network.netflow_collector, null)
-  netflow_collector_port            = try(local.network_settings[each.value].netflow_collector_port, local.defaults.catalyst_center.network_settings.network.netflow_collector_port, null)
-  ntp_servers                       = try(local.network_settings[each.value].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
-  timezone                          = try(local.network_settings[each.value].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
+  network_aaa_server_type           = try(local.network_settings[each.value.network].network_aaa.server_type, local.defaults.catalyst_center.network_settings.network.network_aaa.server_type, null)
+  network_aaa_server_protocol       = try(local.network_settings[each.value.network].network_aaa.protocol, local.defaults.catalyst_center.network_settings.network.network_aaa.protocol, null)
+  network_aaa_server_primary_ip     = try(local.network_settings[each.value.network].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.primary_ip, null)
+  network_aaa_server_secondary_ip   = try(local.network_settings[each.value.network].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.secondary_ip, null)
+  network_aaa_server_shared_secret  = try(local.network_settings[each.value.network].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.network_aaa.shared_secret, null)
+  endpoint_aaa_server_type          = try(local.network_settings[each.value.network].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.server_type, null)
+  endpoint_aaa_server_protocol      = try(local.network_settings[each.value.network].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.protocol, null)
+  endpoint_aaa_server_primary_ip    = try(local.network_settings[each.value.network].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.primary_ip, null)
+  endpoint_aaa_server_secondary_ip  = try(local.network_settings[each.value.network].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.secondary_ip, null)
+  endpoint_aaa_server_shared_secret = try(local.network_settings[each.value.network].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.shared_secret, null)
+  dhcp_servers                      = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
+  domain_name                       = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
+  primary_dns_server                = try(local.network_settings[each.value.network].primary_dns, local.defaults.catalyst_center.network_settings.network.primary_dns, null)
+  secondary_dns_server              = try(local.network_settings[each.value.network].secondary_dns, local.defaults.catalyst_center.network_settings.network.secondary_dns, null)
+  snmp_servers                      = try(local.network_settings[each.value.network].snmp_servers, local.defaults.catalyst_center.network_settings.network.snmp_servers, null)
+  catalyst_center_as_syslog_server  = try(local.network_settings[each.value.network].catalyst_center_as_syslog_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_syslog_server, null)
+  syslog_servers                    = try(local.network_settings[each.value.network].syslog_servers, local.defaults.catalyst_center.network_settings.network.syslog_servers, null)
+  catalyst_center_as_snmp_server    = try(local.network_settings[each.value.network].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_snmp_server, null)
+  netflow_collector                 = try(local.network_settings[each.value.network].netflow_collector, local.defaults.catalyst_center.network_settings.network.netflow_collector, null)
+  netflow_collector_port            = try(local.network_settings[each.value.network].netflow_collector_port, local.defaults.catalyst_center.network_settings.network.netflow_collector_port, null)
+  ntp_servers                       = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
+  timezone                          = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
 
+resource "catalystcenter_aaa_settings" "aaa_servers" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null }
+
+  site_id                         = local.site_id_list[each.key]
+  network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
+  network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
+  network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
+  network_aaa_secondary_server_ip = try(local.aaa_settings[each.value.aaa_servers].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.secondary_ip, null)
+  network_aaa_shared_secret       = try(local.aaa_settings[each.value.aaa_servers].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.shared_secret, null)
+  network_aaa_pan                 = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].network_aaa.pan, local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.pan, null) : null
+  client_aaa_server_type          = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.server_type, null)
+  client_aaa_protocol             = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.protocol, null)
+  client_aaa_primary_server_ip    = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.primary_ip, null)
+  client_aaa_secondary_server_ip  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.secondary_ip, null)
+  client_aaa_shared_secret        = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret, null)
+  client_aaa_pan                  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.pan, local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.pan, null) : null
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
 
 ### IP Pools
 
