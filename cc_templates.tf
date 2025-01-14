@@ -1,13 +1,13 @@
 locals {
-  yaml_template_directories = flatten([
-    for dir in var.template_directories : [
+  yaml_templates_directories = flatten([
+    for dir in var.templates_directories : [
       for file in fileset(dir, "*.{j2,vlt}") : "${dir}${file}"
     ]
   ])
 
   # extract content of template files
   templates_content = {
-    for file in local.yaml_template_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => file(file)
+    for file in local.yaml_templates_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => file(file)
   }
 
   templates = flatten([
