@@ -19,7 +19,7 @@ defaults:
         parent_name: Global
       buildings:
         parent_name: Global
-        country: Denmark
+        country: Poland
       floors:
         parent_name: Global
         height: 3
