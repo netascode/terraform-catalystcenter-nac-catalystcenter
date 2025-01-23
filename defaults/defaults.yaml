@@ -17,11 +17,7 @@ defaults:
     sites:
       areas:
         parent_name: Global
-      buildings:
-        parent_name: Global
-        country: Poland
       floors:
-        parent_name: Global
         height: 3
         length: 30
         rf_model: Cubes And Walled Offices
