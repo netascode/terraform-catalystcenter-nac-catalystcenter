@@ -116,6 +116,11 @@ resource "catalystcenter_template" "regular_template" {
     selection_values = try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)
     }
   ]
+
+  ## defect in the API that templates cannot be edit after assigned to network profile
+  lifecycle {
+    ignore_changes = [template_content]
+  }
 }
 
 resource "time_sleep" "template_wait" {
