@@ -7,7 +7,7 @@ locals {
 
   # extract content of template files
   templates_content = {
-    for file in local.yaml_templates_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => file(file)
+    for file in local.yaml_templates_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => replace(file(file), "\r\n", "\n")
   }
 
   templates = flatten([
@@ -116,11 +116,6 @@ resource "catalystcenter_template" "regular_template" {
     selection_values = try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)
     }
   ]
-
-  ## defect in the API that templates cannot be edit after assigned to network profile
-  lifecycle {
-    ignore_changes = [template_content]
-  }
 }
 
 resource "time_sleep" "template_wait" {
