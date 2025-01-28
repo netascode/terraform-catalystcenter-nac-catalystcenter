@@ -29,10 +29,15 @@ locals {
   )
 
   sites_to_settings_map = merge(
+    { "Global" = try(local.catalyst_center.sites.global.network_settings, null) },
     { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => try(area.network_settings, null) },
     { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => try(building.network_settings, null) },
     { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => try(floor.network_settings, null) }
   )
+}
+
+data "catalystcenter_area" "global" {
+  name = "Global"
 }
 
 resource "catalystcenter_credentials_https_read" "https_read_credentials" {
@@ -142,7 +147,7 @@ resource "catalystcenter_network" "network_settings" {
 resource "catalystcenter_aaa_settings" "aaa_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null }
 
-  site_id                         = local.site_id_list[each.key]
+  site_id                         = try(local.site_id_list[each.key], data.catalystcenter_area.global.id)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
