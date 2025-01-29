@@ -10,7 +10,7 @@ variable "yaml_files" {
   default     = []
 }
 
-variable "template_directories" {
+variable "templates_directories" {
   description = "List of paths to templates directories."
   type        = list(string)
   default     = []

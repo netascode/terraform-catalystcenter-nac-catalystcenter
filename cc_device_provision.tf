@@ -11,10 +11,10 @@ locals {
       {
         dayn_templates_map = merge(
           tomap({
-            for template in try(device.dayn_templates.regular, []) : template.name => template
+            for template in try(device.dayn_templates.regular, []) : template.name => merge(template, { variables = try(template.variables, []) })
           }),
           tomap({
-            for template in try(device.dayn_templates.composite, []) : template.name => template
+            for template in try(device.dayn_templates.composite, []) : template.name => merge(template, { variables = try(template.variables, []) })
           })
         )
       }
@@ -55,7 +55,8 @@ locals {
     ]
   ])
 
-  l2_handoff_vlan_id_map = { for item in local.anycast_gateways : item.vlan_name => item.vlan_id
+  l2_handoff_vlan_id_map = {
+    for item in local.anycast_gateways : item.vlan_name => item.vlan_id if try(item.vlan_name, null) != null
   }
 }
 

@@ -17,11 +17,7 @@ defaults:
     sites:
       areas:
         parent_name: Global
-      buildings:
-        parent_name: Global
-        country: Denmark
       floors:
-        parent_name: Global
         height: 3
         length: 30
         rf_model: Cubes And Walled Offices
@@ -29,10 +25,13 @@ defaults:
     network_settings:
       ip_pools:
         type: generic
+        ip_address_space: IPv4
         ip_pools_reservations:
           type: Generic
-          ipv4_prefix: true
-          ipv6_address_space: false      
+          ipv4:
+            prefix: true
+          ipv6:
+            address_space: false
     fabric:
       transits:
         type: IP_BASED

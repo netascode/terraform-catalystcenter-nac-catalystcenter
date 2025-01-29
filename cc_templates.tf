@@ -1,13 +1,13 @@
 locals {
-  yaml_template_directories = flatten([
-    for dir in var.template_directories : [
+  yaml_templates_directories = flatten([
+    for dir in var.templates_directories : [
       for file in fileset(dir, "*.{j2,vlt}") : "${dir}${file}"
     ]
   ])
 
   # extract content of template files
   templates_content = {
-    for file in local.yaml_template_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => file(file)
+    for file in local.yaml_templates_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => replace(file(file), "\r\n", "\n")
   }
 
   templates = flatten([
@@ -213,7 +213,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if local.templates_map[d.template].composite == true && local.templates_map[d.template].template_type == "dayn" && d.state == "PROVISION" && try(d.dayn_templates_map[d.template].deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && d.state == "PROVISION" && try(d.dayn_templates_map[d.template].deploy, false) == true }
 
   template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
   main_template_id    = catalystcenter_template.composite_template[each.value.template].id
