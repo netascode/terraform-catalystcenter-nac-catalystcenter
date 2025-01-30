@@ -2,7 +2,7 @@
 
 locals {
   sites_to_creds_map = merge(
-    { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => {
+    { for area in try(local.catalyst_center.sites.areas, []) : try("${area.parent_name}/${area.name}", area.name) => {
       cli          = try(area.cli_credentials, null)
       snmpv3       = try(area.snmpv3_credentials, null)
       snmpv2_read  = try(area.snmpv2_read_credentials, null)
@@ -30,7 +30,7 @@ locals {
 
   sites_to_settings_map = merge(
     { "Global" = try(local.catalyst_center.sites.global.network_settings, null) },
-    { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => try(area.network_settings, null) },
+    { for area in try(local.catalyst_center.sites.areas, []) : try("${area.parent_name}/${area.name}", area.name) => try(area.network_settings, null) },
     { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => try(building.network_settings, null) },
     { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => try(floor.network_settings, null) }
   )
@@ -194,7 +194,7 @@ locals {
   }
 
   site_to_ip_pools_reservation_map = merge(
-    { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => try(area.ip_pools_reservations, []) },
+    { for area in try(local.catalyst_center.sites.areas, []) : try("${area.parent_name}/${area.name}", area.name) => try(area.ip_pools_reservations, []) },
     { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => try(building.ip_pools_reservations, []) },
     { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => try(floor.ip_pools_reservations, []) }
   )
