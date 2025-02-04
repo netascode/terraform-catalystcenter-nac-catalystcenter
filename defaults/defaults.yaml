@@ -34,13 +34,14 @@ defaults:
             address_space: false
     fabric:
       transits:
-        type: IP_BASED
+        type: IP_BASED_TRANSIT
         routing_protocol_name: BGP
       fabric_sites:
         authentication_template_name: No Authentication
         pub_sub_enabled: false
         anycast_gateways:
           layer2_flooding: false
+          auto_generate_vlan_name: false
           multiple_ip_to_mac_addresses: false
           wireless_pool: false
           traffic_type: DATA
