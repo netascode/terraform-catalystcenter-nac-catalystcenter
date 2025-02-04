@@ -34,11 +34,11 @@ locals {
 resource "catalystcenter_transit_network" "transit" {
   for_each                          = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit }
   name                              = each.key
-  type                              = try(each.value.type, local.defaults.catalyst_center.transits.type, null)
-  routing_protocol_name             = try(each.value.routing_protocol_name, local.defaults.catalyst_center.transits.routing_protocol_name, null)
-  autonomous_system_number          = try(each.value.autonomous_system_number, local.defaults.catalyst_center.transits.autonomous_system_number, null)
-  is_multicast_over_transit_enabled = try(each.value.is_multicast_over_transit_enabled, local.defaults.catalyst_center.transits.is_multicast_over_transit_enabled, null)
-  control_plane_network_device_ids  = try(each.value.control_plane_network_device_ids, local.defaults.catalyst_center.transits.control_plane_network_device_ids, null)
+  type                              = try(each.value.type, local.defaults.catalyst_center.fabric.transits.type, null)
+  routing_protocol_name             = try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null)
+  autonomous_system_number          = try(each.value.autonomous_system_number, local.defaults.catalyst_center.fabric.transits.autonomous_system_number, null)
+  is_multicast_over_transit_enabled = try(each.value.is_multicast_over_transit_enabled, local.defaults.catalyst_center.fabric.transits.is_multicast_over_transit_enabled, null)
+  control_plane_network_device_ids  = try(each.value.control_plane_network_device_ids, local.defaults.catalyst_center.fabric.transits.control_plane_network_device_ids, null)
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {
