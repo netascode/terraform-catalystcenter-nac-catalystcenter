@@ -111,9 +111,9 @@ module "catalystcenter" {
 | [catalystcenter_transit_network.transit](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/transit_network) | resource |
 | [catalystcenter_virtual_network_to_fabric_site.vn_to_fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
-| [catalystcenter_wireless_enterprise_ssid.enteprise_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_enterprise_ssid) | resource |
 | [catalystcenter_wireless_profile.wireless_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
+| [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
