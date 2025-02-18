@@ -1,6 +1,10 @@
 ---
 defaults:
   catalyst_center:
+    network_profiles:
+      wireless:
+        ssid_details:
+          interface_name: management
     templates:
       force_push_template: true
       language: JINJA
