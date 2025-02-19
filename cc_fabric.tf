@@ -10,6 +10,17 @@ locals {
     ]
   ])
 
+  ssid_to_vlan = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for ssid in try(fabric_site.wireless_ssids, []) : merge(
+        ssid,
+        {
+          "fabric_site_name" : try(fabric_site.name, null)
+        }
+      )
+    ]
+  ])
+
   anycast_gateways = flatten([
     for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
       for vn in try(fabric_site.anycast_gateways, []) : merge(
@@ -111,3 +122,21 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_virtual_network_to_fabric_site.vn_to_fabric_site]
 }
 
+resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
+  for_each = { for ssid in try(local.ssid_to_vlan, []) : ssid.name => ssid }
+
+  fabric_id = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
+  mappings = [
+    {
+      vlan_name = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.wireless_ssids.vlan_name, null)
+      ssid_details = [
+        {
+          name               = try(each.value.name, null)
+          security_group_tag = try(each.value.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.wireless_ssids.security_group_name, null)
+        }
+      ]
+    }
+  ]
+
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn]
+}
