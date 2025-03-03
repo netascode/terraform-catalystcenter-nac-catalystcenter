@@ -186,7 +186,7 @@ resource "catalystcenter_template_version" "composite_commit_version" {
 }
 
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && d.state == "PROVISION" && try(d.dayn_templates_map[d.template].deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && try(d.dayn_templates_map[d.template].deploy, false) == true }
 
   template_id         = catalystcenter_template.regular_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -213,7 +213,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && d.state == "PROVISION" && try(d.dayn_templates_map[d.template].deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && try(d.dayn_templates_map[d.template].deploy, false) == true }
 
   template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
   main_template_id    = catalystcenter_template.composite_template[each.value.template].id

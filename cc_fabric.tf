@@ -60,7 +60,7 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   site_id                     = try(local.site_id_list[each.key], each.key, null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_network.network_settings]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_telemetry_settings.telemetry_settings]
 }
 
 locals {
@@ -135,5 +135,5 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
     }
   ]
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller]
 }
