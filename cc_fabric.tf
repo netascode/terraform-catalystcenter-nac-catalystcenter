@@ -122,5 +122,5 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
     }
   ])
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller]
 }
