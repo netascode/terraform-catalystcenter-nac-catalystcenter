@@ -112,7 +112,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site }
+  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 }
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
