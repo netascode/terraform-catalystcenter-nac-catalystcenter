@@ -130,7 +130,7 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
 
   device_name          = each.key
   site                 = try(each.value.site, null)
-  managed_ap_locations = try(each.value.managed_ap_locations, null)
+  managed_ap_locations = try(each.value.managed_ap_locations, [each.value.site], null)
 
   depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
