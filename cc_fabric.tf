@@ -10,17 +10,6 @@ locals {
     ]
   ])
 
-  ssid_to_vlan = flatten([
-    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
-      for ssid in try(fabric_site.wireless_ssids, []) : merge(
-        ssid,
-        {
-          "fabric_site_name" : try(fabric_site.name, null)
-        }
-      )
-    ]
-  ])
-
   anycast_gateways = flatten([
     for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
       for vn in try(fabric_site.anycast_gateways, []) : merge(
@@ -123,20 +112,15 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = { for ssid in try(local.ssid_to_vlan, []) : ssid.name => ssid }
+  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 }
 
-  fabric_id = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
-  mappings = [
-    {
-      vlan_name = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.wireless_ssids.vlan_name, null)
-      ssid_details = [
-        {
-          name               = try(each.value.name, null)
-          security_group_tag = try(each.value.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.wireless_ssids.security_group_name, null)
-        }
-      ]
+  fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
+  mappings = flatten([
+    for vlan in distinct([for ssid in each.value.wireless_ssids : ssid.vlan_name]) : {
+      vlan_name    = vlan
+      ssid_details = [for ssid in each.value.wireless_ssids : { name = ssid.name } if ssid.vlan_name == vlan]
     }
-  ]
+  ])
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller]
 }
