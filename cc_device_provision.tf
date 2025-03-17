@@ -141,7 +141,7 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
 resource "catalystcenter_fabric_device" "wireless_controller" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(device.fabric_roles, "WIRELESS_CONTROLLER_NODE") }
 
-  network_device_id = local.device_ip_to_id[each.value.device_ip]
+  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles      = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
