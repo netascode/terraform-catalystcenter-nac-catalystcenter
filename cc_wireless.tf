@@ -39,6 +39,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   site_id                                     = try(data.catalystcenter_area.global.id, null)
   aaa_override                                = try(each.value.aaa_override, local.defaults.catalyst_center.wireless.ssids.aaa_override, null)
   acct_servers                                = try(each.value.acct_servers, local.defaults.catalyst_center.wireless.ssids.acct_servers, null)
+  auth_servers                                = try(each.value.auth_servers, local.defaults.catalyst_center.wireless.ssids.auth_servers, null)
   acl_name                                    = try(each.value.acl_name, local.defaults.catalyst_center.wireless.ssids.acl_name, null)
   ap_beacon_protection                        = try(each.value.ap_beacon_protection, local.defaults.catalyst_center.wireless.ssids.ap_beacon_protection, null)
   auth_key8021x                               = try(each.value.auth_key8021x, local.defaults.catalyst_center.wireless.ssids.auth_key8021x, null)
