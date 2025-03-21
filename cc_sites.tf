@@ -1,3 +1,7 @@
+data "catalystcenter_area" "global" {
+  name = "Global"
+}
+
 ## 1st level area Global/area
 resource "catalystcenter_area" "area_0" {
   for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if try(area.parent_name, "") == "Global" }

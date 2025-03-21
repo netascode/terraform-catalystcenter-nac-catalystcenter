@@ -56,7 +56,7 @@ locals {
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : item.vlan_name => item.vlan_id if try(item.vlan_name, null) != null
+    for item in local.anycast_gateways : item.vlan_name => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id if try(item.vlan_name, null) != null
   }
 }
 
