@@ -24,6 +24,10 @@ locals {
       }
     ]
   ])
+
+  wireless_controllers = length({
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(device.fabric_roles, "WIRELESS_CONTROLLER_NODE")
+  }) > 0
 }
 
 resource "catalystcenter_wireless_ssid" "ssid" {

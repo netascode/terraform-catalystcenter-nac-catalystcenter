@@ -1,3 +1,7 @@
+data "catalystcenter_area" "global" {
+  name = "Global"
+}
+
 ## 1st level area Global/area
 resource "catalystcenter_area" "area_0" {
   for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if try(area.parent_name, "") == "Global" }
@@ -5,7 +9,7 @@ resource "catalystcenter_area" "area_0" {
   name        = each.value.name
   parent_name = try(each.value.parent_name, local.defaults.catalyst_center.sites.parent_name, null)
 
-  depends_on = [catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+  depends_on = [catalystcenter_discovery.discovery, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
 
 # 2nd level area Global/area/area

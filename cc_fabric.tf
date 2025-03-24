@@ -32,7 +32,8 @@ locals {
 }
 
 resource "catalystcenter_transit_network" "transit" {
-  for_each                          = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit }
+  for_each = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit }
+
   name                              = each.key
   type                              = try(each.value.type, local.defaults.catalyst_center.fabric.transits.type, null)
   routing_protocol_name             = try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null)
@@ -48,21 +49,20 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   site_id                     = try(local.site_id_list[each.key], each.key, null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_network.network_settings]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_telemetry_settings.telemetry_settings]
 }
 
 locals {
   fabric_site_id_list = { for k, v in catalystcenter_fabric_site.fabric_site : k => v.id }
 }
 
-resource "catalystcenter_fabric_virtual_network" "vn" {
+resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
   for_each = { for vn in try(local.l3_virtual_networks, []) : vn.name => vn if vn.name != "INFRA_VN" }
 
   virtual_network_name = each.key
-  is_guest             = try(each.value.is_guest, local.defaults.catalyst_center.fabric.fabric_sites.l3_virtual_networks.is_guest, null)
-  sg_names             = try(each.value.sg_names, local.defaults.catalyst_center.fabric.fabric_sites.l3_virtual_networks.sg_names, null)
+  fabric_ids           = [catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id]
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site]
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
@@ -75,16 +75,7 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
   fabric_enabled_wireless            = try(each.value.fabric_enabled_wireless, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.fabric_enabled_wireless, null)
   associated_l3_virtual_network_name = try(each.value.associated_l3_virtual_network_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.associated_l3_virtual_network_name, null)
 
-  depends_on = [catalystcenter_virtual_network_to_fabric_site.vn_to_fabric_site]
-}
-
-resource "catalystcenter_virtual_network_to_fabric_site" "vn_to_fabric_site" {
-  for_each = { for vn in try(local.l3_virtual_networks, []) : "${vn.name}/${vn.fabric_site_name}" => vn }
-
-  site_name_hierarchy  = try(each.value.fabric_site_name, null)
-  virtual_network_name = try(catalystcenter_fabric_virtual_network.vn[each.value.name].virtual_network_name, "INFRA_VN", null)
-
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_virtual_network.vn]
+  depends_on = [catalystcenter_fabric_l3_virtual_network.l3_vn]
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
@@ -108,11 +99,11 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_virtual_network_to_fabric_site.vn_to_fabric_site]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn]
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 }
+  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 } : {}
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
