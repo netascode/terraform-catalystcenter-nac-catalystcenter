@@ -219,7 +219,7 @@ resource "time_sleep" "port_assignment_wait" {
 }
 
 resource "catalystcenter_fabric_port_assignment" "port_assignments" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && contains(device.fabric_roles, "EDGE_NODE") && try(device.port_assignments, null) != null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(device.fabric_roles, "EDGE_NODE") && try(device.port_assignments, null) != null }
 
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
