@@ -128,6 +128,7 @@ module "catalystcenter" {
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/pnp_device) | data source |
+| [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 ## Modules
 
 No modules.
