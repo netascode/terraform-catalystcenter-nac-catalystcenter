@@ -202,22 +202,6 @@ locals {
   }
 }
 
-resource "time_sleep" "port_assignment_wait" {
-  count = length({
-    for device in try(local.catalyst_center.inventory.devices, []) :
-    device.name => device
-    if strcontains(device.state, "PROVISION")
-    && device.device_role == "ACCESS"
-    && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null
-    && try(device.port_assignments, null) != null
-  }) > 0 ? 1 : 0
-
-  create_duration  = "1s"
-  destroy_duration = "60s"
-
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
-}
-
 resource "catalystcenter_fabric_port_assignment" "port_assignments" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null }
 
@@ -225,5 +209,5 @@ resource "catalystcenter_fabric_port_assignment" "port_assignments" {
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   port_assignments  = try(local.device_port_assignments[each.key], null)
 
-  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_ip_pool_reservation.pool_reservation, time_sleep.port_assignment_wait]
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_anycast_gateway.anycast_gateway]
 }
