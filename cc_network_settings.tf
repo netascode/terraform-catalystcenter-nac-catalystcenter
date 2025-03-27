@@ -36,10 +36,6 @@ locals {
   )
 }
 
-data "catalystcenter_area" "global" {
-  name = "Global"
-}
-
 resource "catalystcenter_credentials_https_read" "https_read_credentials" {
   for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.https_read_credentials, []) : cred.name => cred }
 
@@ -96,7 +92,7 @@ resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
 resource "catalystcenter_assign_credentials" "assign_credentials" {
   for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) }
 
-  site_id          = local.site_id_list[each.key]
+  site_id          = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   cli_id           = each.value.cli != null ? catalystcenter_credentials_cli.cli_credentials[each.value.cli].id : null
   https_read_id    = each.value.https_read != null ? catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id : null
   https_write_id   = each.value.https_write != null ? catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id : null
@@ -110,36 +106,72 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
 # Network Settings
 
 locals {
-  network_settings = { for settings in try(local.catalyst_center.network_settings.network, []) : settings.name => settings }
-  aaa_settings     = { for settings in try(local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
+  network_settings   = { for settings in try(local.catalyst_center.network_settings.network, []) : settings.name => settings }
+  aaa_settings       = { for settings in try(local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
+  telemetry_settings = { for settings in try(local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
 }
 
-resource "catalystcenter_network" "network_settings" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.network, null) != null }
+resource "catalystcenter_ntp_settings" "ntp_servers" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null }
 
-  site_id                           = local.site_id_list[each.key]
-  network_aaa_server_type           = try(local.network_settings[each.value.network].network_aaa.server_type, local.defaults.catalyst_center.network_settings.network.network_aaa.server_type, null)
-  network_aaa_server_protocol       = try(local.network_settings[each.value.network].network_aaa.protocol, local.defaults.catalyst_center.network_settings.network.network_aaa.protocol, null)
-  network_aaa_server_primary_ip     = try(local.network_settings[each.value.network].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.primary_ip, null)
-  network_aaa_server_secondary_ip   = try(local.network_settings[each.value.network].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.network_aaa.secondary_ip, null)
-  network_aaa_server_shared_secret  = try(local.network_settings[each.value.network].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.network_aaa.shared_secret, null)
-  endpoint_aaa_server_type          = try(local.network_settings[each.value.network].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.server_type, null)
-  endpoint_aaa_server_protocol      = try(local.network_settings[each.value.network].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.protocol, null)
-  endpoint_aaa_server_primary_ip    = try(local.network_settings[each.value.network].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.primary_ip, null)
-  endpoint_aaa_server_secondary_ip  = try(local.network_settings[each.value.network].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.secondary_ip, null)
-  endpoint_aaa_server_shared_secret = try(local.network_settings[each.value.network].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.network.client_and_endpoint_aaa.shared_secret, null)
-  dhcp_servers                      = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
-  domain_name                       = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
-  primary_dns_server                = try(local.network_settings[each.value.network].primary_dns, local.defaults.catalyst_center.network_settings.network.primary_dns, null)
-  secondary_dns_server              = try(local.network_settings[each.value.network].secondary_dns, local.defaults.catalyst_center.network_settings.network.secondary_dns, null)
-  snmp_servers                      = try(local.network_settings[each.value.network].snmp_servers, local.defaults.catalyst_center.network_settings.network.snmp_servers, null)
-  catalyst_center_as_syslog_server  = try(local.network_settings[each.value.network].catalyst_center_as_syslog_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_syslog_server, null)
-  syslog_servers                    = try(local.network_settings[each.value.network].syslog_servers, local.defaults.catalyst_center.network_settings.network.syslog_servers, null)
-  catalyst_center_as_snmp_server    = try(local.network_settings[each.value.network].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.network.catalyst_center_as_snmp_server, null)
-  netflow_collector                 = try(local.network_settings[each.value.network].netflow_collector, local.defaults.catalyst_center.network_settings.network.netflow_collector, null)
-  netflow_collector_port            = try(local.network_settings[each.value.network].netflow_collector_port, local.defaults.catalyst_center.network_settings.network.netflow_collector_port, null)
-  ntp_servers                       = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
-  timezone                          = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
+  site_id = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
+  servers = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
+
+resource "catalystcenter_dhcp_settings" "dhcp_servers" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null }
+
+  site_id = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
+  servers = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
+
+resource "catalystcenter_dns_settings" "dns_settings" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null }
+
+  site_id     = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
+  domain_name = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
+  dns_servers = try(local.network_settings[each.value.network].dns_servers, local.defaults.catalyst_center.network_settings.network.dns_servers, null)
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
+
+resource "catalystcenter_timezone_settings" "timezone" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null }
+
+  site_id    = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
+  identifier = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
+
+resource "catalystcenter_banner_settings" "banner" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null }
+
+  site_id = try(local.site_id_list[each.key], null)
+  type    = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null) != null ? "Custom" : "Builtin"
+  message = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null)
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+}
+
+resource "catalystcenter_telemetry_settings" "telemetry_settings" {
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null }
+
+  site_id                             = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
+  enable_wired_data_collection        = try(local.telemetry_settings[each.value.telemetry].wired_data_collection, local.defaults.catalyst_center.network_settings.telemetry.wired_data_collection, null)
+  enable_wireless_telemetry           = try(local.telemetry_settings[each.value.telemetry].wireless_telemetry, local.defaults.catalyst_center.network_settings.telemetry.wireless_telemetry, null)
+  use_builtin_trap_server             = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_snmp_server, null)
+  external_trap_servers               = try(local.telemetry_settings[each.value.telemetry].snmp_servers, local.defaults.catalyst_center.network_settings.telemetry.snmp_servers, null)
+  use_builtin_syslog_server           = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_syslog_server, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_syslog_server, null)
+  external_syslog_servers             = try(local.telemetry_settings[each.value.telemetry].syslog_servers, local.defaults.catalyst_center.network_settings.telemetry.syslog_servers, null)
+  netflow_collector                   = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_network_collector, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_network_collector, null) == true ? "Builtin" : "TelemetryBrokerOrUDPDirector"
+  enable_netflow_collector_on_devices = try(local.telemetry_settings[each.value.telemetry].enable_netflow_collector_on_devices, local.defaults.catalyst_center.network_settings.telemetry.enable_netflow_collector_on_devices, null)
+  netflow_collector_ip_address        = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_network_collector, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_network_collector, null) == false ? try(local.telemetry_settings[each.value.telemetry].netflow_collector_ip_address, local.defaults.catalyst_center.network_settings.telemetry.netflow_collector_ip_address, null) : null
+  netflow_collector_port              = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_network_collector, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_network_collector, null) == false ? try(local.telemetry_settings[each.value.telemetry].netflow_collector_port, local.defaults.catalyst_center.network_settings.telemetry.netflow_collector_port, null) : null
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
@@ -147,7 +179,7 @@ resource "catalystcenter_network" "network_settings" {
 resource "catalystcenter_aaa_settings" "aaa_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null }
 
-  site_id                         = try(local.site_id_list[each.key], data.catalystcenter_area.global.id)
+  site_id                         = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)

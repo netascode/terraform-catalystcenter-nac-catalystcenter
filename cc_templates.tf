@@ -82,8 +82,12 @@ resource "catalystcenter_tag" "tag" {
   dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.templates.tags.dynamic_rules, null)
 }
 
+data "catalystcenter_project" "onboarding" {
+  name = "Onboarding Configuration"
+}
+
 resource "catalystcenter_project" "project" {
-  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project }
+  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" }
 
   name        = each.key
   description = try(each.value.description, null)
@@ -93,7 +97,7 @@ resource "catalystcenter_template" "regular_template" {
   for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false }
 
   name             = each.key
-  project_id       = try(catalystcenter_project.project[each.value.project_name].id, null)
+  project_id       = try(catalystcenter_project.project[each.value.project_name].id, data.catalystcenter_project.onboarding.id, null)
   description      = try(each.value.description, local.defaults.catalyst_center.templates.description, null)
   device_types     = try(each.value.device_types, local.defaults.catalyst_center.templates.device_types, null)
   language         = try(each.value.language, local.defaults.catalyst_center.templates.language, null)
@@ -130,7 +134,7 @@ resource "catalystcenter_template" "composite_template" {
   for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true }
 
   name             = each.key
-  project_id       = try(catalystcenter_project.project[each.value.project_name].id, null)
+  project_id       = try(catalystcenter_project.project[each.value.project_name].id, data.catalystcenter_project.onboarding.id, null)
   description      = try(each.value.description, local.defaults.catalyst_center.templates.description, null)
   device_types     = try(each.value.device_types, local.defaults.catalyst_center.templates.device_types, null)
   language         = try(each.value.language, local.defaults.catalyst_center.templates.language, null)
@@ -186,7 +190,7 @@ resource "catalystcenter_template_version" "composite_commit_version" {
 }
 
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && d.state == "PROVISION" && try(d.dayn_templates_map[d.template].deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && try(d.dayn_templates_map[d.template].deploy, false) == true }
 
   template_id         = catalystcenter_template.regular_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -209,11 +213,12 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
       ]
     }
   ]
-  depends_on = [catalystcenter_device_role.role]
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.border_device]
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && d.state == "PROVISION" && try(d.dayn_templates_map[d.template].deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && try(d.dayn_templates_map[d.template].deploy, false) == true }
 
   template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
   main_template_id    = catalystcenter_template.composite_template[each.value.template].id
@@ -259,5 +264,5 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     }
   ]
 
-  depends_on = [catalystcenter_device_role.role]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.border_device]
 }
