@@ -27,8 +27,6 @@ defaults:
         rf_model: Cubes And Walled Offices
         width: 30
     network_settings:
-      network:
-        timezone: GMT
       ip_pools:
         type: generic
         ip_address_space: IPv4
