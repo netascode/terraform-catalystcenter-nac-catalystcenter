@@ -21,14 +21,16 @@ locals {
     ]
   ])
 
-  l3_virtual_networks = flatten([
-    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
-      for vn in try(fabric_site.l3_virtual_networks, []) : {
-        "name" : try(vn.name, null)
-        "fabric_site_name" : try(fabric_site.name, null)
-      }
-    ]
-  ])
+  l3_virtual_networks = {
+    for vn in flatten([
+      for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+        for vn in try(fabric_site.l3_virtual_networks, []) : {
+          name             = vn.name
+          fabric_site_name = fabric_site.name
+        }
+      ]
+    ]) : vn.name => vn.fabric_site_name...
+  }
 }
 
 resource "catalystcenter_transit_network" "transit" {
@@ -57,10 +59,10 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = { for vn in try(local.l3_virtual_networks, []) : vn.name => vn if vn.name != "INFRA_VN" }
+  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if vn_name != "INFRA_VN" }
 
   virtual_network_name = each.key
-  fabric_ids           = [catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id]
+  fabric_ids           = [for site in each.value : catalystcenter_fabric_site.fabric_site[site].id]
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site]
 }
