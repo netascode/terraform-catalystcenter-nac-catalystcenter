@@ -1,5 +1,5 @@
 data "catalystcenter_credentials_cli" "cli_credentials" {
-  for_each    = length(try(local.catalyst_center.network_settings.device_credentials.cli_credentials, [local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.name], [])) > 0 ? { for cli_cred in try(local.catalyst_center.network_settings.device_credentials.cli_credentials, [{ name = try(local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.name, null) }]) : cli_cred.name => cli_cred } : {}
+  for_each    = length(try([local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.name], [])) > 0 ? { for cli_cred in try(local.catalyst_center.network_settings.device_credentials.cli_credentials, [{ name = try(local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.name, null) }]) : cli_cred.name => cli_cred } : {}
   description = each.key
 }
 
