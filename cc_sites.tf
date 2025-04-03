@@ -49,12 +49,13 @@ resource "catalystcenter_building" "building" {
 resource "catalystcenter_floor" "floor" {
   for_each = { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => floor }
 
-  name        = each.value.name
-  parent_name = try(each.value.parent_name, local.defaults.catalyst_center.sites.floors.parent_name, null)
-  rf_model    = try(each.value.rf_model, local.defaults.catalyst_center.sites.floors.rf_model, null)
-  width       = try(each.value.width, local.defaults.catalyst_center.sites.floors.width, null)
-  length      = try(each.value.length, local.defaults.catalyst_center.sites.floors.length, null)
-  height      = try(each.value.height, local.defaults.catalyst_center.sites.floors.height, null)
+  name         = each.value.name
+  parent_name  = try(each.value.parent_name, local.defaults.catalyst_center.sites.floors.parent_name, null)
+  floor_number = try(each.value.floor_number, local.defaults.catalyst_center.sites.floors.floor_number, null)
+  rf_model     = try(each.value.rf_model, local.defaults.catalyst_center.sites.floors.rf_model, null)
+  width        = try(each.value.width, local.defaults.catalyst_center.sites.floors.width, null)
+  length       = try(each.value.length, local.defaults.catalyst_center.sites.floors.length, null)
+  height       = try(each.value.height, local.defaults.catalyst_center.sites.floors.height, null)
 
   depends_on = [catalystcenter_building.building, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
