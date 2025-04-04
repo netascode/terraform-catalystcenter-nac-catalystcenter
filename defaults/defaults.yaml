@@ -36,6 +36,14 @@ defaults:
             prefix: true
           ipv6:
             address_space: false
+      device_credentials:
+        https_write_credentials:
+          port: 443
+        https_read_credentials:
+          port: 443
+        snmpv3_credentials:
+          auth_type: SHA
+          privacy_type: AES128
     fabric:
       transits:
         type: IP_BASED_TRANSIT
