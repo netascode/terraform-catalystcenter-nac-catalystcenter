@@ -56,20 +56,20 @@ locals {
   ]
 
   combined_templates = flatten([
-    for np in try(local.catalyst_center.network_profiles.switching, []) : [
-      for site in np.sites : [
-        for template in try(np.dayn_templates, []) : [
-          for device in local.all_devices : merge(
-            device,
-            {
-              "np_site" : try(site, null),
-              "network_profile" : try(np.name, null),
-              "template" : try(template, null)
-            }
-          ) if startswith(try(device.site, ""), site)
-        ]
-      ]
+    #for np in try(local.catalyst_center.network_profiles.switching, []) : [
+    #  for site in np.sites : [
+    for template in try(np.dayn_templates, []) : [
+      for device in local.all_devices : merge(
+        device,
+        {
+          "np_site" : try(site, null),
+          "network_profile" : try(np.name, null),
+          "template" : try(template, null)
+        }
+      ) if startswith(try(device.site, ""), site)
     ]
+    #      ]
+    #    ]
   ])
 }
 
