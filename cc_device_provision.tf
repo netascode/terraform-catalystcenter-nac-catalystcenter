@@ -202,7 +202,7 @@ locals {
   }
 }
 
-resource "catalystcenter_fabric_port_assignment" "port_assignments" {
+resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null }
 
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
