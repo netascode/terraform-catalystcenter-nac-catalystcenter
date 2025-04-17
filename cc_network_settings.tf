@@ -151,7 +151,7 @@ resource "catalystcenter_timezone_settings" "timezone" {
 resource "catalystcenter_banner_settings" "banner" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null }
 
-  site_id = try(local.site_id_list[each.key], null)
+  site_id = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   type    = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null) != null ? "Custom" : "Builtin"
   message = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null)
 
