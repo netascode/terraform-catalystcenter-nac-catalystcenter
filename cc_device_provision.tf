@@ -24,21 +24,23 @@ locals {
   l3_handoffs_ip_transit = flatten([
     for border_device in try(local.catalyst_center.fabric.border_devices, []) : [
       for transit in try(border_device.l3_handoffs, []) : [
-        for vn in try(transit.virtual_networks) : {
-          key                   = format("%s/%s/%s", vn.name, border_device.name, transit.name)
-          transit_name          = try(transit.name, null)
-          device_name           = try(border_device.name, null)
-          device_ip             = try(local.all_devices[border_device.name].device_ip, null)
-          interface_name        = try(transit.interface_name, null)
-          virtual_network_name  = try(vn.name, null)
-          vlan_id               = try(vn.vlan, null)
-          local_ip_address      = try(vn.local_ip_address, null)
-          local_ipv6_address    = try(vn.local_ipv6_address, null)
-          peer_ipv6_address     = try(vn.peer_ipv6_address, null)
-          peer_ip_address       = try(vn.peer_ip_address, null)
-          tcp_mss_adjustment    = try(vn.tcp_mss_adjustment, null)
-          external_handoff_pool = try(border_device.external_handoff_pool, null)
-        }
+        for interface in try(transit.interfaces, []) : [
+          for vn in try(interface.virtual_networks) : {
+            key                   = format("%s/%s/%s/%s", vn.name, interface.name, transit.name, border_device.name)
+            transit_name          = try(transit.name, null)
+            device_name           = try(border_device.name, null)
+            device_ip             = try(local.all_devices[border_device.name].device_ip, null)
+            interface_name        = try(interface.name, null)
+            virtual_network_name  = try(vn.name, null)
+            vlan_id               = try(vn.vlan, null)
+            local_ip_address      = try(vn.local_ip_address, null)
+            local_ipv6_address    = try(vn.local_ipv6_address, null)
+            peer_ipv6_address     = try(vn.peer_ipv6_address, null)
+            peer_ip_address       = try(vn.peer_ip_address, null)
+            tcp_mss_adjustment    = try(vn.tcp_mss_adjustment, null)
+            external_handoff_pool = try(border_device.external_handoff_pool, null)
+          }
+        ]
       ]
     ]
   ])
