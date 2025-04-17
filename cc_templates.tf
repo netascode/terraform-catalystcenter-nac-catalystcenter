@@ -57,13 +57,13 @@ locals {
 
   combined_templates = flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
-      for template in try(device.dayn_templates.regular, []) : [
+      for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
         {
           "template" : try(template.name, null),
           "name" : try(device.name, null),
           "state" : try(device.state, null),
           "device_ip" : try(device.device_ip, null)
-          "deploy" : try(template.deploy, false)
+          "deploy_state" : try(template.state, null)
         }
       ]
     ]
@@ -187,8 +187,9 @@ resource "catalystcenter_template_version" "composite_commit_version" {
 }
 
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && try(d.deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") }
 
+  redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
   template_id         = catalystcenter_template.regular_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
@@ -215,8 +216,9 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && try(d.deploy, false) == true }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") }
 
+  redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
   template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
   main_template_id    = catalystcenter_template.composite_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
