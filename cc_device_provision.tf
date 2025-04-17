@@ -25,16 +25,19 @@ locals {
     for border_device in try(local.catalyst_center.fabric.border_devices, []) : [
       for transit in try(border_device.l3_handoffs, []) : [
         for vn in try(transit.virtual_networks) : {
-          key                  = format("%s/%s/%s", vn.name, border_device.name, transit.name)
-          transit_name         = try(transit.name, null)
-          device_name          = try(border_device.name, null)
-          device_ip            = try(local.all_devices[border_device.name].device_ip, null)
-          interface_name       = try(transit.interface_name, null)
-          virtual_network_name = try(vn.name, null)
-          vlan_id              = try(vn.vlan, null)
-          local_ip_address     = try(vn.local_ip_address, null)
-          peer_ip_address      = try(vn.peer_ip_address, null)
-          tcp_mss_adjustment   = try(vn.tcp_mss_adjustment, null)
+          key                   = format("%s/%s/%s", vn.name, border_device.name, transit.name)
+          transit_name          = try(transit.name, null)
+          device_name           = try(border_device.name, null)
+          device_ip             = try(local.all_devices[border_device.name].device_ip, null)
+          interface_name        = try(transit.interface_name, null)
+          virtual_network_name  = try(vn.name, null)
+          vlan_id               = try(vn.vlan, null)
+          local_ip_address      = try(vn.local_ip_address, null)
+          local_ipv6_address    = try(vn.local_ipv6_address, null)
+          peer_ipv6_address     = try(vn.peer_ipv6_address, null)
+          peer_ip_address       = try(vn.peer_ip_address, null)
+          tcp_mss_adjustment    = try(vn.tcp_mss_adjustment, null)
+          external_handoff_pool = try(border_device.external_handoff_pool, null)
         }
       ]
     ]
@@ -103,17 +106,20 @@ resource "catalystcenter_fabric_device" "border_device" {
 resource "catalystcenter_fabric_l3_handoff_ip_transit" "l3_handoff_ip_transit" {
   for_each = { for handoff in local.l3_handoffs_ip_transit : handoff.key => handoff if strcontains(local.all_devices[handoff.device_name].state, "PROVISION") }
 
-  network_device_id    = lookup(local.device_ip_to_id, each.value.device_ip, "")
-  fabric_id            = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
-  transit_network_id   = try(catalystcenter_transit_network.transit[each.value.transit_name].id, null)
-  interface_name       = try(each.value.interface_name, null)
-  virtual_network_name = try(each.value.virtual_network_name, null)
-  vlan_id              = try(each.value.vlan_id, null)
-  tcp_mss_adjustment   = try(each.value.tcp_mss_adjustment, null)
-  local_ip_address     = try(each.value.local_ip_address, null)
-  remote_ip_address    = try(each.value.peer_ip_address, null)
+  network_device_id                  = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  fabric_id                          = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
+  transit_network_id                 = try(catalystcenter_transit_network.transit[each.value.transit_name].id, null)
+  interface_name                     = try(each.value.interface_name, null)
+  virtual_network_name               = try(each.value.virtual_network_name, null)
+  vlan_id                            = try(each.value.vlan_id, null)
+  tcp_mss_adjustment                 = try(each.value.tcp_mss_adjustment, null)
+  external_connectivity_ip_pool_name = try(each.value.external_handoff_pool, null) != null ? try(each.value.external_handoff_pool, local.defaults.catalyst_center.fabric.border_devices.l3_handoffs.virtual_network.external_handoff_pool, null) : null
+  local_ip_address                   = try(each.value.external_handoff_pool, null) == null ? try(each.value.local_ip_address, null) : null
+  remote_ip_address                  = try(each.value.external_handoff_pool, null) == null ? try(each.value.peer_ip_address, null) : null
+  local_ipv6_address                 = try(each.value.external_handoff_pool, null) == null ? try(each.value.local_ipv6_address, null) : null
+  remote_ipv6_address                = try(each.value.external_handoff_pool, null) == null ? try(each.value.peer_ipv6_address, null) : null
 
-  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_device_role.role, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_site.fabric_site]
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_device_role.role, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_site.fabric_site, catalystcenter_ip_pool_reservation.pool_reservation]
 }
 
 resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
@@ -202,7 +208,7 @@ locals {
   }
 }
 
-resource "catalystcenter_fabric_port_assignment" "port_assignments" {
+resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null }
 
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)

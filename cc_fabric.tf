@@ -68,7 +68,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
-  for_each = { for vn in try(local.l2_virtual_networks, []) : vn.name => vn }
+  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn }
 
   fabric_id                          = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   vlan_name                          = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)
