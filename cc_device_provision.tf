@@ -77,6 +77,16 @@ resource "catalystcenter_device_role" "role" {
   depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
 
+resource "catalystcenter_fabric_provision_device" "non_fabric_device" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.fabric_roles, null) == null }
+
+  site_id           = try(local.site_id_list[each.value.site], null)
+  network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
+  reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
+
+  depends_on = [catalystcenter_device_role.role]
+}
+
 resource "catalystcenter_fabric_provision_device" "border_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" }
 

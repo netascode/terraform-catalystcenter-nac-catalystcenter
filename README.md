@@ -94,6 +94,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_port_assignments.port_assignments](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_assignments) | resource |
 | [catalystcenter_fabric_provision_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_provision_device) | resource |
 | [catalystcenter_fabric_provision_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_provision_device) | resource |
+| [catalystcenter_fabric_provision_device.non_fabric_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_provision_device) | resource |
 | [catalystcenter_fabric_site.fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_site) | resource |
 | [catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_vlan_to_ssid) | resource |
 | [catalystcenter_floor.floor](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floor) | resource |
