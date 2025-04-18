@@ -63,6 +63,10 @@ locals {
   l2_handoff_vlan_id_map = {
     for item in local.anycast_gateways : item.vlan_name => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id if try(item.vlan_name, null) != null
   }
+
+  provisioned_devices = [
+    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION")
+  ]
 }
 
 data "catalystcenter_network_devices" "all_devices" {
@@ -227,5 +231,13 @@ resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   port_assignments  = try(local.device_port_assignments[each.key], null)
 
-  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_anycast_gateway.anycast_gateway]
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_anycast_gateway.anycast_gateway]
+}
+
+resource "time_sleep" "provision_device_wait" {
+  count = length(try(local.provisioned_devices, [])) > 0 ? 1 : 0
+
+  create_duration = "10s"
+
+  depends_on = [catalystcenter_fabric_provision_device.edge_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_provision_device.non_fabric_device, catalystcenter_fabric_provision_device.border_device]
 }
