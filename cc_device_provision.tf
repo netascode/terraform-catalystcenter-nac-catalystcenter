@@ -24,21 +24,23 @@ locals {
   l3_handoffs_ip_transit = flatten([
     for border_device in try(local.catalyst_center.fabric.border_devices, []) : [
       for transit in try(border_device.l3_handoffs, []) : [
-        for vn in try(transit.virtual_networks) : {
-          key                   = format("%s/%s/%s", vn.name, border_device.name, transit.name)
-          transit_name          = try(transit.name, null)
-          device_name           = try(border_device.name, null)
-          device_ip             = try(local.all_devices[border_device.name].device_ip, null)
-          interface_name        = try(transit.interface_name, null)
-          virtual_network_name  = try(vn.name, null)
-          vlan_id               = try(vn.vlan, null)
-          local_ip_address      = try(vn.local_ip_address, null)
-          local_ipv6_address    = try(vn.local_ipv6_address, null)
-          peer_ipv6_address     = try(vn.peer_ipv6_address, null)
-          peer_ip_address       = try(vn.peer_ip_address, null)
-          tcp_mss_adjustment    = try(vn.tcp_mss_adjustment, null)
-          external_handoff_pool = try(border_device.external_handoff_pool, null)
-        }
+        for interface in try(transit.interfaces, []) : [
+          for vn in try(interface.virtual_networks) : {
+            key                   = format("%s/%s/%s/%s", vn.name, interface.name, transit.name, border_device.name)
+            transit_name          = try(transit.name, null)
+            device_name           = try(border_device.name, null)
+            device_ip             = try(local.all_devices[border_device.name].device_ip, null)
+            interface_name        = try(interface.name, null)
+            virtual_network_name  = try(vn.name, null)
+            vlan_id               = try(vn.vlan, null)
+            local_ip_address      = try(vn.local_ip_address, null)
+            local_ipv6_address    = try(vn.local_ipv6_address, null)
+            peer_ipv6_address     = try(vn.peer_ipv6_address, null)
+            peer_ip_address       = try(vn.peer_ip_address, null)
+            tcp_mss_adjustment    = try(vn.tcp_mss_adjustment, null)
+            external_handoff_pool = try(border_device.external_handoff_pool, null)
+          }
+        ]
       ]
     ]
   ])
@@ -61,6 +63,10 @@ locals {
   l2_handoff_vlan_id_map = {
     for item in local.anycast_gateways : item.vlan_name => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id if try(item.vlan_name, null) != null
   }
+
+  provisioned_devices = [
+    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION")
+  ]
 }
 
 data "catalystcenter_network_devices" "all_devices" {
@@ -88,7 +94,7 @@ resource "catalystcenter_fabric_provision_device" "non_fabric_device" {
 }
 
 resource "catalystcenter_fabric_provision_device" "border_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" && try(device.fabric_roles, null) != null }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
@@ -225,5 +231,13 @@ resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   port_assignments  = try(local.device_port_assignments[each.key], null)
 
-  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_anycast_gateway.anycast_gateway]
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.edge_device, catalystcenter_anycast_gateway.anycast_gateway]
+}
+
+resource "time_sleep" "provision_device_wait" {
+  count = length(try(local.provisioned_devices, [])) > 0 ? 1 : 0
+
+  create_duration = "10s"
+
+  depends_on = [catalystcenter_fabric_provision_device.edge_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_provision_device.non_fabric_device, catalystcenter_fabric_provision_device.border_device]
 }
