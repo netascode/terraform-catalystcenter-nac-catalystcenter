@@ -1,4 +1,4 @@
-## 0.0.3-beta1 (unreleased)
+## 0.0.3-beta1
 
 - BREAKING CHANGE: add support for multple interfaces under l3_handoffs
 - Add redeploy option to templates
