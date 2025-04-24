@@ -7,6 +7,7 @@
 - BREAKING CHANGE: rename `catalystcenter_fabric_port_assignment` to `catalystcenter_fabric_port_assignments`
 - Fix issue with assiging same L3 VN to multiple fabric_sites
 - Removed `network_profile` dependencies for deploying templates
+- Fix issue with pnp onboarding templates
 
 ## 0.0.2-beta1
 
