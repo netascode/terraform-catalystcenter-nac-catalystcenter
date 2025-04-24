@@ -171,7 +171,7 @@ resource "catalystcenter_fabric_device" "wireless_controller" {
 }
 
 resource "catalystcenter_fabric_provision_device" "edge_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && (try(contains(device.fabric_roles, "EDGE_NODE"), null) != null || try(device.fabric_site, null) == null) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && try(device.fabric_roles, null) != null }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
@@ -181,7 +181,7 @@ resource "catalystcenter_fabric_provision_device" "edge_device" {
 }
 
 resource "catalystcenter_fabric_device" "edge_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && try(device.fabric_roles, null) != null }
 
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
