@@ -1,7 +1,7 @@
 ## 0.0.3-beta1
 
 - BREAKING CHANGE: add support for multple interfaces under l3_handoffs
-- Add redeploy option to templates
+- Add redeploy option to `catalystcenter_deploy_template`
 - Add non fabric device provisioning
 - Update banner settings to use allow banner settings to be assigned to Global area
 - BREAKING CHANGE: rename `catalystcenter_fabric_port_assignment` to `catalystcenter_fabric_port_assignments`
