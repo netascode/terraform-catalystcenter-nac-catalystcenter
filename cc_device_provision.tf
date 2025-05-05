@@ -156,7 +156,7 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && try(device.managed_ap_locations, null) != null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.managed_ap_locations, null) != null) }
 
   device_name          = each.key
   site                 = try(each.value.site, null)
