@@ -38,10 +38,10 @@ resource "catalystcenter_transit_network" "transit" {
 
   name                              = each.key
   type                              = try(each.value.type, local.defaults.catalyst_center.fabric.transits.type, null)
-  routing_protocol_name             = try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null)
-  autonomous_system_number          = try(each.value.autonomous_system_number, local.defaults.catalyst_center.fabric.transits.autonomous_system_number, null)
-  is_multicast_over_transit_enabled = try(each.value.is_multicast_over_transit_enabled, local.defaults.catalyst_center.fabric.transits.is_multicast_over_transit_enabled, null)
-  control_plane_network_device_ids  = try(each.value.control_plane_network_device_ids, local.defaults.catalyst_center.fabric.transits.control_plane_network_device_ids, null)
+  routing_protocol_name             = try(each.value.type, "") == "IP_BASED_TRANSIT" ? try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null) : null
+  autonomous_system_number          = try(each.value.type, "") == "IP_BASED_TRANSIT" ? try(each.value.autonomous_system_number, local.defaults.catalyst_center.fabric.transits.autonomous_system_number, null) : null
+  is_multicast_over_transit_enabled = try(each.value.type, "") != "IP_BASED_TRANSIT" ? try(each.value.multicast_over_sda_transit, local.defaults.catalyst_center.fabric.transits.multicast_over_sda_transit, null) : null
+  control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : lookup(local.device_name_to_id, device)] : null
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {

@@ -1,7 +1,10 @@
 locals {
   device_ip_to_id = try({
-    for device in data.catalystcenter_network_devices.all_devices.devices :
-    device.management_ip_address => device.id
+    for device in data.catalystcenter_network_devices.all_devices.devices : device.management_ip_address => device.id
+  }, {})
+
+  device_name_to_id = try({
+    for device in data.catalystcenter_network_devices.all_devices.devices : device.hostname => device.id
   }, {})
 
   border_devices = { for device in try(local.catalyst_center.fabric.border_devices, []) : device.name => device }
@@ -84,7 +87,7 @@ resource "catalystcenter_device_role" "role" {
 }
 
 resource "catalystcenter_fabric_provision_device" "non_fabric_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.fabric_roles, null) == null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.fabric_roles, null) == null && try(device.managed_ap_locations, null) == null }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
@@ -151,7 +154,7 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.managed_ap_locations, null) != null) }
 
   device_name          = each.key
   site                 = try(each.value.site, null)
