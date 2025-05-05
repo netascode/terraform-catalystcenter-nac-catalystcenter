@@ -41,7 +41,7 @@ resource "catalystcenter_transit_network" "transit" {
   routing_protocol_name             = try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null)
   autonomous_system_number          = try(each.value.autonomous_system_number, local.defaults.catalyst_center.fabric.transits.autonomous_system_number, null)
   is_multicast_over_transit_enabled = try(each.value.multicast_over_sda_transit, local.defaults.catalyst_center.fabric.transits.multicast_over_sda_transit, null)
-  control_plane_network_device_ids  = try(lookup(local.device_name_to_id, each.value.control_plane_devices[0], ""), null)
+  control_plane_network_device_ids  = [try(lookup(local.device_name_to_id, each.value.control_plane_devices[0], ""), null)]
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {
