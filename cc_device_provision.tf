@@ -4,6 +4,11 @@ locals {
     device.management_ip_address => device.id
   }, {})
 
+  device_name_to_id = try({
+    for device in data.catalystcenter_network_devices.all_devices.devices :
+    device.hostname => device.id
+  }, {})
+
   border_devices = { for device in try(local.catalyst_center.fabric.border_devices, []) : device.name => device }
 
   all_devices = {
