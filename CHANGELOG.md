@@ -1,5 +1,6 @@
-## 0.1.0
+## 0.0.4-beta1 (unreleased)
 
+- BREAKING CHANGE: Fix issue with assigning the same VLAN to different anycast gateways from different fabric sites
 - Fix issue with provision non fabric wireless controller
 - Add support for SDA Transit
 

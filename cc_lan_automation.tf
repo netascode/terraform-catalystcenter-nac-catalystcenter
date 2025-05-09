@@ -23,4 +23,9 @@ resource "catalystcenter_lan_automation" "lanauto_edge" {
   redistribute_isis_to_bgp              = try(each.value.redistribute_isis_to_bgp, local.defaults.catalyst_center.lan_automation.redistribute_isis_to_bgp, null)
   isis_domain_password                  = try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.isis_domain_password, null)
   host_name_prefix                      = try(each.value.host_name_prefix, local.defaults.catalyst_center.lan_automation.host_name_prefix, null)
+  discovery_level                       = try(each.value.discovery_level, local.defaults.catalyst_center.lan_automation.discovery_level, null)
+  discovery_devices                     = try(each.value.discovery_devices, local.defaults.catalyst_center.lan_automation.discovery_devices, null)
+  discovery_timeout                     = try(each.value.discovery_timeout, local.defaults.catalyst_center.lan_automation.discovery_timeout, null)
+
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
 }

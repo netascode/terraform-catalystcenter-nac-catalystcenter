@@ -1,15 +1,4 @@
 locals {
-  # onboarding_template_sites = {
-  #   for v in flatten([
-  #     for profile in try(local.catalyst_center.network_profiles.switching, []) : [
-  #       for template in try(profile.onboarding_templates, []) : [
-  #         for site in profile.sites : {
-  #           "onboarding_template" : try(template, null)
-  #           "site" : try(site, null)
-  #         }
-  #     ]]
-  # ]) : v.site => v }
-
   pnp_devices = [
     for device in try(local.catalyst_center.inventory.devices, []) : {
       "serial_number" : try(device.serial_number, null)

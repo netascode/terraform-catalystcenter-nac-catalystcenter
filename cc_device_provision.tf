@@ -50,21 +50,40 @@ locals {
 
   l2_handoffs = flatten([
     for border_device in try(local.catalyst_center.fabric.border_devices, []) : [
-      for vn in try(border_device.l2_handoffs.virtual_networks, []) : [
-        for vlan in try(vn.vlans) : {
-          key              = format("vlan%s/%s", vlan.external_vlan_id, border_device.name)
+      for vn in try(border_device.l2_handoffs.l2_with_anycast_gateway, []) : [
+        for interface in try(vn.interfaces) : {
+          key              = format("vlan%s/%s/%s", vn.external_vlan, border_device.name, interface)
           device_name      = try(border_device.name, null)
           device_ip        = try(local.all_devices[border_device.name].device_ip, null)
-          interface_name   = try(vn.interface_name, null)
-          external_vlan_id = try(vlan.external_vlan_id, null)
-          vlan_name        = try(vlan.vlan_name, null)
+          interface_name   = try(interface, null)
+          external_vlan_id = try(vn.external_vlan, null)
+          name             = try(vn.name, null)
+        }
+      ]
+    ]
+  ])
+
+  l2_handoffs_no_anycast = flatten([
+    for border_device in try(local.catalyst_center.fabric.border_devices, []) : [
+      for vlan in try(border_device.l2_handoffs.l2_without_anycast_gateway.vlans, []) : [
+        for interface in try(border_device.l2_handoffs.l2_without_anycast_gateway.interfaces, []) : {
+          key              = format("vlan%s/%s/%s", vlan.external_vlan, border_device.name, interface)
+          device_name      = try(border_device.name, null)
+          device_ip        = try(local.all_devices[border_device.name].device_ip, null)
+          interface_name   = try(interface, null)
+          external_vlan_id = try(vlan.external_vlan, null)
+          vlan_name        = try(vlan.name, null)
         }
       ]
     ]
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : item.vlan_name => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id if try(item.vlan_name, null) != null
+    for item in local.anycast_gateways : "${item.l3_virtual_network}#_#${item.fabric_site_name}" => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id
+  }
+
+  l2_handoff_vlan_id_map_no_anycast = {
+    for item in local.l2_virtual_networks : "${item.vlan_name}#_#${item.fabric_site_name}" => item.vlan_id if try(item.vlan_name, null) != null
   }
 
   provisioned_devices = [
@@ -147,10 +166,22 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
   network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
   interface_name    = try(each.value.interface_name, null)
-  internal_vlan_id  = try(local.l2_handoff_vlan_id_map[each.value.vlan_name], null)
+  internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
   depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_site.fabric_site]
+}
+
+resource "catalystcenter_fabric_l2_handoff" "l2_handoff_no_anycast" {
+  for_each = { for handoff in local.l2_handoffs_no_anycast : handoff.key => handoff if strcontains(local.all_devices[handoff.device_name].state, "PROVISION") }
+
+  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  fabric_id         = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
+  interface_name    = try(each.value.interface_name, null)
+  internal_vlan_id  = try(local.l2_handoff_vlan_id_map_no_anycast["${each.value.vlan_name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
+  external_vlan_id  = try(each.value.external_vlan_id, null)
+
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l2_virtual_network.l2_vn]
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
