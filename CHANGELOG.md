@@ -1,4 +1,4 @@
-## 0.0.4-beta1 (unreleased)
+## 0.0.4-beta1
 
 - BREAKING CHANGE: Fix issue with assigning the same VLAN to different anycast gateways from different fabric sites
 - Fix issue with provision non fabric wireless controller
