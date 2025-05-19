@@ -141,6 +141,18 @@ resource "catalystcenter_fabric_device" "border_device" {
   depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.border_device]
 }
 
+resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" && try(device.fabric_roles, null) != null }
+
+  network_device_id                 = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  fabric_id                         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  transit_network_id                = try(catalystcenter_transit_network.transit[local.border_devices[each.key].sda_transit].id, null)
+  affinity_id_prime                 = try(local.border_devices[each.key].affinity_id_prime, local.defaults.catalyst_center.fabric.border_devices.affinity_id_prime, null)
+  affinity_id_decider               = try(local.border_devices[each.key].affinity_id_decider, local.defaults.catalyst_center.fabric.border_devices.affinity_id_decider, null)
+  connected_to_internet             = try(local.border_devices[each.key].connected_to_internet, local.defaults.catalyst_center.fabric.border_devices.connected_to_internet, null)
+  is_multicast_over_transit_enabled = try(local.border_devices[each.key].multicast_over_transit, local.defaults.catalyst_center.fabric.border_devices.multicast_over_transit, null)
+}
+
 resource "catalystcenter_fabric_l3_handoff_ip_transit" "l3_handoff_ip_transit" {
   for_each = { for handoff in local.l3_handoffs_ip_transit : handoff.key => handoff if strcontains(local.all_devices[handoff.device_name].state, "PROVISION") }
 
