@@ -228,7 +228,7 @@ resource "catalystcenter_fabric_provision_device" "edge_device" {
 }
 
 resource "catalystcenter_fabric_device" "edge_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && try(device.fabric_roles, null) != null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && try(device.fabric_roles, null) != null && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") == false }
 
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
