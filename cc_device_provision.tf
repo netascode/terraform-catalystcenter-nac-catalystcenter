@@ -142,7 +142,7 @@ resource "catalystcenter_fabric_device" "border_device" {
 }
 
 resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" && try(device.fabric_roles, null) != null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" && try(device.fabric_roles, null) != null && try(local.border_devices[device.name].sda_transit, null) != null }
 
   network_device_id                 = lookup(local.device_ip_to_id, each.value.device_ip, "")
   fabric_id                         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
