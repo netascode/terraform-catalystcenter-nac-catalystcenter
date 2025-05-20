@@ -149,7 +149,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     ssid_name           = try(ssid.name, null)
     enable_fabric       = try(ssid.enable_fabric, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_fabric, null)
     enable_flex_connect = try(ssid.enable_flex_connect, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_flex_connect, null)
-    interface_name      = try(ssid.enable_fabric, false) == true ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
+    interface_name      = try(ssid.enable_fabric, false) == false ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
   }], null)
 
   depends_on = [catalystcenter_wireless_ssid.ssid]
