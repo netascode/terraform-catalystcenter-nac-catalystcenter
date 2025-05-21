@@ -192,6 +192,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
   redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
   template_id         = catalystcenter_template.regular_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  copying_config      = try(local.templates_map[tmpl].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   is_composite        = false
 
   target_info = [
