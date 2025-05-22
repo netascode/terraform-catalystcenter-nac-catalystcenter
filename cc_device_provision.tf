@@ -14,8 +14,14 @@ locals {
       {
         dayn_templates_map = merge(
           tomap({
-            for template in try(device.dayn_templates.regular, []) : template.name => merge(template, { variables = try(template.variables, []) })
-          }),
+            for template in try(device.dayn_templates.regular, []) : template.name => merge(
+              template,
+              {
+                variables           = try(template.variables, []),
+                copying_config      = try(template.copying_config, null)
+                force_push_template = try(template.force_push_template, null)
+              }
+          ) }),
           tomap({
             for template in try(device.dayn_templates.composite, []) : template.name => merge(template, { variables = try(template.variables, []) })
           })

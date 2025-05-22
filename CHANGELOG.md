@@ -1,3 +1,8 @@
+## 0.0.5-beta1 (unreleased)
+
+- Add support for saving running config to startup config in regular templates
+- Fix issue with anycast_gateway dependencies to fabric_vlan_to_ssid
+
 ## 0.0.4-beta1
 
 - BREAKING CHANGE: Fix issue with assigning the same VLAN to different anycast gateways from different fabric sites
