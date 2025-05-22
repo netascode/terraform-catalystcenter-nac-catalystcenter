@@ -59,7 +59,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if vn_name != "INFRA_VN" }
+  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names }
 
   virtual_network_name = each.key
   fabric_ids           = [for site in each.value : catalystcenter_fabric_site.fabric_site[site].id]
