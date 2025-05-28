@@ -1,7 +1,7 @@
 locals {
   yaml_templates_directories = flatten([
     for dir in var.templates_directories : [
-      for file in fileset(dir, "*.{j2,vlt}") : "${dir}${file}"
+      for file in fileset(dir, "*.{j2,vlt,vtl}") : "${dir}${file}"
     ]
   ])
 
@@ -102,7 +102,7 @@ resource "catalystcenter_template" "regular_template" {
   language         = try(each.value.language, local.defaults.catalyst_center.templates.language, null)
   software_type    = try(each.value.software_type, local.defaults.catalyst_center.templates.software_type, null)
   software_version = try(each.value.software_version, local.catalyst_center.templates.software_version, null)
-  template_content = try(local.templates_content[each.key], null)
+  template_content = local.templates_content[each.key]
   composite        = try(each.value.composite, local.defaults.catalyst_center.templates.composite, null)
 
   template_params = [for param in try(each.value.variables, []) : {

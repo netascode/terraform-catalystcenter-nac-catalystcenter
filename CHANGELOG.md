@@ -1,5 +1,6 @@
 ## 0.1.0 (unreleased)
 
+- Add support for `.vtl` and `.vlt` extensions for velocity templates
 - Add support for `INFRA_VN` and `DEFAULT_VN` layer3 virtual networks
 - Add support for saving running config to startup config while deploying regular templates
 - Fix issue with anycast_gateway dependencies to fabric_vlan_to_ssid
