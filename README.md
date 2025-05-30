@@ -108,8 +108,8 @@ module "catalystcenter" {
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile) | resource |
 | [catalystcenter_ntp_settings.ntp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ntp_settings) | resource |
 | [catalystcenter_pnp_config_preview.config_preview](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_config_preview) | resource |
+| [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device) | resource |
 | [catalystcenter_pnp_device_claim_site.claim_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device_claim_site) | resource |
-| [catalystcenter_pnp_import_devices.pnp_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_import_devices) | resource |
 | [catalystcenter_project.project](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/project) | resource |
 | [catalystcenter_tag.tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/tag) | resource |
 | [catalystcenter_telemetry_settings.telemetry_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/telemetry_settings) | resource |
@@ -130,7 +130,6 @@ module "catalystcenter" {
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
-| [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/pnp_device) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 ## Modules
 

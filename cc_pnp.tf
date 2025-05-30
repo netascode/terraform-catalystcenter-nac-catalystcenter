@@ -1,30 +1,15 @@
-locals {
-  pnp_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : {
-      "serial_number" : try(device.serial_number, null)
-      "hostname" : try(device.name, null)
-      "pid" : try(device.pid, null)
-    } if device.state == "PNP"
-  ]
-}
-
-resource "catalystcenter_pnp_import_devices" "pnp_devices" {
-  count   = length(local.pnp_devices) != 0 ? 1 : 0
-  devices = local.pnp_devices
-}
-
-data "catalystcenter_pnp_device" "pnp_device" {
+resource "catalystcenter_pnp_device" "pnp_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" }
 
   serial_number = each.value.serial_number
-
-  depends_on = [catalystcenter_pnp_import_devices.pnp_devices]
+  hostname      = each.value.name
+  pid           = each.value.pid
 }
 
 resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" }
 
-  device_id         = data.catalystcenter_pnp_device.pnp_device[each.key].id
+  device_id         = catalystcenter_pnp_device.pnp_device.id
   site_id           = local.site_id_list[each.value.site]
   type              = try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
   image_id          = try(each.value.image_id, local.defaults.catalyst_center.pnp.devices.image_id, null)
@@ -38,7 +23,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
 resource "catalystcenter_pnp_config_preview" "config_preview" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" }
 
-  device_id = data.catalystcenter_pnp_device.pnp_device[each.key].id
+  device_id = catalystcenter_pnp_device.pnp_device.id
   site_id   = local.site_id_list[each.value.site]
   type      = try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
 
