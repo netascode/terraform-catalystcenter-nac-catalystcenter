@@ -1,5 +1,7 @@
 ## 0.1.0 (unreleased)
 
+- Add `ASSIGN` state for assigning device to site without provisioning
+- Fix pnp issue when adding multiple devices
 - Add support for `.vtl` and `.vlt` extensions for velocity templates
 - Add support for `INFRA_VN` and `DEFAULT_VN` layer3 virtual networks
 - Add support for saving running config to startup config while deploying regular templates

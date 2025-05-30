@@ -95,14 +95,25 @@ locals {
   provisioned_devices = [
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION")
   ]
+
+  assigned_devices_map = {
+    for d in local.catalyst_center.inventory.devices :
+    d.site => d.name... if d.state == "ASSIGN"
+  }
 }
 
 data "catalystcenter_network_devices" "all_devices" {
 }
 
-resource "catalystcenter_device_role" "role" {
+resource "catalystcenter_assign_device_to_site" "devices_to_site" {
+  for_each = local.assigned_devices_map
 
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") }
+  device_ids = [for device in each.value : local.device_name_to_id[device]]
+  site_id    = local.site_id_list[each.key]
+}
+
+resource "catalystcenter_device_role" "role" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") || device.state == "ASSIGN" }
 
   device_id   = lookup(local.device_ip_to_id, each.value.device_ip, "")
   role        = try(each.value.device_role, local.defaults.catalyst_center.inventory.devices.device_role, null)
