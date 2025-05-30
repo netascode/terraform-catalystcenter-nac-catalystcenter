@@ -41,7 +41,7 @@ module "catalystcenter" {
 | <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.8 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
-| <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 0.2.6 |
+| <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
