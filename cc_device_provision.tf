@@ -96,10 +96,6 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION")
   ]
 
-  assigned_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "ASSIGN")
-  ]
-
   assigned_devices_map = {
     for d in local.catalyst_center.inventory.devices :
     d.site => d.name... if d.state == "ASSIGN"
@@ -133,7 +129,7 @@ resource "catalystcenter_fabric_provision_device" "non_fabric_device" {
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
 
-  depends_on = [catalystcenter_device_role.role, time_sleep.assign_site_wait]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
 }
 
 resource "catalystcenter_fabric_provision_device" "border_device" {
@@ -308,12 +304,4 @@ resource "time_sleep" "provision_device_wait" {
   create_duration = "10s"
 
   depends_on = [catalystcenter_fabric_provision_device.edge_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_provision_device.non_fabric_device, catalystcenter_fabric_provision_device.border_device]
-}
-
-resource "time_sleep" "assign_site_wait" {
-  count = length(try(local.assigned_devices, [])) > 0 ? 1 : 0
-
-  destroy_duration = "30s"
-
-  depends_on = [catalystcenter_assign_device_to_site.devices_to_site]
 }
