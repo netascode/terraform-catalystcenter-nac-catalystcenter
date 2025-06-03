@@ -1,5 +1,6 @@
 ## 0.1.0 (unreleased)
 
+- BREAKING CHANGE: Add support to update `authentication_template` settings globally and on fabric site level
 - Add `ASSIGN` state for assigning device to site without provisioning
 - Fix pnp issue when adding multiple devices
 - Add support for `.vtl` and `.vlt` extensions for velocity templates

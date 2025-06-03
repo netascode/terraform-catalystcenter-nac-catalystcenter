@@ -55,7 +55,7 @@ resource "catalystcenter_transit_network" "transit" {
 resource "catalystcenter_fabric_site" "fabric_site" {
   for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site }
 
-  authentication_profile_name = try(each.value.authentication_template_name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template_name, null)
+  authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
   site_id                     = try(local.site_id_list[each.key], each.key, null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
