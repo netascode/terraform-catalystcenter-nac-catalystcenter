@@ -29,7 +29,7 @@ locals {
   ]
 
   assigned_devices_map = {
-    for d in local.catalyst_center.inventory.devices :
+    for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => d.name... if d.state == "ASSIGN"
   }
 }

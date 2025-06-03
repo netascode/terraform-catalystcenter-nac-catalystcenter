@@ -21,7 +21,20 @@ locals {
     ]
   ])
 
-  l3_virtual_networks = {
+  l3_virtual_networks_fabric_zone = {
+    for vn in flatten([
+      for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+        for fabric_zone in try(fabric_site.fabric_zones, []) : [
+          for vn in try(fabric_zone.l3_virtual_networks, []) : {
+            name             = vn
+            fabric_site_name = fabric_zone.name
+          }
+        ]
+      ]
+    ]) : vn.name => vn.fabric_site_name...
+  }
+
+  l3_virtual_networks_fabric_site = {
     for vn in flatten([
       for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
         for vn in try(fabric_site.l3_virtual_networks, []) : {
@@ -30,6 +43,13 @@ locals {
         }
       ]
     ]) : vn.name => vn.fabric_site_name...
+  }
+
+  l3_virtual_networks = {
+    for key in keys(local.l3_virtual_networks_fabric_site) : key => concat(
+      try(local.l3_virtual_networks_fabric_site[key], []),
+      try(local.l3_virtual_networks_fabric_zone[key], [])
+    )
   }
 }
 
@@ -63,6 +83,23 @@ resource "catalystcenter_fabric_site" "fabric_site" {
 }
 
 locals {
+  fabric_zones = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for fabric_zone in try(fabric_site.fabric_zones, []) : fabric_zone
+    ]
+  ])
+}
+
+resource "catalystcenter_fabric_zone" "fabric_zone" {
+  for_each = { for zone in try(local.fabric_zones, []) : zone.name => zone }
+
+  authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
+  site_id                     = try(local.site_id_list[each.key], each.key, null)
+
+  depends_on = [catalystcenter_fabric_site.fabric_site]
+}
+
+locals {
   fabric_site_id_list = { for k, v in catalystcenter_fabric_site.fabric_site : k => v.id }
 }
 
@@ -70,7 +107,17 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
   for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names }
 
   virtual_network_name = each.key
-  fabric_ids           = [for site in each.value : catalystcenter_fabric_site.fabric_site[site].id]
+  fabric_ids = [
+    for site in each.value : (
+      contains(keys(catalystcenter_fabric_site.fabric_site), site)
+      ? catalystcenter_fabric_site.fabric_site[site].id
+      : (
+        contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
+        ? catalystcenter_fabric_zone.fabric_zone[site].id
+        : null
+      )
+    )
+  ]
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site]
 }
@@ -239,7 +286,7 @@ locals {
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : "${item.l3_virtual_network}#_#${item.fabric_site_name}" => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id
+    for item in local.anycast_gateways : "${item.name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id
   }
 }
 
