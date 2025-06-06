@@ -100,6 +100,7 @@ resource "catalystcenter_fabric_zone" "fabric_zone" {
 }
 
 locals {
+  fabric_zone_id_list = { for k, v in catalystcenter_fabric_zone.fabric_zone : k => v.id }
   fabric_site_id_list = { for k, v in catalystcenter_fabric_site.fabric_site : k => v.id }
 }
 
@@ -353,7 +354,7 @@ locals {
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
             network_device_id          = try(local.device_ip_to_id[device.device_ip], "")
-            fabric_id                  = try(local.fabric_site_id_list[device.fabric_site], null)
+            fabric_id                  = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
           ] : [
           {
@@ -363,7 +364,7 @@ locals {
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
             network_device_id          = try(local.device_ip_to_id[device.device_ip], "")
-            fabric_id                  = try(local.fabric_site_id_list[device.fabric_site], null)
+            fabric_id                  = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
         ]
       )
@@ -374,7 +375,7 @@ locals {
 resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null }
 
-  fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  fabric_id         = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   port_assignments  = try(local.device_port_assignments[each.key], null)
 
