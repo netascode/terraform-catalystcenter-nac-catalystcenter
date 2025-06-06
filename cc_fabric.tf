@@ -69,7 +69,7 @@ resource "catalystcenter_transit_network" "transit" {
   is_multicast_over_transit_enabled = try(each.value.type, "") != "IP_BASED_TRANSIT" ? try(each.value.multicast_over_sda_transit, local.defaults.catalyst_center.fabric.transits.multicast_over_sda_transit, null) : null
   control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : try(local.device_name_to_id[device], null)] : null
 
-  depends_on = [catalystcenter_fabric_provision_device.non_fabric_device, catalystcenter_fabric_provision_device.border_device]
+  depends_on = [catalystcenter_fabric_provision_device.non_fabric_device, catalystcenter_fabric_provision_device.border_device, catalystcenter_fabric_device.border_device]
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {
