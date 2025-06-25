@@ -109,7 +109,7 @@ resource "catalystcenter_wireless_rf_profile" "rf_profile" {
   default_rf_profile                = try(each.value.default_rf_profile, local.defaults.catalyst_center.wireless.rf_profiles.default_rf_profile, null)
   enable_radio_type_a               = try(each.value.enable_radio_type_a, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type_a, null)
   enable_radio_type_b               = try(each.value.enable_radio_type_b, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type_b, null)
-  enable_radio_type6_g_hz           = try(each.value.enable_radio_type6_ghz, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type6_ghz, null)
+  enable_radio_type6_g_hz           = try(each.value.enable_radio_type_6_ghz, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type_6_ghz, null)
 
   # Radio Type A Properties (5 GHz)
   radio_type_a_parent_profile           = try(each.value.radio_type_a_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.parent_profile, null)
