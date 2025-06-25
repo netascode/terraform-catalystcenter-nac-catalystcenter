@@ -105,40 +105,124 @@ resource "catalystcenter_wireless_ssid" "ssid" {
 resource "catalystcenter_wireless_rf_profile" "rf_profile" {
   for_each = { for rf_profile in try(local.catalyst_center.wireless.rf_profiles, []) : rf_profile.name => rf_profile }
 
-  name                              = each.key
+  rf_profile_name                   = each.key
   default_rf_profile                = try(each.value.default_rf_profile, local.defaults.catalyst_center.wireless.rf_profiles.default_rf_profile, null)
   enable_radio_type_a               = try(each.value.enable_radio_type_a, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type_a, null)
   enable_radio_type_b               = try(each.value.enable_radio_type_b, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type_b, null)
-  enable_radio_type_c               = try(each.value.enable_radio_type_c, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type_c, null)
-  channel_width                     = try(each.value.channel_width, local.defaults.catalyst_center.wireless.rf_profiles.channel_width, null)
-  enable_custom                     = try(each.value.enable_custom, local.defaults.catalyst_center.wireless.rf_profiles.enable_custom, null)
-  enable_brown_field                = try(each.value.enable_brown_field, local.defaults.catalyst_center.wireless.rf_profiles.enable_brown_field, null)
-  radio_type_a_parent_profile       = try(each.value.radio_type_a_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.parent_profile, null)
-  radio_type_a_radio_channels       = try(each.value.radio_type_a_properties.radio_channels, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.radio_channels, null)
-  radio_type_a_data_rates           = try(each.value.radio_type_a_properties.data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.data_rates, null)
-  radio_type_a_mandatory_data_rates = try(each.value.radio_type_a_properties.mandatory_data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.mandatory_data_rates, null)
-  radio_type_a_power_threshold_v1   = try(each.value.radio_type_a_properties.power_threshold_v1, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.power_threshold_v1, null)
-  radio_type_a_rx_sop_threshold     = try(each.value.radio_type_a_properties.rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.rx_sop_threshold, null)
-  radio_type_a_min_power_level      = try(each.value.radio_type_a_properties.min_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.min_power_level, null)
-  radio_type_a_max_power_level      = try(each.value.radio_type_a_properties.max_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.max_power_level, null)
-  radio_type_b_parent_profile       = try(each.value.radio_type_b_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.parent_profile, null)
-  radio_type_b_radio_channels       = try(each.value.radio_type_b_properties.radio_channels, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.radio_channels, null)
-  radio_type_b_data_rates           = try(each.value.radio_type_b_properties.data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.data_rates, null)
-  radio_type_b_mandatory_data_rates = try(each.value.radio_type_b_properties.mandatory_data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.mandatory_data_rates, null)
-  radio_type_b_power_threshold_v1   = try(each.value.radio_type_b_properties.power_threshold_v1, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.power_threshold_v1, null)
-  radio_type_b_rx_sop_threshold     = try(each.value.radio_type_b_properties.rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.rx_sop_threshold, null)
-  radio_type_b_min_power_level      = try(each.value.radio_type_b_properties.min_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.min_power_level, null)
-  radio_type_b_max_power_level      = try(each.value.radio_type_b_properties.max_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.max_power_level, null)
-  radio_type_c_parent_profile       = try(each.value.radio_type_c_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.parent_profile, null)
-  radio_type_c_radio_channels       = try(each.value.radio_type_c_properties.radio_channels, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.radio_channels, null)
-  radio_type_c_data_rates           = try(each.value.radio_type_c_properties.data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.data_rates, null)
-  radio_type_c_mandatory_data_rates = try(each.value.radio_type_c_properties.mandatory_data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.mandatory_data_rates, null)
-  radio_type_c_power_threshold_v1   = try(each.value.radio_type_c_properties.power_threshold_v1, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.power_threshold_v1, null)
-  radio_type_c_rx_sop_threshold     = try(each.value.radio_type_c_properties.rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.rx_sop_threshold, null)
-  radio_type_c_min_power_level      = try(each.value.radio_type_c_properties.min_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.min_power_level, null)
-  radio_type_c_max_power_level      = try(each.value.radio_type_c_properties.max_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_c_properties.max_power_level, null)
+  enable_radio_type6_g_hz           = try(each.value.enable_radio_type6_g_hz, local.defaults.catalyst_center.wireless.rf_profiles.enable_radio_type6_g_hz, null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid]
+  # Radio Type A Properties (5 GHz)
+  radio_type_a_parent_profile           = try(each.value.radio_type_a_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.parent_profile, null)
+  radio_type_a_radio_channels           = try(each.value.radio_type_a_properties.radio_channels, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.radio_channels, null)
+  radio_type_a_data_rates               = try(each.value.radio_type_a_properties.data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.data_rates, null)
+  radio_type_a_mandatory_data_rates     = try(each.value.radio_type_a_properties.mandatory_data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.mandatory_data_rates, null)
+  radio_type_a_power_threshold_v1       = try(each.value.radio_type_a_properties.power_threshold_v1, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.power_threshold_v1, null)
+  radio_type_a_rx_sop_threshold         = try(each.value.radio_type_a_properties.rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.rx_sop_threshold, null)
+  radio_type_a_min_power_level          = try(each.value.radio_type_a_properties.min_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.min_power_level, null)
+  radio_type_a_max_power_level          = try(each.value.radio_type_a_properties.max_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.max_power_level, null)
+  radio_type_a_channel_width            = try(each.value.radio_type_a_properties.channel_width, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.channel_width, null)
+  radio_type_a_preamble_puncture        = try(each.value.radio_type_a_properties.preamble_puncture, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.preamble_puncture, null)
+  radio_type_a_zero_wait_dfs_enable     = try(each.value.radio_type_a_properties.zero_wait_dfs_enable, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.zero_wait_dfs_enable, null)
+  radio_type_a_custom_rx_sop_threshold  = try(each.value.radio_type_a_properties.custom_rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.custom_rx_sop_threshold, null)
+  radio_type_a_max_radio_clients        = try(each.value.radio_type_a_properties.max_radio_clients, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.max_radio_clients, null)
+
+  # Radio Type A FRA Properties (5 GHz)
+  radio_type_a_fra_properties_client_aware = try(each.value.radio_type_a_properties.fra_properties_a.client_aware, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.fra_properties_a.client_aware, null)
+  radio_type_a_fra_properties_client_select = try(each.value.radio_type_a_properties.fra_properties_a.client_select, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.fra_properties_a.client_select, null)
+  radio_type_a_fra_properties_client_reset = try(each.value.radio_type_a_properties.fra_properties_a.client_reset, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.fra_properties_a.client_reset, null)
+
+  # Radio Type A Coverage Hole Detection Properties (5 GHz)
+  radio_type_a_coverage_hole_detection_properties_chd_client_level = try(each.value.radio_type_a_properties.coverage_hole_detection_properties.chd_client_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.coverage_hole_detection_properties.chd_client_level, null)
+  radio_type_a_coverage_hole_detection_properties_chd_data_rssi_threshold = try(each.value.radio_type_a_properties.coverage_hole_detection_properties.chd_data_rssi_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.coverage_hole_detection_properties.chd_data_rssi_threshold, null)
+  radio_type_a_coverage_hole_detection_properties_chd_voice_rssi_threshold = try(each.value.radio_type_a_properties.coverage_hole_detection_properties.chd_voice_rssi_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.coverage_hole_detection_properties.chd_voice_rssi_threshold, null)
+  radio_type_a_coverage_hole_detection_properties_chd_exception_level = try(each.value.radio_type_a_properties.coverage_hole_detection_properties.chd_exception_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.coverage_hole_detection_properties.chd_exception_level, null)
+
+  # Radio Type A Spatial Reuse Properties (5 GHz)
+  radio_type_a_spatial_reuse_properties_dot11ax_non_srg_obss_packet_detect = try(each.value.radio_type_a_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect, null)
+  radio_type_a_spatial_reuse_properties_dot11ax_non_srg_obss_packet_detect_max_threshold = try(each.value.radio_type_a_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect_max_threshold, null)
+  radio_type_a_spatial_reuse_properties_dot11ax_srg_obss_packet_detect = try(each.value.radio_type_a_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, null)
+  radio_type_a_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_min_threshold = try(each.value.radio_type_a_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, null)
+  radio_type_a_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_max_threshold = try(each.value.radio_type_a_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_a_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, null)
+
+  # Radio Type B Properties (2.4 GHz)
+  radio_type_b_parent_profile           = try(each.value.radio_type_b_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.parent_profile, null)
+  radio_type_b_radio_channels           = try(each.value.radio_type_b_properties.radio_channels, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.radio_channels, null)
+  radio_type_b_data_rates               = try(each.value.radio_type_b_properties.data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.data_rates, null)
+  radio_type_b_mandatory_data_rates     = try(each.value.radio_type_b_properties.mandatory_data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.mandatory_data_rates, null)
+  radio_type_b_power_threshold_v1       = try(each.value.radio_type_b_properties.power_threshold_v1, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.power_threshold_v1, null)
+  radio_type_b_rx_sop_threshold         = try(each.value.radio_type_b_properties.rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.rx_sop_threshold, null)
+  radio_type_b_min_power_level          = try(each.value.radio_type_b_properties.min_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.min_power_level, null)
+  radio_type_b_max_power_level          = try(each.value.radio_type_b_properties.max_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.max_power_level, null)
+  radio_type_b_custom_rx_sop_threshold  = try(each.value.radio_type_b_properties.custom_rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.custom_rx_sop_threshold, null)
+  radio_type_b_max_radio_clients        = try(each.value.radio_type_b_properties.max_radio_clients, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.max_radio_clients, null)
+
+  # Radio Type B Coverage Hole Detection Properties (2.4 GHz)
+  radio_type_b_coverage_hole_detection_properties_chd_client_level = try(each.value.radio_type_b_properties.coverage_hole_detection_properties.chd_client_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.coverage_hole_detection_properties.chd_client_level, null)
+  radio_type_b_coverage_hole_detection_properties_chd_data_rssi_threshold = try(each.value.radio_type_b_properties.coverage_hole_detection_properties.chd_data_rssi_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.coverage_hole_detection_properties.chd_data_rssi_threshold, null)
+  radio_type_b_coverage_hole_detection_properties_chd_voice_rssi_threshold = try(each.value.radio_type_b_properties.coverage_hole_detection_properties.chd_voice_rssi_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.coverage_hole_detection_properties.chd_voice_rssi_threshold, null)
+  radio_type_b_coverage_hole_detection_properties_chd_exception_level = try(each.value.radio_type_b_properties.coverage_hole_detection_properties.chd_exception_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.coverage_hole_detection_properties.chd_exception_level, null)
+
+  # Radio Type B Spatial Reuse Properties (2.4 GHz)
+  radio_type_b_spatial_reuse_properties_dot11ax_non_srg_obss_packet_detect = try(each.value.radio_type_b_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect, null)
+  radio_type_b_spatial_reuse_properties_dot11ax_non_srg_obss_packet_detect_max_threshold = try(each.value.radio_type_b_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect_max_threshold, null)
+  radio_type_b_spatial_reuse_properties_dot11ax_srg_obss_packet_detect = try(each.value.radio_type_b_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, null)
+  radio_type_b_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_min_threshold = try(each.value.radio_type_b_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, null)
+  radio_type_b_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_max_threshold = try(each.value.radio_type_b_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_b_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, null)
+
+  # Radio Type C (6 GHz) Properties
+  radio_type_c_parent_profile           = try(each.value.radio_type_6_ghz_properties.parent_profile, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.parent_profile, null)
+  radio_type_c_radio_channels           = try(each.value.radio_type_6_ghz_properties.radio_channels, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.radio_channels, null)
+  radio_type_c_data_rates               = try(each.value.radio_type_6_ghz_properties.data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.data_rates, null)
+  radio_type_c_mandatory_data_rates     = try(each.value.radio_type_6_ghz_properties.mandatory_data_rates, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.mandatory_data_rates, null)
+  radio_type_c_power_threshold_v1       = try(each.value.radio_type_6_ghz_properties.power_threshold_v1, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.power_threshold_v1, null)
+  radio_type_c_rx_sop_threshold         = try(each.value.radio_type_6_ghz_properties.rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.rx_sop_threshold, null)
+  radio_type_c_min_power_level          = try(each.value.radio_type_6_ghz_properties.min_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.min_power_level, null)
+  radio_type_c_max_power_level          = try(each.value.radio_type_6_ghz_properties.max_power_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.max_power_level, null)
+  radio_type_c_enable_standard_power_service = try(each.value.radio_type_6_ghz_properties.enable_standard_power_service, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.enable_standard_power_service, null)
+  radio_type_c_custom_rx_sop_threshold  = try(each.value.radio_type_6_ghz_properties.custom_rx_sop_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.custom_rx_sop_threshold, null)
+  radio_type_c_max_radio_clients        = try(each.value.radio_type_6_ghz_properties.max_radio_clients, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.max_radio_clients, null)
+
+  # Radio Type C Multi-BSSID Properties - 802.11ax Parameters
+  radio_type_c_multi_bssid_properties_dot11ax_parameters_ofdma_down_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.ofdma_down_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.ofdma_down_link, null)
+  radio_type_c_multi_bssid_properties_dot11ax_parameters_ofdma_up_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.ofdma_up_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.ofdma_up_link, null)
+  radio_type_c_multi_bssid_properties_dot11ax_parameters_mu_mimo_up_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.mu_mimo_up_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.mu_mimo_up_link, null)
+  radio_type_c_multi_bssid_properties_dot11ax_parameters_mu_mimo_down_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.mu_mimo_down_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11ax_parameters.mu_mimo_down_link, null)
+
+  # Radio Type C Multi-BSSID Properties - 802.11be Parameters
+  radio_type_c_multi_bssid_properties_dot11be_parameters_ofdma_down_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.ofdma_down_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.ofdma_down_link, null)
+  radio_type_c_multi_bssid_properties_dot11be_parameters_ofdma_up_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.ofdma_up_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.ofdma_up_link, null)
+  radio_type_c_multi_bssid_properties_dot11be_parameters_mu_mimo_up_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.mu_mimo_up_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.mu_mimo_up_link, null)
+  radio_type_c_multi_bssid_properties_dot11be_parameters_mu_mimo_down_link = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.mu_mimo_down_link, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.mu_mimo_down_link, null)
+  radio_type_c_multi_bssid_properties_dot11be_parameters_ofdma_multi_ru = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.ofdma_multi_ru, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.dot11be_parameters.ofdma_multi_ru, null)
+
+  # Radio Type C Multi-BSSID Properties - Target Wake Time and TWT Broadcast Support
+  radio_type_c_multi_bssid_properties_target_wake_time = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.target_wake_time, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.target_wake_time, null)
+  radio_type_c_multi_bssid_properties_twt_broadcast_support = try(each.value.radio_type_6_ghz_properties.multi_bssid_properties.twt_broadcast_support, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.multi_bssid_properties.twt_broadcast_support, null)
+
+  # Radio Type C Additional Properties
+  radio_type_c_preamble_puncture       = try(each.value.radio_type_6_ghz_properties.preamble_puncture, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.preamble_puncture, null)
+  radio_type_c_min_dbs_width           = try(each.value.radio_type_6_ghz_properties.min_dbs_width, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.min_dbs_width, null)
+  radio_type_c_max_dbs_width           = try(each.value.radio_type_6_ghz_properties.max_dbs_width, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.max_dbs_width, null)
+  radio_type_c_psc_enforcing_enabled   = try(each.value.radio_type_6_ghz_properties.psc_enforcing_enabled, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.psc_enforcing_enabled, null)
+  radio_type_c_discovery_frames_6ghz   = try(each.value.radio_type_6_ghz_properties.discovery_frames_6ghz, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.discovery_frames_6ghz, null)
+  radio_type_c_broadcast_probe_response_interval = try(each.value.radio_type_6_ghz_properties.broadcast_probe_response_interval, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.broadcast_probe_response_interval, null)
+
+  # Radio Type C FRA Properties
+  radio_type_c_fra_properties_client_reset_count = try(each.value.radio_type_6_ghz_properties.fra_properties_c.client_reset_count, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.fra_properties_c.client_reset_count, null)
+  radio_type_c_fra_properties_client_utilization_threshold = try(each.value.radio_type_6_ghz_properties.fra_properties_c.client_utilization_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.fra_properties_c.client_utilization_threshold, null)
+
+  # Radio Type C Coverage Hole Detection Properties
+  radio_type_c_coverage_hole_detection_properties_chd_client_level = try(each.value.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_client_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_client_level, null)
+  radio_type_c_coverage_hole_detection_properties_chd_data_rssi_threshold = try(each.value.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_data_rssi_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_data_rssi_threshold, null)
+  radio_type_c_coverage_hole_detection_properties_chd_voice_rssi_threshold = try(each.value.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_voice_rssi_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_voice_rssi_threshold, null)
+  radio_type_c_coverage_hole_detection_properties_chd_exception_level = try(each.value.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_exception_level, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.coverage_hole_detection_properties.chd_exception_level, null)
+
+  # Radio Type C Spatial Reuse Properties (6 GHz)
+  radio_type_c_spatial_reuse_properties_dot11ax_non_srg_obss_packet_detect = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect, null)
+  radio_type_c_spatial_reuse_properties_dot11ax_non_srg_obss_packet_detect_max_threshold = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_non_srg_obss_packet_detect_max_threshold, null)
+  radio_type_c_spatial_reuse_properties_dot11ax_srg_obss_packet_detect = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, null)
+  radio_type_c_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_min_threshold = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, null)
+  radio_type_c_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_max_threshold = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, null)
 }
 
 resource "catalystcenter_wireless_profile" "wireless_profile" {
