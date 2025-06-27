@@ -31,4 +31,8 @@ resource "catalystcenter_discovery" "discovery" {
   snmp_version              = try(each.value.snmp_version, local.defaults.catalyst_center.inventory.discovery.snmp_version, null)
   timeout_seconds           = try(each.value.timeout_seconds, local.defaults.catalyst_center.inventory.discovery.timeout_seconds, null)
   user_name_list            = try(each.value.user_name_list, local.defaults.catalyst_center.inventory.discovery.user_name_list, null)
+
+  lifecycle {
+    ignore_changes = [discovery_type]
+  }
 }

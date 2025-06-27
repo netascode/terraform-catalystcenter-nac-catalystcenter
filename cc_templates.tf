@@ -1,7 +1,7 @@
 locals {
   yaml_templates_directories = flatten([
     for dir in var.templates_directories : [
-      for file in fileset(dir, "*.{j2,vlt}") : "${dir}${file}"
+      for file in fileset(dir, "*.{j2,vlt,vtl}") : "${dir}${file}"
     ]
   ])
 
@@ -64,6 +64,8 @@ locals {
           "state" : try(device.state, null),
           "device_ip" : try(device.device_ip, null)
           "deploy_state" : try(template.state, null)
+          "copying_config" : try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+          "force_push_template" : try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
         }
       ]
     ]
@@ -100,7 +102,7 @@ resource "catalystcenter_template" "regular_template" {
   language         = try(each.value.language, local.defaults.catalyst_center.templates.language, null)
   software_type    = try(each.value.software_type, local.defaults.catalyst_center.templates.software_type, null)
   software_version = try(each.value.software_version, local.catalyst_center.templates.software_version, null)
-  template_content = try(local.templates_content[each.key], null)
+  template_content = local.templates_content[each.key]
   composite        = try(each.value.composite, local.defaults.catalyst_center.templates.composite, null)
 
   template_params = [for param in try(each.value.variables, []) : {
@@ -191,7 +193,8 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 
   redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
   template_id         = catalystcenter_template.regular_template[each.value.template].id
-  force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+  force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
 
   target_info = [
@@ -227,9 +230,9 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   member_template_deployment_info = [for tmpl in local.composite_templates_map[each.value.template] : {
     template_id         = catalystcenter_template_version.regular_commit_version[tmpl].id
     main_template_id    = catalystcenter_template.regular_template[tmpl].id
-    force_push_template = try(local.templates_map[tmpl].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+    force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
     is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
-    copying_config      = try(local.templates_map[tmpl].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+    copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
     target_info = [
       {
         id   = lookup(local.device_ip_to_id, each.value.device_ip, null)
