@@ -223,6 +223,8 @@ resource "catalystcenter_wireless_rf_profile" "rf_profile" {
   radio_type_c_spatial_reuse_properties_dot11ax_srg_obss_packet_detect                   = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect, null)
   radio_type_c_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_min_threshold     = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_min_threshold, null)
   radio_type_c_spatial_reuse_properties_dot11ax_srg_obss_packet_detect_max_threshold     = try(each.value.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, local.defaults.catalyst_center.wireless.rf_profiles.radio_type_6_ghz_properties.spatial_reuse_properties.dot11ax_srg_obss_packet_detect_max_threshold, null)
+
+  depends_on = [catalystcenter_wireless_ssid.ssid]
 }
 
 resource "catalystcenter_wireless_profile" "wireless_profile" {
