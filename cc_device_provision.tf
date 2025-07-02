@@ -65,7 +65,7 @@ resource "catalystcenter_fabric_provision_device" "non_fabric_device" {
 }
 
 resource "catalystcenter_fabric_provision_device" "border_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "BORDER ROUTER" && try(device.fabric_roles, null) != null }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "BORDER_NODE") }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
