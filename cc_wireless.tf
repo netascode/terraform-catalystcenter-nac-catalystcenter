@@ -4,9 +4,9 @@ locals {
     "5GHz"            = "5GHz only"
     "2.4GHz"          = "2.4GHz only"
     "6GHz"            = "6GHz only"
-    "2.4GHz and 5GHz" = "2.4 and 5GHz"
-    "2.4GHz and 6GHz" = "2.4 and 6GHz"
-    "5GHz and 6GHz"   = "5 and 6GHz"
+    "2.4GHz and 5GHz" = "2.4 and 5 GHz"
+    "2.4GHz and 6GHz" = "2.4 and 6 GHz"
+    "5GHz and 6GHz"   = "5 and 6 GHz"
   }
 
   wireless_network_profiles = [

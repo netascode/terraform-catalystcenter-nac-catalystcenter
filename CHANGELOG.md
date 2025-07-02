@@ -1,5 +1,6 @@
 ## 0.1.0 (unreleased)
 
+- Fix wireless ssid radio type mapping to match API response
 - Fix issue with ssid to vlan mapping in fabric
 - Add support for same `l3_virtual_network` under multiple `anycast_gateways`
 - Add `fabric_zone` support and adding `l3_virtual_networks` under fabric zone
