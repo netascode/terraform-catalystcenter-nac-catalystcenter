@@ -205,7 +205,7 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
-    for vlan in distinct([for ssid in each.value.wireless_ssids : ssid.vlan_name]) : {
+    for vlan in distinct([for ssid in try(each.value.wireless_ssids, []) : ssid.vlan_name]) : {
       vlan_name    = vlan
       ssid_details = [for ssid in each.value.wireless_ssids : { name = ssid.name } if ssid.vlan_name == vlan]
     }
