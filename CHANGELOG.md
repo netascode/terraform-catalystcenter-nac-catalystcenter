@@ -1,3 +1,19 @@
+## 0.1.0 (unreleased)
+
+- Add support for assigning tag to device
+- Add support for `CORE` and `DISTRIBUTION` role
+- Fix wireless ssid radio type mapping to match API response
+- Fix issue with ssid to vlan mapping in fabric
+- Add support for same `l3_virtual_network` under multiple `anycast_gateways`
+- Add `fabric_zone` support and adding `l3_virtual_networks` under fabric zone
+- BREAKING CHANGE: Add support to update `authentication_template` settings globally and on fabric site level
+- Add `ASSIGN` state for assigning device to site without provisioning
+- Fix pnp issue when adding multiple devices
+- Add support for `.vtl` and `.vlt` extensions for velocity templates
+- Add support for `INFRA_VN` and `DEFAULT_VN` layer3 virtual networks
+- Add support for saving running config to startup config while deploying regular templates
+- Fix issue with anycast_gateway dependencies to fabric_vlan_to_ssid
+
 ## 0.0.4-beta1
 
 - BREAKING CHANGE: Fix issue with assigning the same VLAN to different anycast gateways from different fabric sites
