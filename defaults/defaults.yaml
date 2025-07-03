@@ -1,12 +1,6 @@
 ---
 defaults:
   catalyst_center:
-    authentication_templates:
-      name: No Authentication
-      dot1x_to_mab_fallback_timeout: 21
-      wake_on_lan: false
-      number_of_hosts: Unlimited
-      authentication_order: dot1x
     network_profiles:
       wireless:
         ssid_details:
