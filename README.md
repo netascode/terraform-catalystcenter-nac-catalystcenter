@@ -68,6 +68,7 @@ module "catalystcenter" {
 | [catalystcenter_area.area_2](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_assign_credentials.assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_device_to_site.devices_to_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_device_to_site) | resource |
+| [catalystcenter_assign_devices_to_tag.device_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_devices_to_tag) | resource |
 | [catalystcenter_assign_templates_to_tag.template_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_templates_to_tag) | resource |
 | [catalystcenter_associate_site_to_network_profile.site_to_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/associate_site_to_network_profile) | resource |
 | [catalystcenter_associate_site_to_network_profile.site_to_wireless_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/associate_site_to_network_profile) | resource |

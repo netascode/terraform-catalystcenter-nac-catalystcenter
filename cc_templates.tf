@@ -55,6 +55,22 @@ locals {
     }
   ]
 
+  tag_devices = flatten([
+    for device in try(local.catalyst_center.inventory.devices, []) : [
+      for tag in try(device.tags, []) : {
+        "tag_name" : tag,
+        "device_name" : device.name
+      }
+    ] if try(device.tags, null) != null
+  ])
+
+  devices_to_tag = [
+    for tag_key in distinct([for t in local.tag_devices : t.tag_name]) : {
+      "tag_name" : tag_key
+      "device_names" : [for t in local.tag_devices : t.device_name if t.tag_name == tag_key]
+    }
+  ]
+
   combined_templates = flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
@@ -157,6 +173,13 @@ resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
 
   tag_id       = catalystcenter_tag.tag[each.key].id
   template_ids = [for template in each.value.template_names : try(catalystcenter_template.regular_template[template].id, catalystcenter_template.composite_template[template].id, null)]
+}
+
+resource "catalystcenter_assign_devices_to_tag" "device_to_tag" {
+  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag }
+
+  tag_id     = catalystcenter_tag.tag[each.key].id
+  device_ids = [for device in each.value.device_names : try(local.device_name_to_id[device], null)]
 }
 
 resource "catalystcenter_template_version" "regular_commit_version" {

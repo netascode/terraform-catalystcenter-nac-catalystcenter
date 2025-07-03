@@ -1,5 +1,6 @@
 ## 0.1.0 (unreleased)
 
+- Add support for assigning tag to device
 - Add support for `CORE` and `DISTRIBUTION` role
 - Fix wireless ssid radio type mapping to match API response
 - Fix issue with ssid to vlan mapping in fabric
