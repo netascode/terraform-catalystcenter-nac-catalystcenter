@@ -35,4 +35,6 @@ resource "catalystcenter_discovery" "discovery" {
   lifecycle {
     ignore_changes = [discovery_type]
   }
+
+  depends_on = [data.catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_cli.cli_credentials]
 }
