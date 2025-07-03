@@ -1,4 +1,4 @@
-## 0.1.0 (unreleased)
+## 0.1.0
 
 - Add support for assigning tag to device
 - Add support for `CORE` and `DISTRIBUTION` role
