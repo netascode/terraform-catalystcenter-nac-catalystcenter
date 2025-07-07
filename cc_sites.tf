@@ -2,9 +2,12 @@ data "catalystcenter_area" "global" {
   name = "Global"
 }
 
+data "catalystcenter_sites" "all_sites" {
+}
+
 ## 1st level area Global/area
 resource "catalystcenter_area" "area_0" {
-  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if try(area.parent_name, "") == "Global" }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if try(area.parent_name, "") == "Global" && contains(local.sites, "Global/${area.name}") }
 
   name        = each.value.name
   parent_name = try(each.value.parent_name, local.defaults.catalyst_center.sites.parent_name, null)
@@ -14,7 +17,7 @@ resource "catalystcenter_area" "area_0" {
 
 # 2nd level area Global/area/area
 resource "catalystcenter_area" "area_1" {
-  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 1 }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 1 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name        = each.value.name
   parent_name = try(each.value.parent_name, local.defaults.catalyst_center.sites.areas.parent_name, null)
@@ -24,7 +27,7 @@ resource "catalystcenter_area" "area_1" {
 
 # 3rd level area Global/area/area/area
 resource "catalystcenter_area" "area_2" {
-  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 2 }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 2 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name        = each.value.name
   parent_name = try(each.value.parent_name, local.defaults.catalyst_center.sites.areas.parent_name, null)
@@ -68,4 +71,6 @@ locals {
     { for k, v in catalystcenter_building.building : k => v.id },
     { for k, v in catalystcenter_floor.floor : k => v.id }
   )
+
+  data_source_site_list = { for site in data.catalystcenter_sites.all_sites.sites : coalesce(site.name_hierarchy, site.name) => site.id }
 }

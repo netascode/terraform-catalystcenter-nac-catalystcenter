@@ -22,6 +22,12 @@ variable "model" {
   default     = {}
 }
 
+variable "managed_sites" {
+  description = "List of site names to be managed. By default all sites will be managed."
+  type        = list(string)
+  default     = []
+}
+
 variable "write_default_values_file" {
   description = "Write all default values to a YAML file. Value is a path pointing to the file to be created."
   type        = string

@@ -179,7 +179,7 @@ resource "catalystcenter_telemetry_settings" "telemetry_settings" {
 resource "catalystcenter_aaa_settings" "aaa_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null }
 
-  site_id                         = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
+  site_id                         = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)

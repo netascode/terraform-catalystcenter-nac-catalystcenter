@@ -1,3 +1,7 @@
+## 0.1.1 (unreleased)
+
+- Add support to manage list of sites in site hierarchy
+
 ## 0.1.0
 
 - Add support for assigning tag to device
