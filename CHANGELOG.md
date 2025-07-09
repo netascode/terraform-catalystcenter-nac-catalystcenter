@@ -1,6 +1,6 @@
 ## 0.1.1 (unreleased)
 
-- Add support to manage list of sites in site hierarchy
+- Add `managed_sites` variable to the module. This variable defines a list of site names to manage. If not specified, all sites will be managed by default.
 
 ## 0.1.0
 

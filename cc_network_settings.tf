@@ -243,8 +243,17 @@ locals {
   }
 }
 
+output "ip_pools_reservation_to_site_map" {
+  value = data.catalystcenter_ip_pool.pools
+}
+data "catalystcenter_ip_pool" "pools" {
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool }
+
+  name = each.key
+}
+
 resource "catalystcenter_ip_pool" "ip_pool_v4" {
-  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv4" }
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv4" && try(data.catalystcenter_ip_pool.pools[pool.name], null) == null }
 
   name             = each.key
   ip_address_space = try(each.value.ip_address_space, local.defaults.catalyst_center.network_settings.ip_pools.ip_address_space, null)
@@ -272,7 +281,7 @@ resource "catalystcenter_ip_pool" "ip_pool_v6" {
 }
 
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
-  for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v }
+  for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if contains(local.sites, v) }
 
   site_id            = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name               = each.key

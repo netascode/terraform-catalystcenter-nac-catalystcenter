@@ -57,7 +57,10 @@ module "catalystcenter" {
 | Name | Description |
 |------|-------------|
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
+| <a name="output_ip_pools_reservation_to_site_map"></a> [ip\_pools\_reservation\_to\_site\_map](#output\_ip\_pools\_reservation\_to\_site\_map) | n/a |
+| <a name="output_local_sites"></a> [local\_sites](#output\_local\_sites) | n/a |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
+| <a name="output_sites"></a> [sites](#output\_sites) | List of sites managed by the module. |
 ## Resources
 
 | Name | Type |
@@ -137,6 +140,7 @@ module "catalystcenter" {
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
+| [catalystcenter_ip_pool.pools](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/ip_pool) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
