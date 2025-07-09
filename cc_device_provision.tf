@@ -54,24 +54,14 @@ resource "catalystcenter_device_role" "role" {
   depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
 
-resource "catalystcenter_fabric_provision_device" "non_fabric_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.fabric_roles, null) == null && try(device.managed_ap_locations, null) == null }
+resource "catalystcenter_fabric_provision_device" "provision_device" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.managed_ap_locations, null) == null }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
   reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
-}
-
-resource "catalystcenter_fabric_provision_device" "border_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "BORDER_NODE") }
-
-  site_id           = try(local.site_id_list[each.value.site], null)
-  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
-  reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
-
-  depends_on = [catalystcenter_device_role.role]
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
@@ -85,20 +75,10 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
 }
 
-resource "catalystcenter_fabric_provision_device" "edge_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && device.device_role == "ACCESS" && try(device.fabric_roles, null) != null && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") == false }
-
-  site_id           = try(local.site_id_list[each.value.site], null)
-  network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
-  reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
-
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.border_device]
-}
-
 resource "time_sleep" "provision_device_wait" {
   count = length(try(local.provisioned_devices, [])) > 0 ? 1 : 0
 
   create_duration = "10s"
 
-  depends_on = [catalystcenter_fabric_provision_device.edge_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_provision_device.non_fabric_device, catalystcenter_fabric_provision_device.border_device]
+  depends_on = [catalystcenter_fabric_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller]
 }

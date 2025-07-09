@@ -238,7 +238,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     }
   ]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.border_device, catalystcenter_fabric_provision_device.non_fabric_device, time_sleep.provision_device_wait]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait]
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
@@ -289,5 +289,5 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     }
   ]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.edge_device, catalystcenter_fabric_provision_device.border_device, catalystcenter_fabric_provision_device.non_fabric_device, time_sleep.provision_device_wait]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait]
 }
