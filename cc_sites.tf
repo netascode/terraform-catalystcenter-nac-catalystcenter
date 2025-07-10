@@ -5,10 +5,6 @@ data "catalystcenter_area" "global" {
 data "catalystcenter_sites" "all_sites" {
 }
 
-output "local_sites" {
-  value = local.sites
-}
-
 ## 1st level area Global/area
 resource "catalystcenter_area" "area_0" {
   for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if try(area.parent_name, "") == "Global" && contains(local.sites, "Global/${area.name}") }

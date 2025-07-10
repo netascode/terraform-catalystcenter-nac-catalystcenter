@@ -28,6 +28,12 @@ variable "managed_sites" {
   default     = []
 }
 
+variable "manage_global_settings" {
+  description = "Flag to indicate if global settings should be managed."
+  type        = bool
+  default     = false
+}
+
 variable "write_default_values_file" {
   description = "Write all default values to a YAML file. Value is a path pointing to the file to be created."
   type        = string

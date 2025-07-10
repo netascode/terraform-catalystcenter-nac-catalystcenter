@@ -46,6 +46,7 @@ module "catalystcenter" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag to indicate if global settings should be managed. | `bool` | `false` | no |
 | <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of site names to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
 | <a name="input_model"></a> [model](#input\_model) | As an alternative to YAML files, a native Terraform data structure can be provided as well. | `map(any)` | `{}` | no |
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |
@@ -57,10 +58,7 @@ module "catalystcenter" {
 | Name | Description |
 |------|-------------|
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
-| <a name="output_ip_pools_reservation_to_site_map"></a> [ip\_pools\_reservation\_to\_site\_map](#output\_ip\_pools\_reservation\_to\_site\_map) | n/a |
-| <a name="output_local_sites"></a> [local\_sites](#output\_local\_sites) | n/a |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
-| <a name="output_sites"></a> [sites](#output\_sites) | List of sites managed by the module. |
 ## Resources
 
 | Name | Type |
