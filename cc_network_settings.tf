@@ -112,7 +112,7 @@ locals {
 }
 
 resource "catalystcenter_ntp_settings" "ntp_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null && var.manage_global_settings }
 
   site_id = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   servers = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
@@ -121,7 +121,7 @@ resource "catalystcenter_ntp_settings" "ntp_servers" {
 }
 
 resource "catalystcenter_dhcp_settings" "dhcp_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null && var.manage_global_settings }
 
   site_id = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   servers = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
@@ -130,7 +130,7 @@ resource "catalystcenter_dhcp_settings" "dhcp_servers" {
 }
 
 resource "catalystcenter_dns_settings" "dns_settings" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null && var.manage_global_settings }
 
   site_id     = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   domain_name = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
@@ -140,7 +140,7 @@ resource "catalystcenter_dns_settings" "dns_settings" {
 }
 
 resource "catalystcenter_timezone_settings" "timezone" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null && var.manage_global_settings }
 
   site_id    = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   identifier = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
@@ -149,7 +149,7 @@ resource "catalystcenter_timezone_settings" "timezone" {
 }
 
 resource "catalystcenter_banner_settings" "banner" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null && var.manage_global_settings }
 
   site_id = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   type    = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null) != null ? "Custom" : "Builtin"
@@ -159,7 +159,7 @@ resource "catalystcenter_banner_settings" "banner" {
 }
 
 resource "catalystcenter_telemetry_settings" "telemetry_settings" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null && var.manage_global_settings }
 
   site_id                             = try(local.site_id_list[each.key], data.catalystcenter_area.global.id, null)
   enable_wired_data_collection        = try(local.telemetry_settings[each.value.telemetry].wired_data_collection, local.defaults.catalyst_center.network_settings.telemetry.wired_data_collection, null)
@@ -177,7 +177,7 @@ resource "catalystcenter_telemetry_settings" "telemetry_settings" {
 }
 
 resource "catalystcenter_aaa_settings" "aaa_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && var.manage_global_settings }
 
   site_id                         = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
@@ -243,8 +243,14 @@ locals {
   }
 }
 
+data "catalystcenter_ip_pool" "pools" {
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool }
+
+  name = each.key
+}
+
 resource "catalystcenter_ip_pool" "ip_pool_v4" {
-  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv4" }
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv4" && var.manage_global_settings }
 
   name             = each.key
   ip_address_space = try(each.value.ip_address_space, local.defaults.catalyst_center.network_settings.ip_pools.ip_address_space, null)
@@ -258,7 +264,7 @@ resource "catalystcenter_ip_pool" "ip_pool_v4" {
 }
 
 resource "catalystcenter_ip_pool" "ip_pool_v6" {
-  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv6" }
+  for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv6" && var.manage_global_settings }
 
   name             = each.key
   ip_address_space = try(each.value.ip_address_space, local.defaults.catalyst_center.network_settings.ip_pools.ip_address_space, null)
@@ -272,12 +278,12 @@ resource "catalystcenter_ip_pool" "ip_pool_v6" {
 }
 
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
-  for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v }
+  for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if contains(local.sites, v) }
 
   site_id            = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name               = each.key
   type               = try(join("", [upper(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
-  ipv4_global_pool   = catalystcenter_ip_pool.ip_pool_v4[local.ip_pools_reservations[each.key].global_pool].ip_subnet
+  ipv4_global_pool   = try(catalystcenter_ip_pool.ip_pool_v4[local.ip_pools_reservations[each.key].global_pool].ip_subnet, data.catalystcenter_ip_pool.pools[local.ip_pools_reservations[each.key].global_pool].ip_subnet)
   ipv4_prefix        = try(local.ip_pools_reservations[each.key].prefix, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix, null)
   ipv4_prefix_length = try(local.ip_pools_reservations[each.key].prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix_length, null)
   ipv4_gateway       = try(local.ip_pools_reservations[each.key].gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.gateway, null)

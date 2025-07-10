@@ -36,7 +36,7 @@ resource "catalystcenter_area" "area_2" {
 }
 
 resource "catalystcenter_building" "building" {
-  for_each = { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => building }
+  for_each = { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => building if contains(local.sites, try("${building.parent_name}/${building.name}", "")) }
 
   name        = each.value.name
   parent_name = try(each.value.parent_name, local.defaults.catalyst_center.sites.buildings.parent_name, null)
@@ -50,7 +50,7 @@ resource "catalystcenter_building" "building" {
 
 
 resource "catalystcenter_floor" "floor" {
-  for_each = { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => floor }
+  for_each = { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => floor if contains(local.sites, try("${floor.parent_name}/${floor.name}", "")) }
 
   name         = each.value.name
   parent_name  = try(each.value.parent_name, local.defaults.catalyst_center.sites.floors.parent_name, null)

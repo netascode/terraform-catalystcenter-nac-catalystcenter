@@ -1,5 +1,6 @@
 ## 0.1.1 (unreleased)
 
+- Add `manage_global_settings` variable to the module. This flag indicates if global settings should be managed.
 - Add `managed_sites` variable to the module. This variable defines a list of site names to manage. If not specified, all sites will be managed by default.
 
 ## 0.1.0
