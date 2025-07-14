@@ -46,7 +46,7 @@ module "catalystcenter" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag to indicate if global settings should be managed. | `bool` | `false` | no |
+| <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag to indicate if global settings should be managed. | `bool` | `true` | no |
 | <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of site names to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
 | <a name="input_model"></a> [model](#input\_model) | As an alternative to YAML files, a native Terraform data structure can be provided as well. | `map(any)` | `{}` | no |
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |

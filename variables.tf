@@ -31,7 +31,7 @@ variable "managed_sites" {
 variable "manage_global_settings" {
   description = "Flag to indicate if global settings should be managed."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "write_default_values_file" {
