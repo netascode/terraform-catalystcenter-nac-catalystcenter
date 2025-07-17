@@ -89,7 +89,7 @@ locals {
 }
 
 resource "catalystcenter_tag" "tag" {
-  for_each = { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag }
+  for_each = { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag if var.manage_global_settings }
 
   name          = each.key
   description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
@@ -101,15 +101,28 @@ data "catalystcenter_project" "onboarding" {
   name = "Onboarding Configuration"
 }
 
+data "catalystcenter_project" "projects" {
+  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project }
+
+  name = each.key
+}
+
+data "catalystcenter_template" "templates" {
+  for_each = local.templates_map
+
+  project_id = data.catalystcenter_project.projects[each.value.project_name].id
+  name       = each.key
+}
+
 resource "catalystcenter_project" "project" {
-  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" }
+  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" && var.manage_global_settings }
 
   name        = each.key
   description = try(each.value.description, null)
 }
 
 resource "catalystcenter_template" "regular_template" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && var.manage_global_settings }
 
   name             = each.key
   project_id       = try(catalystcenter_project.project[each.value.project_name].id, data.catalystcenter_project.onboarding.id, null)
@@ -138,7 +151,7 @@ resource "catalystcenter_template" "regular_template" {
 }
 
 resource "time_sleep" "template_wait" {
-  count = length(try(local.templates, [])) > 0 ? 1 : 0
+  count = length(try(local.templates, [])) > 0 && var.manage_global_settings ? 1 : 0
 
   create_duration = "10s"
 
@@ -146,7 +159,7 @@ resource "time_sleep" "template_wait" {
 }
 
 resource "catalystcenter_template" "composite_template" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true && var.manage_global_settings }
 
   name             = each.key
   project_id       = try(catalystcenter_project.project[each.value.project_name].id, data.catalystcenter_project.onboarding.id, null)
@@ -169,21 +182,21 @@ resource "catalystcenter_template" "composite_template" {
 }
 
 resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
-  for_each = { for tag in try(local.templates_to_tag, []) : tag.tag_name => tag }
+  for_each = { for tag in try(local.templates_to_tag, []) : tag.tag_name => tag if var.manage_global_settings }
 
   tag_id       = catalystcenter_tag.tag[each.key].id
   template_ids = [for template in each.value.template_names : try(catalystcenter_template.regular_template[template].id, catalystcenter_template.composite_template[template].id, null)]
 }
 
 resource "catalystcenter_assign_devices_to_tag" "device_to_tag" {
-  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag }
+  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if var.manage_global_settings }
 
   tag_id     = catalystcenter_tag.tag[each.key].id
   device_ids = [for device in each.value.device_names : try(local.device_name_to_id[device], null)]
 }
 
 resource "catalystcenter_template_version" "regular_commit_version" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && var.manage_global_settings }
 
   template_id = catalystcenter_template.regular_template[each.key].id
   comments    = try(md5(local.templates_content[each.key]), null)
@@ -205,7 +218,7 @@ locals {
 }
 
 resource "catalystcenter_template_version" "composite_commit_version" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true && var.manage_global_settings }
 
   template_id = catalystcenter_template.composite_template[each.key].id
   comments    = try(md5(local.composite_template_hashes[each.key]), null)

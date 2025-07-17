@@ -5,7 +5,7 @@ locals {
         "type" : "cli.templates"
         "attributes" : [for template_name in try(profile.dayn_templates, []) :
           {
-            "template_id" : try(catalystcenter_template.regular_template[template_name].id, catalystcenter_template.composite_template[template_name].id, null)
+            "template_id" : try(catalystcenter_template.regular_template[template_name].id, catalystcenter_template.composite_template[template_name].id, data.catalystcenter_template.templates[template_name].id, null)
           }
         ]
         },
@@ -13,7 +13,7 @@ locals {
           "type" : "day0.templates"
           "attributes" : [for template_name in try(profile.onboarding_templates, []) :
             {
-              "template_id" : try(catalystcenter_template.regular_template[template_name].id, catalystcenter_template.composite_template[template_name].id, null)
+              "template_id" : try(catalystcenter_template.regular_template[template_name].id, catalystcenter_template.composite_template[template_name].id, data.catalystcenter_template.templates[template_name].id, null)
             }
           ]
       }]
@@ -31,7 +31,7 @@ locals {
 }
 
 resource "catalystcenter_network_profile" "switching_network_profile" {
-  for_each = local.switching_profile_templates
+  for_each = var.manage_global_settings ? local.switching_profile_templates : {}
 
   name      = each.key
   type      = "switching"

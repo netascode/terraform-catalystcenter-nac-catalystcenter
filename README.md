@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.8.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.11 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.12 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -147,9 +147,12 @@ module "catalystcenter" {
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
+| [catalystcenter_ip_pools.all_pools](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/ip_pools) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
+| [catalystcenter_project.projects](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
+| [catalystcenter_template.templates](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template) | data source |
 ## Modules
 
 No modules.

@@ -60,7 +60,7 @@ locals {
 }
 
 resource "catalystcenter_transit_network" "transit" {
-  for_each = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit }
+  for_each = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit if var.manage_global_settings }
 
   name                              = each.key
   type                              = try(each.value.type, local.defaults.catalyst_center.fabric.transits.type, null)
@@ -73,7 +73,7 @@ resource "catalystcenter_transit_network" "transit" {
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {
-  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site }
+  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
   site_id                     = try(local.site_id_list[each.key], each.key, null)
@@ -105,7 +105,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names }
+  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if var.manage_global_settings }
 
   virtual_network_name = each.key
   fabric_ids = [
@@ -137,7 +137,7 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
-  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.name => anycast_gateway }
+  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) }
 
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
@@ -287,7 +287,7 @@ locals {
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : "${item.name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id
+    for item in local.anycast_gateways : "${item.name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id, null)
   }
 }
 
