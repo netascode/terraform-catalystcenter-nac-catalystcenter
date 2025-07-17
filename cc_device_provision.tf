@@ -88,7 +88,7 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, null)
   reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
 
-  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site]
+  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile]
 }
 
 resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
