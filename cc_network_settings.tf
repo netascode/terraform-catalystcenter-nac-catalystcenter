@@ -333,12 +333,6 @@ locals {
   }
 }
 
-data "catalystcenter_ip_pools" "all_pools" {
-}
-locals {
-  data_source_ip_pools_list = { for pool in data.catalystcenter_ip_pools.all_pools.pools : pool.name => "${pool.subnet}/${pool.prefix_length}" }
-}
-
 resource "catalystcenter_ip_pool" "ip_pool_v4" {
   for_each = { for pool in try(local.catalyst_center.network_settings.ip_pools, []) : pool.name => pool if pool.ip_address_space == "IPv4" && var.manage_global_settings }
 
@@ -370,10 +364,13 @@ resource "catalystcenter_ip_pool" "ip_pool_v6" {
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if contains(local.sites, v) }
 
-  site_id            = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
-  name               = each.key
-  type               = try(join("", [upper(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
-  ipv4_global_pool   = try(catalystcenter_ip_pool.ip_pool_v4[local.ip_pools_reservations[each.key].global_pool].ip_subnet, local.data_source_ip_pools_list[local.ip_pools_reservations[each.key].global_pool], null)
+  site_id = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
+  name    = each.key
+  type    = try(join("", [upper(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
+  ipv4_global_pool = try(one([
+    for pool in local.catalyst_center.network_settings.ip_pools : pool
+    if pool.name == local.ip_pools_reservations[each.key].global_pool
+  ]).ip_pool_cidr, null)
   ipv4_prefix        = try(local.ip_pools_reservations[each.key].prefix, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix, null)
   ipv4_prefix_length = try(local.ip_pools_reservations[each.key].prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix_length, null)
   ipv4_gateway       = try(local.ip_pools_reservations[each.key].gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.gateway, null)

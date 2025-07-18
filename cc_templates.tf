@@ -101,19 +101,6 @@ data "catalystcenter_project" "onboarding" {
   name = "Onboarding Configuration"
 }
 
-data "catalystcenter_project" "projects" {
-  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project }
-
-  name = each.key
-}
-
-data "catalystcenter_template" "templates" {
-  for_each = local.templates_map
-
-  project_id = data.catalystcenter_project.projects[each.value.project_name].id
-  name       = each.key
-}
-
 resource "catalystcenter_project" "project" {
   for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" && var.manage_global_settings }
 

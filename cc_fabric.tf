@@ -51,9 +51,16 @@ locals {
       try(local.l3_virtual_networks_fabric_zone[key], [])
     )
   }
-}
 
-locals {
+  global_l3_virtual_networks = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for vn in try(fabric_site.l3_virtual_networks, []) : {
+        "name" : try(vn.name, null)
+        "fabric_site_name" : try(fabric_site.name, null)
+      }
+    ]
+  ])
+
   device_name_to_id = try({
     for device in data.catalystcenter_network_devices.all_devices.devices : device.hostname => device.id
   }, {})
@@ -105,22 +112,41 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if var.manage_global_settings }
+  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if length(var.managed_sites) == 0 }
 
   virtual_network_name = each.key
   fabric_ids = [
     for site in each.value : (
       contains(keys(catalystcenter_fabric_site.fabric_site), site)
       ? catalystcenter_fabric_site.fabric_site[site].id
-      : (
-        contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
-        ? catalystcenter_fabric_zone.fabric_zone[site].id
-        : null
-      )
+      : contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
+      ? catalystcenter_fabric_zone.fabric_zone[site].id
+      : null
+    )
+    if(
+      contains(keys(catalystcenter_fabric_site.fabric_site), site)
+      || contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
     )
   ]
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site]
+}
+
+resource "catalystcenter_fabric_virtual_network" "l3_vn" {
+  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if var.manage_global_settings && length(var.managed_sites) > 0 }
+
+  virtual_network_name = each.key
+
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
+}
+
+resource "catalystcenter_virtual_network_to_fabric_site" "vn_to_fabric_site" {
+  for_each = { for vn in try(local.global_l3_virtual_networks, []) : "${vn.name}/${vn.fabric_site_name}" => vn if contains(local.sites, vn.fabric_site_name) && length(var.managed_sites) > 0 }
+
+  site_name_hierarchy  = try(each.value.fabric_site_name, null)
+  virtual_network_name = try(each.value.name, null)
+
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_virtual_network.l3_vn]
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {

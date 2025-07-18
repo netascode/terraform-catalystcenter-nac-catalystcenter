@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.8.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.12 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.13 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -107,6 +107,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_port_assignments.port_assignments](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_assignments) | resource |
 | [catalystcenter_fabric_provision_device.provision_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_provision_device) | resource |
 | [catalystcenter_fabric_site.fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_site) | resource |
+| [catalystcenter_fabric_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_virtual_network) | resource |
 | [catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_vlan_to_ssid) | resource |
 | [catalystcenter_fabric_zone.fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_zone) | resource |
 | [catalystcenter_floor.floor](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floor) | resource |
@@ -136,6 +137,7 @@ module "catalystcenter" {
 | [catalystcenter_update_authentication_profile.global_authentication_template](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
 | [catalystcenter_update_authentication_profile.low_impact](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
 | [catalystcenter_update_authentication_profile.open_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
+| [catalystcenter_virtual_network_to_fabric_site.vn_to_fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
 | [catalystcenter_wireless_profile.wireless_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
@@ -147,12 +149,9 @@ module "catalystcenter" {
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
-| [catalystcenter_ip_pools.all_pools](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/ip_pools) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
-| [catalystcenter_project.projects](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
-| [catalystcenter_template.templates](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template) | data source |
 ## Modules
 
 No modules.
