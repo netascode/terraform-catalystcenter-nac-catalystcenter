@@ -55,7 +55,8 @@ defaults:
         type: IP_BASED_TRANSIT
         routing_protocol_name: BGP
       fabric_sites:
-        authentication_template_name: No Authentication
+        authentication_template:
+          name: No Authentication
         pub_sub_enabled: false
         anycast_gateways:
           layer2_flooding: false
