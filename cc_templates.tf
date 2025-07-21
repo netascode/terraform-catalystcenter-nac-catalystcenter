@@ -60,6 +60,7 @@ locals {
       for tag in try(device.tags, []) : {
         "tag_name" : tag,
         "device_name" : device.name
+        "device_hostname" : try(device.hostname, null)
       }
     ] if try(device.tags, null) != null
   ])
@@ -68,6 +69,7 @@ locals {
     for tag_key in distinct([for t in local.tag_devices : t.tag_name]) : {
       "tag_name" : tag_key
       "device_names" : [for t in local.tag_devices : t.device_name if t.tag_name == tag_key]
+      "device_hostnames" : [for t in local.tag_devices : t.device_hostname if t.tag_name == tag_key]
     }
   ]
 
@@ -245,21 +247,22 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") }
 
   redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
-  template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
+  template_id         = catalystcenter_template.composite_template[each.value.template].id
   main_template_id    = catalystcenter_template.composite_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = true
 
   member_template_deployment_info = [for tmpl in local.composite_templates_map[each.value.template] : {
     template_id         = catalystcenter_template_version.regular_commit_version[tmpl].id
-    main_template_id    = catalystcenter_template.regular_template[tmpl].id
+    main_template_id    = catalystcenter_template.composite_template[each.value.template].id
     force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
     is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
     copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
     target_info = [
       {
-        id   = lookup(local.device_ip_to_id, each.value.device_ip, null)
-        type = "MANAGED_DEVICE_UUID"
+        id                    = lookup(local.device_ip_to_id, each.value.device_ip, null)
+        type                  = "MANAGED_DEVICE_UUID"
+        versioned_template_id = catalystcenter_template_version.regular_commit_version[tmpl].id
 
         params = { for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value if item.template_name == tmpl }
         resource_params = [
