@@ -1,7 +1,12 @@
 locals {
-  device_ip_to_id = try({
-    for device in data.catalystcenter_network_devices.all_devices.devices : device.management_ip_address => device.id
-  }, {})
+  device_ip_to_id = {
+    for device in data.catalystcenter_network_devices.all_devices.devices :
+    device.management_ip_address => device.id
+    if device.management_ip_address != null
+    && device.management_ip_address != ""
+    && !startswith(device.platform_id, "C91")
+    && !startswith(device.platform_id, "CW91")
+  }
 
   all_devices = {
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => merge(device,
