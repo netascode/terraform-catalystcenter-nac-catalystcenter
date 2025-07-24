@@ -47,7 +47,8 @@ module "catalystcenter" {
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag to indicate if global settings should be managed. | `bool` | `true` | no |
-| <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of site names to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
+| <a name="input_manage_specific_sites_only"></a> [manage\_specific\_sites\_only](#input\_manage\_specific\_sites\_only) | If true, manage only the specified site listed in managed\_sites. If false, also manage all child sites under each managed site. | `bool` | `true` | no |
+| <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of sites to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
 | <a name="input_model"></a> [model](#input\_model) | As an alternative to YAML files, a native Terraform data structure can be provided as well. | `map(any)` | `{}` | no |
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |
 | <a name="input_write_default_values_file"></a> [write\_default\_values\_file](#input\_write\_default\_values\_file) | Write all default values to a YAML file. Value is a path pointing to the file to be created. | `string` | `""` | no |
@@ -150,6 +151,7 @@ module "catalystcenter" {
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
+| [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_profile) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
 ## Modules

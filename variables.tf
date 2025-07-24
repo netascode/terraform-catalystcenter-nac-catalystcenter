@@ -23,13 +23,19 @@ variable "model" {
 }
 
 variable "managed_sites" {
-  description = "List of site names to be managed. By default all sites will be managed."
+  description = "List of sites to be managed. By default all sites will be managed."
   type        = list(string)
   default     = []
 }
 
 variable "manage_global_settings" {
   description = "Flag to indicate if global settings should be managed."
+  type        = bool
+  default     = true
+}
+
+variable "manage_specific_sites_only" {
+  description = "If true, manage only the specified site listed in managed_sites. If false, also manage all child sites under each managed site."
   type        = bool
   default     = true
 }

@@ -1,7 +1,7 @@
 locals {
   catalyst_center = try(local.model.catalyst_center, {})
 
-  sites = concat(
+  sites = var.manage_specific_sites_only ? var.managed_sites : concat(
     [
       for site in try(local.catalyst_center.sites.areas, []) : try("${site.parent_name}/${site.name}", "Global")
       if length(var.managed_sites) == 0 ||
