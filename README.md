@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.8.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.14 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.2.16 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -47,7 +47,7 @@ module "catalystcenter" {
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag to indicate if global settings should be managed. | `bool` | `true` | no |
-| <a name="input_manage_specific_sites_only"></a> [manage\_specific\_sites\_only](#input\_manage\_specific\_sites\_only) | If true, manage only the specified site listed in managed\_sites. If false, also manage all child sites under each managed site. | `bool` | `true` | no |
+| <a name="input_manage_specific_sites_only"></a> [manage\_specific\_sites\_only](#input\_manage\_specific\_sites\_only) | If true, manage only the specified site listed in managed\_sites. If false, also manage all child sites under each managed site. | `bool` | `false` | no |
 | <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of sites to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
 | <a name="input_model"></a> [model](#input\_model) | As an alternative to YAML files, a native Terraform data structure can be provided as well. | `map(any)` | `{}` | no |
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |
@@ -60,6 +60,7 @@ module "catalystcenter" {
 |------|-------------|
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
+| <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
 ## Resources
 
 | Name | Type |
@@ -108,7 +109,6 @@ module "catalystcenter" {
 | [catalystcenter_fabric_port_assignments.port_assignments](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_assignments) | resource |
 | [catalystcenter_fabric_provision_device.provision_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_provision_device) | resource |
 | [catalystcenter_fabric_site.fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_site) | resource |
-| [catalystcenter_fabric_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_virtual_network) | resource |
 | [catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_vlan_to_ssid) | resource |
 | [catalystcenter_fabric_zone.fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_zone) | resource |
 | [catalystcenter_floor.floor](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floor) | resource |
@@ -138,7 +138,6 @@ module "catalystcenter" {
 | [catalystcenter_update_authentication_profile.global_authentication_template](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
 | [catalystcenter_update_authentication_profile.low_impact](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
 | [catalystcenter_update_authentication_profile.open_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
-| [catalystcenter_virtual_network_to_fabric_site.vn_to_fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
 | [catalystcenter_wireless_profile.wireless_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
@@ -150,6 +149,7 @@ module "catalystcenter" {
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
+| [catalystcenter_fabric_sites.fabric_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_sites) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_profile) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |

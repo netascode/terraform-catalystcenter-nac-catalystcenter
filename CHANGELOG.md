@@ -1,5 +1,6 @@
 ## 0.1.1 (unreleased)
 
+- BREAKING CHANGE: Change data model struture for `l3_virtual_networks` to support L3 VNs on global level
 - Add support for reprovisioning wireless controller device
 - Add `manage_global_settings` variable to the module. This flag indicates if global settings should be managed.
 - Add `managed_sites` variable to the module. This variable defines a list of site names to manage. If not specified, all sites will be managed by default.

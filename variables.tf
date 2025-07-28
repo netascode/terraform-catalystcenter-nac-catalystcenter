@@ -37,7 +37,7 @@ variable "manage_global_settings" {
 variable "manage_specific_sites_only" {
   description = "If true, manage only the specified site listed in managed_sites. If false, also manage all child sites under each managed site."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "write_default_values_file" {

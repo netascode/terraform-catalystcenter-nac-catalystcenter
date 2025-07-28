@@ -39,7 +39,7 @@ resource "catalystcenter_network_profile" "switching_network_profile" {
 }
 
 data "catalystcenter_network_profile" "switching_network_profile" {
-  for_each = local.switching_profile_templates
+  for_each = (length(var.managed_sites) == 0 || (var.manage_global_settings == false && length(var.managed_sites) != 0)) ? local.switching_profile_templates : {}
 
   name = each.key
 }
