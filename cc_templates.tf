@@ -79,7 +79,7 @@ locals {
           "name" : try(device.name, null),
           "state" : try(device.state, null),
           "device_ip" : try(device.device_ip, null)
-          "deploy_state" : try(template.state, null)
+          "deploy_state" : try(template.state, local.defaults.catalyst_center.inventory.devices.dayn_template.state, null)
           "copying_config" : try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
           "force_push_template" : try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
         }

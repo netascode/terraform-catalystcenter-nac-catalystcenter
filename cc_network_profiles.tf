@@ -39,13 +39,13 @@ resource "catalystcenter_network_profile" "switching_network_profile" {
 }
 
 data "catalystcenter_network_profile" "switching_network_profile" {
-  for_each = (length(var.managed_sites) == 0 || (var.manage_global_settings == false && length(var.managed_sites) != 0)) ? local.switching_profile_templates : {}
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? local.switching_profile_templates : {}
 
   name = each.key
 }
 
 resource "catalystcenter_associate_site_to_network_profile" "site_to_network_profile" {
-  for_each = { for s in try(local.sites_to_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if contains(local.sites, s.site) && length(var.managed_sites) > 0 }
+  for_each = { for s in try(local.sites_to_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if(contains(local.sites, s.site) && length(var.managed_sites) > 0) || (var.manage_global_settings && length(var.managed_sites) == 0) }
 
   network_profile_id = try(catalystcenter_network_profile.switching_network_profile[each.value.network_profile].id, data.catalystcenter_network_profile.switching_network_profile[each.value.network_profile].id)
   site_id            = local.site_id_list[each.value.site]

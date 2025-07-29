@@ -103,7 +103,7 @@ data "catalystcenter_fabric_sites" "fabric_sites" {
 locals {
   fabric_zone_id_list             = { for k, v in catalystcenter_fabric_zone.fabric_zone : k => v.id }
   fabric_site_id_list             = { for k, v in catalystcenter_fabric_site.fabric_site : k => v.id }
-  data_source_fabric_site_id_list = { for site in data.catalystcenter_fabric_sites.fabric_sites.sites : site.site_id => site.id }
+  data_source_fabric_site_id_list = try({ for site in data.catalystcenter_fabric_sites.fabric_sites.sites : site.site_id => site.id }, {})
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
