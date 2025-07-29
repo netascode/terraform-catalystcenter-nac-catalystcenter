@@ -202,7 +202,7 @@ resource "catalystcenter_fabric_device" "edge_device" {
   fabric_id         = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles      = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, catalystcenter_fabric_device.border_device]
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
