@@ -18,7 +18,7 @@ locals {
 
   sites_to_wireless_network_profile = flatten([
     for np in local.wireless_network_profiles : [
-      for site in np.sites : {
+      for site in coalesce(np.sites, []) : {
         "site" : try(site, null)
         "network_profile" : try(np.name, null)
       }
