@@ -52,6 +52,10 @@ locals {
     )
   }
 
+  global_l3_virtual_networks = {
+    for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) : vn.name => []
+  }
+
   device_name_to_id = try({
     for device in data.catalystcenter_network_devices.all_devices.devices : device.hostname => device.id
   }, {})
@@ -107,7 +111,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = { for vn_name, site_names in try(local.l3_virtual_networks, {}) : vn_name => site_names if var.manage_global_settings }
+  for_each = var.manage_global_settings ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks_fabric_site : local.global_l3_virtual_networks) : {}
 
   virtual_network_name = each.key
   fabric_ids = [
