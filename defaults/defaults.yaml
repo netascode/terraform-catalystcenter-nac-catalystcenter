@@ -7,6 +7,7 @@ defaults:
       wake_on_lan: false
       number_of_hosts: Unlimited
       authentication_order: dot1x
+      bpdu_guard: true
     network_profiles:
       wireless:
         ssid_details:
@@ -50,6 +51,13 @@ defaults:
         snmpv3_credentials:
           auth_type: SHA
           privacy_type: AES128
+      telemetry:
+        wired_data_collection: true
+        enable_netflow_collector_on_devices: false
+        wireless_telemetry: false
+        catalyst_center_as_snmp_server: true
+        catalyst_center_as_syslog_server: true
+        catalyst_center_as_network_collector: true
     fabric:
       transits:
         type: IP_BASED_TRANSIT
