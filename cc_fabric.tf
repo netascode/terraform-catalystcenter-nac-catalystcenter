@@ -62,7 +62,12 @@ locals {
 }
 
 resource "catalystcenter_transit_network" "transit" {
-  for_each = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit if var.manage_global_settings }
+  for_each = { for transit in try(local.catalyst_center.fabric.transits, []) : transit.name => transit if var.manage_global_settings &&
+    alltrue([
+      for device in try(transit.control_plane_devices, []) :
+      contains(local.provisioned_sda_transit_cp_devices, device)
+    ])
+  }
 
   name                              = each.key
   type                              = try(each.value.type, local.defaults.catalyst_center.fabric.transits.type, null)

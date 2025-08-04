@@ -33,6 +33,17 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION")
   ]
 
+  provisioned_sda_transit_cp_devices = flatten([
+    for transit in try(local.catalyst_center.fabric.transits, []) : [
+      for device in try(transit.control_plane_devices, []) :
+      device
+      if anytrue([
+        for prov in local.provisioned_devices :
+        prov.name == device && prov.state == "PROVISION"
+      ])
+    ]
+  ])
+
   assigned_devices_map = {
     for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => {
