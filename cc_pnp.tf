@@ -4,6 +4,10 @@ resource "catalystcenter_pnp_device" "pnp_device" {
   serial_number = each.value.serial_number
   hostname      = each.value.name
   pid           = each.value.pid
+
+  lifecycle {
+    ignore_changes = [hostname]
+  }
 }
 
 resource "catalystcenter_pnp_device_claim_site" "claim_device" {
