@@ -78,7 +78,7 @@ resource "catalystcenter_device_role" "role" {
   role        = try(each.value.device_role, local.defaults.catalyst_center.inventory.devices.device_role, null)
   role_source = try(each.value.role_source, local.defaults.catalyst_center.inventory.devices.role_source, null)
 
-  depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2]
+  depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3]
 }
 
 resource "catalystcenter_fabric_provision_device" "provision_device" {
@@ -104,7 +104,7 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, null)
   reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
 
-  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile]
+  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile]
 }
 
 resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {

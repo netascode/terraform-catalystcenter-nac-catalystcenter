@@ -1,5 +1,6 @@
 ## 0.1.1 (unreleased)
 
+- Add support for a new hierarchy area level: `Global/area/area/area/area`
 - Fix issue with assigning `security_group_name` to fabric port assignments
 - BREAKING CHANGE: Change data model struture for `l3_virtual_networks` to support L3 VNs on global level
 - Add support for reprovisioning wireless controller device
