@@ -249,7 +249,7 @@ resource "catalystcenter_telemetry_settings" "global_telemetry_settings" {
 }
 
 resource "catalystcenter_aaa_settings" "aaa_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && contains(local.sites, k) && k != "Global" }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && contains(local.sites, k) }
 
   site_id                         = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)

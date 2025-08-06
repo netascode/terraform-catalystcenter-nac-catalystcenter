@@ -22,6 +22,15 @@ locals {
     ]
   ])
 
+  project_templates = flatten([
+    for project in try(local.catalyst_center.templates.projects, []) : [
+      for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : {
+        project_name  = project.name
+        template_name = template.name
+      }
+    ]
+  ])
+
   composite_templates_list = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
       for tmpl in try(project.dayn_templates, []) : [
@@ -78,6 +87,7 @@ locals {
           "template" : try(template.name, null),
           "name" : try(device.name, null),
           "state" : try(device.state, null),
+          "site" : try(device.site, null),
           "device_ip" : try(device.device_ip, null)
           "deploy_state" : try(template.state, local.defaults.catalyst_center.inventory.devices.dayn_template.state, null)
           "copying_config" : try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
@@ -99,6 +109,19 @@ resource "catalystcenter_tag" "tag" {
 
 data "catalystcenter_project" "onboarding" {
   name = "Onboarding Configuration"
+}
+
+data "catalystcenter_project" "project" {
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? toset([for project in try(local.catalyst_center.templates.projects, []) : project.name]) : toset([])
+
+  name = each.key
+}
+
+data "catalystcenter_template" "template" {
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? { for template in try(local.project_templates, []) : template.template_name => template.project_name } : {}
+
+  name       = each.key
+  project_id = try(catalystcenter_project.project[each.key].id, data.catalystcenter_project.project[each.value].id, null)
 }
 
 resource "catalystcenter_project" "project" {
@@ -212,10 +235,10 @@ resource "catalystcenter_template_version" "composite_commit_version" {
 }
 
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") && contains(local.sites, try(d.site, "NONE")) }
 
   redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
-  template_id         = catalystcenter_template.regular_template[each.value.template].id
+  template_id         = try(catalystcenter_template.regular_template[each.value.template].id, data.catalystcenter_template.template[each.value.template].id)
   copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
@@ -224,7 +247,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     {
       id                    = lookup(local.device_ip_to_id, each.value.device_ip, null)
       type                  = "MANAGED_DEVICE_UUID"
-      versioned_template_id = catalystcenter_template_version.regular_commit_version[each.value.template].id
+      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.value.template].id, data.catalystcenter_template.template[each.value.template].id, null)
       params = try({
         for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value
       }, {})
@@ -242,7 +265,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") && contains(local.sites, try(d.site, "NONE")) }
 
   redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
   template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id

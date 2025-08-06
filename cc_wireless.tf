@@ -30,6 +30,13 @@ locals {
   }) > 0
 }
 
+
+data "catalystcenter_wireless_profile" "wireless_profile" {
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile } : {}
+
+  wireless_profile_name = each.key
+}
+
 resource "catalystcenter_wireless_ssid" "ssid" {
   for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings }
 
@@ -245,6 +252,6 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
 resource "catalystcenter_associate_site_to_network_profile" "site_to_wireless_network_profile" {
   for_each = { for s in try(local.sites_to_wireless_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if contains(local.sites, s.site) }
 
-  network_profile_id = catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id
+  network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id)
   site_id            = local.site_id_list[each.value.site]
 }
