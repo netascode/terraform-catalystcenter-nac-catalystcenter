@@ -245,6 +245,8 @@ resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
   affinity_id_decider               = try(local.border_devices[each.key].affinity_id_decider, local.defaults.catalyst_center.fabric.border_devices.affinity_id_decider, null)
   connected_to_internet             = try(local.border_devices[each.key].connected_to_internet, local.defaults.catalyst_center.fabric.border_devices.connected_to_internet, null)
   is_multicast_over_transit_enabled = try(local.border_devices[each.key].multicast_over_transit, local.defaults.catalyst_center.fabric.border_devices.multicast_over_transit, null)
+
+  depends_on = [catalystcenter_fabric_provision_device.provision_device]
 }
 
 locals {
