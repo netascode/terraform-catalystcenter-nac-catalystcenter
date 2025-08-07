@@ -1,4 +1,4 @@
-## 0.1.1 (unreleased)
+## 0.1.1
 
 - Add support for a new hierarchy area level: `Global/area/area/area/area`
 - Fix issue with assigning `security_group_name` to fabric port assignments
