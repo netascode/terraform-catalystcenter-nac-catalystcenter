@@ -22,6 +22,24 @@ variable "model" {
   default     = {}
 }
 
+variable "managed_sites" {
+  description = "List of sites to be managed. By default all sites will be managed."
+  type        = list(string)
+  default     = []
+}
+
+variable "manage_global_settings" {
+  description = "Flag to indicate if global settings should be managed."
+  type        = bool
+  default     = true
+}
+
+variable "manage_specific_sites_only" {
+  description = "If true, manage only the specified site listed in managed_sites. If false, also manage all child sites under each managed site."
+  type        = bool
+  default     = false
+}
+
 variable "write_default_values_file" {
   description = "Write all default values to a YAML file. Value is a path pointing to the file to be created."
   type        = string

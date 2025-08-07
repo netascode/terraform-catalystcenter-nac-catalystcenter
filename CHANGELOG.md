@@ -1,3 +1,14 @@
+## 0.1.1 (unreleased)
+
+- Add support for a new hierarchy area level: `Global/area/area/area/area`
+- Fix issue with assigning `security_group_name` to fabric port assignments
+- BREAKING CHANGE: Change data model struture for `l3_virtual_networks` to support L3 VNs on global level
+- Add support for reprovisioning wireless controller device
+- Add `manage_global_settings` variable to the module. This flag indicates if global settings should be managed.
+- Add `managed_sites` variable to the module. This variable defines a list of site names to manage. If not specified, all sites will be managed by default.
+- Add `manage_specific_sites_only` variable to the module. If set to true only sites listed under `managed_sites` will be managed. If false, also all child sites under managed_sites will be managed.
+- BREAKING CHANGE: Modify `catalystcenter_fabric_provision_device` resource instance to fix issue with initial provisioning followed by reprovisioning after adding `fabric_site`
+
 ## 0.1.0
 
 - Add support for assigning tag to device

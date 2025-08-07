@@ -1,5 +1,5 @@
 resource "catalystcenter_update_authentication_profile" "global_authentication_template" {
-  for_each = { for template in try(local.catalyst_center.authentication_templates, []) : template.name => template }
+  for_each = { for template in try(local.catalyst_center.authentication_templates, []) : template.name => template if var.manage_global_settings }
 
   authentication_profile_name   = each.value.name
   authentication_order          = try(each.value.authentication_order, local.defaults.catalyst_center.authentication_templates.authentication_order, null)
@@ -22,7 +22,7 @@ resource "catalystcenter_update_authentication_profile" "global_authentication_t
 }
 
 resource "catalystcenter_update_authentication_profile" "low_impact" {
-  for_each = { for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : fabric_site.name => fabric_site if fabric_site.authentication_template.name == "Low Impact" }
+  for_each = { for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : fabric_site.name => fabric_site if try(fabric_site.authentication_template.name, local.defaults.catalyst_center.authentication_templates.name) == "Low Impact" && contains(local.sites, fabric_site.name) }
 
   fabric_id                     = try(local.fabric_site_id_list[each.key], null)
   authentication_profile_name   = "Low Impact"
@@ -45,7 +45,7 @@ resource "catalystcenter_update_authentication_profile" "low_impact" {
 }
 
 resource "catalystcenter_update_authentication_profile" "open_authentication" {
-  for_each = { for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : fabric_site.name => fabric_site if fabric_site.authentication_template.name == "Open Authentication" }
+  for_each = { for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : fabric_site.name => fabric_site if try(fabric_site.authentication_template.name, local.defaults.catalyst_center.authentication_templates.name) == "Open Authentication" && contains(local.sites, fabric_site.name) }
 
   fabric_id                     = try(local.fabric_site_id_list[each.key], null)
   authentication_profile_name   = "Open Authentication"
@@ -56,7 +56,7 @@ resource "catalystcenter_update_authentication_profile" "open_authentication" {
 }
 
 resource "catalystcenter_update_authentication_profile" "closed_authentication" {
-  for_each = { for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : fabric_site.name => fabric_site if fabric_site.authentication_template.name == "Closed Authentication" }
+  for_each = { for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : fabric_site.name => fabric_site if try(fabric_site.authentication_template.name, local.defaults.catalyst_center.authentication_templates.name) == "Closed Authentication" && contains(local.sites, fabric_site.name) }
 
   fabric_id                     = try(local.fabric_site_id_list[each.key], null)
   authentication_profile_name   = "Closed Authentication"

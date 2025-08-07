@@ -1,7 +1,7 @@
 locals {
   yaml_strings_directories = flatten([
     for dir in var.yaml_directories : [
-      for file in fileset(".", "${dir}/*.{yml,yaml}") : file(file)
+      for file in fileset(".", "${dir}/**/*.{yml,yaml}") : file(file)
     ]
   ])
   yaml_strings_files = [
