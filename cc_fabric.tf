@@ -132,7 +132,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
       ? catalystcenter_fabric_site.fabric_site[site].id
       : contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
       ? catalystcenter_fabric_zone.fabric_zone[site].id
-      : try(local.data_source_fabric_site_id_list[local.data_source_site_list[site]], null)
+      : try(local.data_source_fabric_site_id_list[local.data_source_site_list[site]], "DSD")
     )
     if(
       contains(keys(catalystcenter_fabric_site.fabric_site), site)

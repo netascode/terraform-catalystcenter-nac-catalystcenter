@@ -62,6 +62,7 @@ defaults:
       transits:
         type: IP_BASED_TRANSIT
         routing_protocol_name: BGP
+        multicast_over_sda_transit: false
       fabric_sites:
         authentication_template:
           name: No Authentication
