@@ -19,9 +19,9 @@ defaults:
       copying_config: true
     pnp:
       devices:
-         type: Default
-         protocol: SSH2
-         image_skip: true
+        type: Default
+        protocol: SSH2
+        image_skip: true
     inventory:
       devices:
         role_source: MANUAL
