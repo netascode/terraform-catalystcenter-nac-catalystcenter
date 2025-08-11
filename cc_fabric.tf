@@ -123,7 +123,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = var.manage_global_settings ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks_fabric_site : local.global_l3_virtual_networks) : {}
+  for_each = var.manage_global_settings ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks : local.global_l3_virtual_networks) : {}
 
   virtual_network_name = each.key
   fabric_ids = try([

@@ -1,6 +1,7 @@
 ## 0.1.2 (unreleased)
 
 - Fix issue with assigning `local_to_vlan` to wireless profile.
+- Fix issue with assigning `l3_vn` to fabric zones.
 
 ## 0.1.1
 
