@@ -242,6 +242,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     ssid_name           = try(ssid.name, null)
     enable_fabric       = try(ssid.enable_fabric, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_fabric, null)
     enable_flex_connect = try(ssid.enable_flex_connect, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_flex_connect, null)
+    local_to_vlan       = try(ssid.enable_flex_connect, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_flex_connect, false) == true ? try(ssid.local_to_vlan, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.local_to_vlan, null) : null
     interface_name      = try(ssid.enable_fabric, false) == false ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
     wlan_profile_name   = try(ssid.wlan_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.wlan_profile_name, null)
   }], null)

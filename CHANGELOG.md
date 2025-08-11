@@ -1,3 +1,7 @@
+## 0.1.2 (unreleased)
+
+- Fix issue with assigning `local_to_vlan` to wireless profile.
+
 ## 0.1.1
 
 - Add support for a new hierarchy area level: `Global/area/area/area/area`
