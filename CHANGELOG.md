@@ -1,7 +1,8 @@
 ## 0.1.2 (unreleased)
 
-- Fix issue with assigning `local_to_vlan` to wireless profile.
-- Fix issue with assigning `l3_vn` to fabric zones.
+- BREAKING_CHANGE: Modify data model for Lan Automation
+- Fix issue with assigning Local to VLAN to wireless profile for Flex Connect Local Switching
+- Fix issue with assigning L3 Virtual Networks to Fabric Zones.
 
 ## 0.1.1
 
