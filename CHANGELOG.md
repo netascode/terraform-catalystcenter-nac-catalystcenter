@@ -1,5 +1,6 @@
 ## 0.1.2 (unreleased)
 
+- BREAKING CHANGE: Replace `name` with `ip_pool_name` under Anycast Gateway data model
 - BREAKING_CHANGE: Modify data model for Lan Automation
 - Fix issue with assigning Local to VLAN to wireless profile for Flex Connect Local Switching
 - Fix issue with assigning L3 Virtual Networks to Fabric Zones.

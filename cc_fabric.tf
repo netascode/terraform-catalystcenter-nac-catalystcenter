@@ -158,11 +158,11 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
-  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) }
+  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) }
 
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
-  ip_pool_name                              = try(each.value.ip_pool_name, each.key, null)
+  ip_pool_name                              = try(each.key, null)
   vlan_name                                 = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
   vlan_id                                   = try(each.value.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
   traffic_type                              = try(each.value.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
