@@ -106,6 +106,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_l2_virtual_network.l2_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_virtual_network) | resource |
 | [catalystcenter_fabric_l3_handoff_ip_transits.l3_handoff_ip_transits](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_handoff_ip_transits) | resource |
 | [catalystcenter_fabric_l3_handoff_sda_transit.sda_transit](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_handoff_sda_transit) | resource |
+| [catalystcenter_fabric_l3_virtual_network.global_l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_virtual_network) | resource |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_virtual_network) | resource |
 | [catalystcenter_fabric_port_assignments.port_assignments](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_assignments) | resource |
 | [catalystcenter_fabric_provision_device.provision_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_provision_device) | resource |
@@ -139,6 +140,7 @@ module "catalystcenter" {
 | [catalystcenter_update_authentication_profile.global_authentication_template](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
 | [catalystcenter_update_authentication_profile.low_impact](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
 | [catalystcenter_update_authentication_profile.open_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_authentication_profile) | resource |
+| [catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
 | [catalystcenter_wireless_profile.wireless_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
@@ -150,6 +152,7 @@ module "catalystcenter" {
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.cli_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
+| [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l3_virtual_network) | data source |
 | [catalystcenter_fabric_sites.fabric_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_sites) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_profile) | data source |
