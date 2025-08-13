@@ -314,7 +314,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_handoff_ip_transits" "l3_handoff_ip_transits" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(device.fabric_roles, "BORDER_NODE") && length(try(local.l3_handoffs_ip_transit_by_device[device.name], [])) != 0 && contains(local.sites, try(device.fabric_site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "BORDER_NODE") && length(try(local.l3_handoffs_ip_transit_by_device[device.name], [])) != 0 && contains(local.sites, try(device.fabric_site, "NONE")) }
 
   fabric_id         = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
