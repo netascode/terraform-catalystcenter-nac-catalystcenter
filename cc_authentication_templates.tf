@@ -1,5 +1,5 @@
 resource "catalystcenter_update_authentication_profile" "global_authentication_template" {
-  for_each = { for template in try(local.catalyst_center.authentication_templates, []) : template.name => template if var.manage_global_settings }
+  for_each = { for template in try(local.catalyst_center.authentication_templates, []) : template.name => template if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   authentication_profile_name   = each.value.name
   authentication_order          = try(each.value.authentication_order, local.defaults.catalyst_center.authentication_templates.authentication_order, null)

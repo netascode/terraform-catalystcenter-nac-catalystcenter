@@ -29,9 +29,9 @@ variable "managed_sites" {
 }
 
 variable "manage_global_settings" {
-  description = "Flag to indicate if global settings should be managed."
+  description = "Flag indicating whether global settings should be managed, used in combination with managed_sites."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "manage_specific_sites_only" {

@@ -31,7 +31,7 @@ locals {
 }
 
 resource "catalystcenter_network_profile" "switching_network_profile" {
-  for_each = var.manage_global_settings ? local.switching_profile_templates : {}
+  for_each = var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) ? local.switching_profile_templates : {}
 
   name      = each.key
   type      = "switching"

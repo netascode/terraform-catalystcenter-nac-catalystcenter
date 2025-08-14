@@ -38,7 +38,7 @@ data "catalystcenter_wireless_profile" "wireless_profile" {
 }
 
 resource "catalystcenter_wireless_ssid" "ssid" {
-  for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings }
+  for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   ssid                                        = each.key
   auth_type                                   = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ssids.auth_type, null)
@@ -110,7 +110,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
 }
 
 resource "catalystcenter_wireless_rf_profile" "rf_profile" {
-  for_each = { for rf_profile in try(local.catalyst_center.wireless.rf_profiles, []) : rf_profile.name => rf_profile }
+  for_each = { for rf_profile in try(local.catalyst_center.wireless.rf_profiles, []) : rf_profile.name => rf_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   rf_profile_name         = each.key
   default_rf_profile      = try(each.value.default_rf_profile, local.defaults.catalyst_center.wireless.rf_profiles.default_rf_profile, null)
@@ -235,7 +235,7 @@ resource "catalystcenter_wireless_rf_profile" "rf_profile" {
 }
 
 resource "catalystcenter_wireless_profile" "wireless_profile" {
-  for_each = { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile if var.manage_global_settings }
+  for_each = { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   wireless_profile_name = each.key
   ssid_details = try([for ssid in each.value.ssid_details : {

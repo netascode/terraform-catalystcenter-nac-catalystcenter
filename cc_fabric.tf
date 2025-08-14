@@ -82,7 +82,7 @@ resource "catalystcenter_transit_network" "transit" {
     alltrue([
       for device in try(transit.control_plane_devices, []) :
       contains(local.provisioned_sda_transit_cp_devices, device)
-    ])
+    ]) || (!var.manage_global_settings && length(var.managed_sites) == 0)
   }
 
   name                              = each.key
@@ -132,7 +132,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
-  for_each = var.manage_global_settings == true && length(var.managed_sites) != 0 ? try(local.global_l3_virtual_networks, {}) : {}
+  for_each = var.manage_global_settings == true ? try(local.global_l3_virtual_networks, {}) : {}
 
   virtual_network_name = each.key
 
@@ -146,7 +146,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
 }
 
 data "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? toset([for l3_vn in try(local.global_l3_virtual_networks, []) : l3_vn]) : toset([])
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? try(local.global_l3_virtual_networks, {}) : {}
 
   virtual_network_name = each.key
 }
@@ -160,7 +160,7 @@ resource "catalystcenter_virtual_network_to_fabric_site" "l3_vn_to_fabric_site" 
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = var.manage_global_settings && length(var.managed_sites) == 0 ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks : {}) : {}
+  for_each = !var.manage_global_settings && length(var.managed_sites) == 0 ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks : {}) : {}
 
   virtual_network_name = each.key
   fabric_ids = try([
@@ -182,7 +182,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
-  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn }
+  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   fabric_id                          = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   vlan_name                          = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)

@@ -118,7 +118,7 @@ resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
 }
 
 resource "time_sleep" "provision_device_wait" {
-  count = length(try(local.provisioned_devices, [])) > 0 ? 1 : 0
+  count = length(try(local.provisioned_devices, [])) > 0 && !var.manage_global_settings ? 1 : 0
 
   create_duration = "10s"
 
