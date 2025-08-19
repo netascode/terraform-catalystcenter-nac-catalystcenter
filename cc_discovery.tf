@@ -16,7 +16,7 @@ resource "catalystcenter_discovery" "discovery" {
   ip_address_list           = try(each.value.ip_address_list, local.defaults.catalyst_center.inventory.discovery.ip_address_list, null)
   ip_filter_list            = try(each.value.ip_filter_list, local.defaults.catalyst_center.inventory.discovery.ip_filter_list, null)
   netconf_port              = try(each.value.netconf_port, local.defaults.catalyst_center.inventory.discovery.netconf_port, null)
-   preferred_ip_method       = try(each.value.preferred_ip_method, local.defaults.catalyst_center.inventory.discovery.preferred_ip_method, null)
+  preferred_ip_method       = try(each.value.preferred_ip_method, local.defaults.catalyst_center.inventory.discovery.preferred_ip_method, null)
   retry                     = try(each.value.retry, local.defaults.catalyst_center.inventory.discovery.retry, null)
   snmp_auth_passphrase      = try(each.value.snmp_auth_passphrase, local.defaults.catalyst_center.inventory.discovery.snmp_auth_passphrase, null)
   snmp_auth_protocol        = try(each.value.snmp_auth_protocol, local.defaults.catalyst_center.inventory.discovery.snmp_auth_protocol, null)
