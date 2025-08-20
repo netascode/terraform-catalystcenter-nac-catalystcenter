@@ -5,6 +5,9 @@
 - BREAKING CHANGE: Modify data model for Lan Automation
 - Fix issue with assigning Local to VLAN to wireless profile for Flex Connect Local Switching
 - Fix issue with assigning L3 Virtual Networks to Fabric Zones.
+- Fix issue with assigning L3 Virtual Networks to Fabric Zones.
+- Fix issue with assigning UseLoopBack as preferred_ip_method to Discovery.
+- Fix issue with assigning global_credential_id_list to Discovery.
 
 ## 0.1.1
 
