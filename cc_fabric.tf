@@ -21,6 +21,10 @@ locals {
     ]
   ])
 
+  anycast_gateways_map = {
+    for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway
+  }
+
   l3_virtual_networks_fabric_zone = {
     for vn in flatten([
       for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
@@ -349,7 +353,7 @@ locals {
           device_ip        = try(local.all_devices[border_device.name].device_ip, null)
           interface_name   = try(interface, null)
           external_vlan_id = try(vn.external_vlan, null)
-          name             = try(vn.name, null)
+          name             = try(vn.ip_pool_name, null)
         }
       ]
     ]
@@ -366,7 +370,7 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
   network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
   interface_name    = try(each.value.interface_name, null)
-  internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
+  internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.name}#_#${local.anycast_gateways_map[each.value.name].l3_virtual_network}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
   depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site]
