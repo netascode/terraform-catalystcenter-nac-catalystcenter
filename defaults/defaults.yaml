@@ -14,9 +14,11 @@ defaults:
           interface_name: management
     templates:
       force_push_template: true
+      description: ""
       language: JINJA
       composite: false
       copying_config: true
+      redeploy_template: NEVER
     pnp:
       devices:
         type: Default
@@ -24,6 +26,8 @@ defaults:
         image_skip: true
     inventory:
       devices:
+        dayn_template:
+          redeploy_template: NEVER
         role_source: MANUAL
     sites:
       areas:
