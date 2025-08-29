@@ -1,6 +1,22 @@
-data "catalystcenter_credentials_cli" "cli_credentials" {
-  for_each    = length(try([local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.name], [])) > 0 ? { for cli_cred in try(local.catalyst_center.network_settings.device_credentials.cli_credentials, [{ name = try(local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.name, null) }]) : cli_cred.name => cli_cred } : {}
-  description = each.key
+# Simplified approach: Only use Terraform managed resources for credentials
+# This avoids the complexity of mixing managed resources with data sources
+
+locals {
+  # Collect all credential IDs from managed resources only
+  all_credential_ids = merge(
+    # CLI credentials
+    try({ for name, cred in catalystcenter_credentials_cli.cli_credentials : name => cred.id }, {}),
+    # SNMP v2 Read credentials
+    try({ for name, cred in catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials : name => cred.id }, {}),
+    # SNMP v2 Write credentials  
+    try({ for name, cred in catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials : name => cred.id }, {}),
+    # SNMP v3 credentials
+    try({ for name, cred in catalystcenter_credentials_snmpv3.snmpv3_credentials : name => cred.id }, {}),
+    # HTTPS Read credentials
+    try({ for name, cred in catalystcenter_credentials_https_read.https_read_credentials : name => cred.id }, {}),
+    # HTTPS Write credentials
+    try({ for name, cred in catalystcenter_credentials_https_write.https_write_credentials : name => cred.id }, {})
+  )
 }
 
 resource "catalystcenter_discovery" "discovery" {
@@ -10,13 +26,13 @@ resource "catalystcenter_discovery" "discovery" {
   protocol_order            = try(each.value.protocol_order, local.defaults.catalyst_center.inventory.discovery.protocol_order, null)
   cdp_level                 = try(each.value.cdp_level, local.defaults.catalyst_center.inventory.discovery.cdp_level, null)
   enable_password_list      = try(each.value.enable_password_list, local.defaults.catalyst_center.inventory.discovery.enable_password_list, null)
-  global_credential_id_list = try([for cred in each.value.global_credential_list : data.catalystcenter_credentials_cli.cli_credentials[cred].id], null)
+  global_credential_id_list = try([for cred in each.value.global_credential_list : local.all_credential_ids[cred]], null)
   http_read_credential      = try(each.value.http_read_credential, local.defaults.catalyst_center.inventory.discovery.http_read_credential, null)
   http_write_credential     = try(each.value.http_write_credential, local.defaults.catalyst_center.inventory.discovery.http_write_credential, null)
   ip_address_list           = try(each.value.ip_address_list, local.defaults.catalyst_center.inventory.discovery.ip_address_list, null)
   ip_filter_list            = try(each.value.ip_filter_list, local.defaults.catalyst_center.inventory.discovery.ip_filter_list, null)
   netconf_port              = try(each.value.netconf_port, local.defaults.catalyst_center.inventory.discovery.netconf_port, null)
-  preferred_ip_method       = try(each.value.preferred_mgmt_ipmethod, local.defaults.catalyst_center.inventory.discovery.preferred_mgmt_ipmethod, null)
+  preferred_mgmt_ip_method  = try(each.value.preferred_mgmt_ip_method, local.defaults.catalyst_center.inventory.discovery.preferred_mgmt_ip_method, null)
   retry                     = try(each.value.retry, local.defaults.catalyst_center.inventory.discovery.retry, null)
   snmp_auth_passphrase      = try(each.value.snmp_auth_passphrase, local.defaults.catalyst_center.inventory.discovery.snmp_auth_passphrase, null)
   snmp_auth_protocol        = try(each.value.snmp_auth_protocol, local.defaults.catalyst_center.inventory.discovery.snmp_auth_protocol, null)
@@ -36,5 +52,12 @@ resource "catalystcenter_discovery" "discovery" {
     ignore_changes = [discovery_type]
   }
 
-  depends_on = [data.catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_cli.cli_credentials]
+  depends_on = [
+    catalystcenter_credentials_cli.cli_credentials,
+    catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials,
+    catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials,
+    catalystcenter_credentials_snmpv3.snmpv3_credentials,
+    catalystcenter_credentials_https_read.https_read_credentials,
+    catalystcenter_credentials_https_write.https_write_credentials
+  ]
 }
