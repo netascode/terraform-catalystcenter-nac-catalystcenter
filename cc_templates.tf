@@ -90,7 +90,7 @@ locals {
           "state" : try(device.state, null),
           "site" : try(device.site, null),
           "device_ip" : try(device.device_ip, null)
-          "redeploy_template" : try(template.redeploy_template, device.dayn_templates.redeploy_template, local.defaults.catalyst_center.inventory.devices.dayn_templates.redeploy_template, local.templates_map[template.name].redeploy_template, null)
+          "redeploy_template" : try(template.redeploy_template, device.dayn_templates.redeploy_template, local.templates_map[template.name].redeploy_template, null)
           "copying_config" : try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
           "force_push_template" : try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
         }

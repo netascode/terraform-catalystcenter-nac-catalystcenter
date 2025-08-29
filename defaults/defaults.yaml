@@ -26,8 +26,6 @@ defaults:
         image_skip: true
     inventory:
       devices:
-        dayn_template:
-          redeploy_template: NEVER
         role_source: MANUAL
     sites:
       areas:
