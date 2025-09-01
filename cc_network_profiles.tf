@@ -44,7 +44,7 @@ data "catalystcenter_network_profile" "switching_network_profile" {
   name = each.key
 }
 
-resource "catalystcenter_associate_site_to_network_profile" "site_to_network_profile" {
+resource "catalystcenter_network_profile_for_site_assignments" "site_to_network_profile" {
   for_each = { for s in try(local.sites_to_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if contains(local.sites, s.site) }
 
   network_profile_id = try(catalystcenter_network_profile.switching_network_profile[each.value.network_profile].id, data.catalystcenter_network_profile.switching_network_profile[each.value.network_profile].id)
