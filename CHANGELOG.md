@@ -5,6 +5,7 @@
 - BREAKING CHANGE: rename `catalystcenter_fabric_l3_handoff_ip_transit` to `catalystcenter_fabric_l3_handoff_ip_transits`
 - BREAKING CHANGE: Replace `name` with `ip_pool_name` under Anycast Gateway data model
 - BREAKING CHANGE: Modify data model for Lan Automation
+- BREAKING CHANGE: rename `catalystcenter_associate_site_to_network_profile` to `catalystcenter_network_profile_for_site_assignments`
 - Fix issue with assigning Local to VLAN to wireless profile for Flex Connect Local Switching
 - Fix issue with assigning L3 Virtual Networks to Fabric Zones.
 - Fix issue with assigning UseLoopBack as preferred_ip_method to Discovery.
