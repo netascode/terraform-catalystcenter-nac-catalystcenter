@@ -9,22 +9,6 @@ locals {
     "5GHz and 6GHz"   = "5 and 6 GHz"
   }
 
-  wireless_network_profiles = [
-    for i in try(local.catalyst_center.network_profiles.wireless, []) : {
-      name  = try(i.name, null)
-      sites = try(i.sites, null)
-    }
-  ]
-
-  sites_to_wireless_network_profile = flatten([
-    for np in local.wireless_network_profiles : [
-      for site in coalesce(np.sites, []) : {
-        "site" : try(site, null)
-        "network_profile" : try(np.name, null)
-      }
-    ]
-  ])
-
   wireless_controllers = length({
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
@@ -250,9 +234,13 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
   depends_on = [catalystcenter_wireless_ssid.ssid]
 }
 
-resource "catalystcenter_associate_site_to_network_profile" "site_to_wireless_network_profile" {
-  for_each = { for s in try(local.sites_to_wireless_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if contains(local.sites, s.site) }
+resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
+  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
 
-  network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id)
-  site_id            = local.site_id_list[each.value.site]
+  network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
+  items = [
+    for site in each.value.sites : {
+      id = local.site_id_list[site]
+    } if contains(local.sites, site)
+  ]
 }

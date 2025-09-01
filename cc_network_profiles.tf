@@ -19,15 +19,6 @@ locals {
       }]
     }
   }
-
-  sites_to_network_profile = flatten([
-    for np in try(local.catalyst_center.network_profiles.switching, []) : [
-      for site in np.sites : {
-        "site" : try(site, null)
-        "network_profile" : try(np.name, null)
-      }
-    ]
-  ])
 }
 
 resource "catalystcenter_network_profile" "switching_network_profile" {
@@ -44,9 +35,13 @@ data "catalystcenter_network_profile" "switching_network_profile" {
   name = each.key
 }
 
-resource "catalystcenter_associate_site_to_network_profile" "site_to_network_profile" {
-  for_each = { for s in try(local.sites_to_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if contains(local.sites, s.site) }
+resource "catalystcenter_network_profile_for_sites_assignments" "site_to_network_profile" {
+  for_each = { for np in try(local.catalyst_center.network_profiles.switching, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
 
-  network_profile_id = try(catalystcenter_network_profile.switching_network_profile[each.value.network_profile].id, data.catalystcenter_network_profile.switching_network_profile[each.value.network_profile].id)
-  site_id            = local.site_id_list[each.value.site]
+  network_profile_id = try(catalystcenter_network_profile.switching_network_profile[each.key].id, data.catalystcenter_network_profile.switching_network_profile[each.key].id)
+  items = [
+    for site in each.value.sites : {
+      id = local.site_id_list[site]
+    } if contains(local.sites, site)
+  ]
 }
