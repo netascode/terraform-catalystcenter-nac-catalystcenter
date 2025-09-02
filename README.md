@@ -79,8 +79,6 @@ module "catalystcenter" {
 | [catalystcenter_assign_devices_to_tag.device_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_devices_to_tag) | resource |
 | [catalystcenter_assign_managed_ap_locations.managed_ap_locations](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_managed_ap_locations) | resource |
 | [catalystcenter_assign_templates_to_tag.template_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_templates_to_tag) | resource |
-| [catalystcenter_associate_site_to_network_profile.site_to_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/associate_site_to_network_profile) | resource |
-| [catalystcenter_associate_site_to_network_profile.site_to_wireless_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/associate_site_to_network_profile) | resource |
 | [catalystcenter_banner_settings.banner](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/banner_settings) | resource |
 | [catalystcenter_banner_settings.global_banner](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/banner_settings) | resource |
 | [catalystcenter_building.building](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/building) | resource |
@@ -122,6 +120,8 @@ module "catalystcenter" {
 | [catalystcenter_lan_automation.lanauto_edge](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/lan_automation) | resource |
 | [catalystcenter_lan_automation.lanauto_link](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/lan_automation) | resource |
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile) | resource |
+| [catalystcenter_network_profile_for_sites_assignments.site_to_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile_for_sites_assignments) | resource |
+| [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile_for_sites_assignments) | resource |
 | [catalystcenter_ntp_settings.global_ntp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ntp_settings) | resource |
 | [catalystcenter_ntp_settings.ntp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ntp_settings) | resource |
 | [catalystcenter_pnp_config_preview.config_preview](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_config_preview) | resource |

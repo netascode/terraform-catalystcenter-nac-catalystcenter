@@ -9,6 +9,7 @@
 - Fix issue with assigning L3 Virtual Networks to Fabric Zones.
 - Fix issue with assigning UseLoopBack as preferred_ip_method to Discovery.
 - Fix issue with assigning global_credential_id_list to Discovery.
+- BREAKING CHANGE: Replace resource `catalystcenter_associate_site_to_network_profile` with `catalystcenter_network_profile_for_site_assignments`
 
 ## 0.1.1
 
