@@ -70,6 +70,8 @@ locals {
       for tag in try(device.tags, []) : {
         "tag_name" : tag,
         "device_name" : device.name
+        "device_ip" : device.device_ip
+        "fqdn_name" : device.fqdn_name
       }
     ] if try(device.tags, null) != null
   ])
@@ -78,6 +80,8 @@ locals {
     for tag_key in distinct([for t in local.tag_devices : t.tag_name]) : {
       "tag_name" : tag_key
       "device_names" : [for t in local.tag_devices : t.device_name if t.tag_name == tag_key]
+      "device_ips" : [for t in local.tag_devices : t.device_ip if t.tag_name == tag_key]
+      "fqdn_names" : [for t in local.tag_devices : t.fqdn_name if t.tag_name == tag_key]
     }
   ]
 
@@ -90,6 +94,8 @@ locals {
           "state" : try(device.state, null),
           "site" : try(device.site, null),
           "device_ip" : try(device.device_ip, null)
+          "device_name" : try(device.name, null)
+          "fqdn_name" : try(device.fqdn_name, null)
           "redeploy_template" : try(template.redeploy_template, device.dayn_templates.redeploy_template, local.templates_map[template.name].redeploy_template, null)
           "copying_config" : try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
           "force_push_template" : try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -202,8 +208,14 @@ resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
 resource "catalystcenter_assign_devices_to_tag" "device_to_tag" {
   for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  tag_id     = catalystcenter_tag.tag[each.key].id
-  device_ids = [for device in each.value.device_names : try(local.device_name_to_id[device], null)]
+  tag_id = catalystcenter_tag.tag[each.key].id
+  device_ids = [
+    for i in range(length(each.value.device_names)) : coalesce(
+      try(local.device_name_to_id[each.value.device_names[i]], null),
+      try(local.device_name_to_id[each.value.fqdn_names[i]], null),
+      try(local.device_ip_to_id[each.value.device_ips[i]], null)
+    )
+  ]
 }
 
 resource "catalystcenter_template_version" "regular_commit_version" {
@@ -246,7 +258,11 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 
   target_info = [
     {
-      id                    = lookup(local.device_ip_to_id, each.value.device_ip, null)
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
       type                  = "MANAGED_DEVICE_UUID"
       versioned_template_id = try(catalystcenter_template.regular_template[each.value.template].id, data.catalystcenter_template.template[each.value.template].id)
       params = try({
@@ -256,7 +272,11 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
         {
           type  = "MANAGED_DEVICE_UUID"
           scope = "RUNTIME"
-          value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
         }
       ]
     }
@@ -276,7 +296,11 @@ resource "catalystcenter_deploy_template" "regular_template_redeploy" {
 
   target_info = [
     {
-      id                    = lookup(local.device_ip_to_id, each.value.device_ip, null)
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
       type                  = "MANAGED_DEVICE_UUID"
       versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.value.template].id, data.catalystcenter_template.template[each.value.template].id, null)
       params = try({
@@ -286,7 +310,11 @@ resource "catalystcenter_deploy_template" "regular_template_redeploy" {
         {
           type  = "MANAGED_DEVICE_UUID"
           scope = "RUNTIME"
-          value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
         }
       ]
     }
@@ -312,7 +340,11 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
     target_info = [
       {
-        id   = lookup(local.device_ip_to_id, each.value.device_ip, null)
+        id = coalesce(
+          try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+          try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+          try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+        )
         type = "MANAGED_DEVICE_UUID"
 
         params = { for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value if item.template_name == tmpl }
@@ -320,7 +352,11 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
           {
             type  = "MANAGED_DEVICE_UUID"
             scope = "RUNTIME"
-            value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+            value = coalesce(
+              try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+              try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+            )
           }
         ]
       }
@@ -330,14 +366,22 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
 
   target_info = [
     {
-      id     = lookup(local.device_ip_to_id, each.value.device_ip, null)
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
       type   = "MANAGED_DEVICE_UUID"
       params = {}
       resource_params = [
         {
           type  = "MANAGED_DEVICE_UUID"
           scope = "RUNTIME"
-          value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
         }
       ]
     }
@@ -363,7 +407,11 @@ resource "catalystcenter_deploy_template" "composite_template_redeploy" {
     copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
     target_info = [
       {
-        id   = lookup(local.device_ip_to_id, each.value.device_ip, null)
+        id = coalesce(
+          try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+          try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+          try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+        )
         type = "MANAGED_DEVICE_UUID"
 
         params = { for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value if item.template_name == tmpl }
@@ -371,7 +419,11 @@ resource "catalystcenter_deploy_template" "composite_template_redeploy" {
           {
             type  = "MANAGED_DEVICE_UUID"
             scope = "RUNTIME"
-            value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+            value = coalesce(
+              try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+              try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+            )
           }
         ]
       }
@@ -381,14 +433,22 @@ resource "catalystcenter_deploy_template" "composite_template_redeploy" {
 
   target_info = [
     {
-      id     = lookup(local.device_ip_to_id, each.value.device_ip, null)
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
       type   = "MANAGED_DEVICE_UUID"
       params = {}
       resource_params = [
         {
           type  = "MANAGED_DEVICE_UUID"
           scope = "RUNTIME"
-          value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
         }
       ]
     }
