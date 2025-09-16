@@ -90,7 +90,7 @@ resource "catalystcenter_transit_network" "transit" {
   routing_protocol_name             = try(each.value.type, "") == "IP_BASED_TRANSIT" ? try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null) : null
   autonomous_system_number          = try(each.value.type, "") == "IP_BASED_TRANSIT" ? try(each.value.autonomous_system_number, local.defaults.catalyst_center.fabric.transits.autonomous_system_number, null) : null
   is_multicast_over_transit_enabled = try(each.value.type, "") != "IP_BASED_TRANSIT" ? try(each.value.multicast_over_sda_transit, local.defaults.catalyst_center.fabric.transits.multicast_over_sda_transit, null) : null
-  control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : try(local.device_name_to_id[device], null)] : null
+  control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : try(local.device_name_to_id[device], local.device_name_to_id[local.name_to_fqdn_mapping[device]], null)] : null
 
   depends_on = [catalystcenter_fabric_provision_device.provision_device]
 }

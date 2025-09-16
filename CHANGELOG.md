@@ -1,13 +1,14 @@
 ## 0.1.2 (unreleased)
 
+- BREAKING CHANGE: change `hostname` to `fqdn_name` in inventory devices
 - BREAKING CHANGE: Modify template redeployment, replace `deploy_state` with `redeploy_template` attribute with values `ALWAYS`, `ON_CHANGE`, `NEVER`
-- BREAKING CHANGE: Add ip_pool_name and rename name to l3_virtual_network under l2_handoff with anycast gateway
+- BREAKING CHANGE: Add `ip_pool_name` and rename `name` to `l3_virtual_network` under `l2_handoff` with anycast gateway
 - BREAKING CHANGE: rename `catalystcenter_fabric_l3_handoff_ip_transit` to `catalystcenter_fabric_l3_handoff_ip_transits`
 - BREAKING CHANGE: Replace `name` with `ip_pool_name` under Anycast Gateway data model
 - BREAKING CHANGE: Modify data model for Lan Automation
 - Fix issue with assigning Local to VLAN to wireless profile for Flex Connect Local Switching
 - Fix issue with assigning L3 Virtual Networks to Fabric Zones.
-- Fix issue with assigning UseLoopBack as preferred_ip_method to Discovery.
+- BREAKING_CHANGE: Fix issue with assigning UseLoopBack as preferred_mgmt_ip_method to Discovery.
 - Fix issue with assigning global_credential_id_list to Discovery.
 - BREAKING CHANGE: Replace resource `catalystcenter_associate_site_to_network_profile` with `catalystcenter_network_profile_for_site_assignments`
 
