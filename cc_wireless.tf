@@ -230,8 +230,14 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     interface_name      = try(ssid.enable_fabric, false) == false ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
     wlan_profile_name   = try(ssid.wlan_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.wlan_profile_name, null)
   }], null)
+  additional_interfaces = try(each.value.additional_interfaces, null)
+  ap_zones = try([for ap_zone in each.value.ap_zones : {
+    ap_zone_name    = try(ap_zone.name, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.name, null)
+    rf_profile_name = try(ap_zone.rf_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.rf_profile_name, null)
+    ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
+  }], null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
@@ -243,4 +249,11 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
       id = local.site_id_list[site]
     } if contains(local.sites, site)
   ]
+}
+
+resource "catalystcenter_wireless_interface" "interface" {
+  for_each = { for iface in try(local.catalyst_center.wireless.interfaces, []) : iface.name => iface }
+
+  interface_name = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
+  vlan_id        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
 }
