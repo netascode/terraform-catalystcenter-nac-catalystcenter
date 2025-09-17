@@ -1,5 +1,6 @@
-## 0.1.2 (unreleased)
+## 0.2.0 (unreleased)
 
+- Add AP Zones support under Wireless Network Profile
 - BREAKING CHANGE: change `hostname` to `fqdn_name` in inventory devices
 - BREAKING CHANGE: Modify template redeployment, replace `deploy_state` with `redeploy_template` attribute with values `ALWAYS`, `ON_CHANGE`, `NEVER`
 - BREAKING CHANGE: Add `ip_pool_name` and rename `name` to `l3_virtual_network` under `l2_handoff` with anycast gateway

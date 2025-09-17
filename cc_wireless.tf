@@ -237,7 +237,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
   }], null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
@@ -252,7 +252,7 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
 }
 
 resource "catalystcenter_wireless_interface" "interface" {
-  for_each = { for iface in try(local.catalyst_center.wireless.interfaces, []) : iface.name => iface }
+  for_each = { for iface in try(local.catalyst_center.wireless.interfaces, []) : iface.name => iface if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   interface_name = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
   vlan_id        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
