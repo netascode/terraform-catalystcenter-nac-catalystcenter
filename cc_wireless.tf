@@ -254,6 +254,6 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
 resource "catalystcenter_wireless_interface" "interface" {
   for_each = { for iface in try(local.catalyst_center.wireless.interfaces, []) : iface.name => iface }
 
-  interfaceName = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
-  vlanId        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
+  interface_name = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
+  vlan_id        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
 }
