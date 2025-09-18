@@ -8,9 +8,9 @@ locals {
     && !startswith(device.platform_id, "CW91")
   }
 
-  name_to_fqdn_mapping = {
+  name_to_fqdn_mapping = try({
     for device in local.catalyst_center.inventory.devices : device.name => try(device.fqdn_name, device.name, null)
-  }
+  }, {})
 
   all_devices = {
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => merge(device,
