@@ -1,4 +1,4 @@
-## 0.2.0 (unreleased)
+## 0.2.0
 
 - Add AP Zones support under Wireless Network Profile
 - BREAKING CHANGE: change `hostname` to `fqdn_name` in inventory devices
