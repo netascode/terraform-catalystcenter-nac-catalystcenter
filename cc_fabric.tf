@@ -45,6 +45,15 @@ locals {
     ]) : vn.name => vn.fabric_site_name...
   }
 
+  l3_virtual_networks_all = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for vn in try(fabric_site.l3_virtual_networks, []) : {
+        name             = try(vn.name, vn)
+        fabric_site_name = fabric_site.name
+      }
+    ]
+  ])
+
   l3_virtual_networks = {
     for key in keys(local.l3_virtual_networks_fabric_site) : key => concat(
       try(local.l3_virtual_networks_fabric_site[key], []),
@@ -73,7 +82,7 @@ resource "catalystcenter_transit_network" "transit" {
     alltrue([
       for device in try(transit.control_plane_devices, []) :
       contains(local.provisioned_sda_transit_cp_devices, device)
-    ])
+    ]) || (!var.manage_global_settings && length(var.managed_sites) == 0)
   }
 
   name                              = each.key
@@ -81,7 +90,7 @@ resource "catalystcenter_transit_network" "transit" {
   routing_protocol_name             = try(each.value.type, "") == "IP_BASED_TRANSIT" ? try(each.value.routing_protocol_name, local.defaults.catalyst_center.fabric.transits.routing_protocol_name, null) : null
   autonomous_system_number          = try(each.value.type, "") == "IP_BASED_TRANSIT" ? try(each.value.autonomous_system_number, local.defaults.catalyst_center.fabric.transits.autonomous_system_number, null) : null
   is_multicast_over_transit_enabled = try(each.value.type, "") != "IP_BASED_TRANSIT" ? try(each.value.multicast_over_sda_transit, local.defaults.catalyst_center.fabric.transits.multicast_over_sda_transit, null) : null
-  control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : try(local.device_name_to_id[device], null)] : null
+  control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : try(local.device_name_to_id[device], local.device_name_to_id[local.name_to_fqdn_mapping[device]], null)] : null
 
   depends_on = [catalystcenter_fabric_provision_device.provision_device]
 }
@@ -122,8 +131,36 @@ locals {
   data_source_fabric_site_id_list = try({ for site in data.catalystcenter_fabric_sites.fabric_sites.sites : site.site_id => site.id }, {})
 }
 
+resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
+  for_each = var.manage_global_settings == true ? try(local.global_l3_virtual_networks, {}) : {}
+
+  virtual_network_name = each.key
+
+  lifecycle {
+    ignore_changes = [
+      fabric_ids
+    ]
+  }
+
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
+}
+
+data "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? try(local.global_l3_virtual_networks, {}) : {}
+
+  virtual_network_name = each.key
+}
+
+resource "catalystcenter_virtual_network_to_fabric_site" "l3_vn_to_fabric_site" {
+  for_each = { for l3_vn in try(local.l3_virtual_networks_all, []) : "${l3_vn.name}#_#${l3_vn.fabric_site_name}" => l3_vn if contains(local.sites, l3_vn.fabric_site_name) && length(var.managed_sites) != 0 }
+
+  virtual_network_name = each.value.name
+  virtual_network_id   = try(catalystcenter_fabric_l3_virtual_network.global_l3_vn[each.value.name].id, data.catalystcenter_fabric_l3_virtual_network.l3_vn[each.value.name].id)
+  fabric_site_id       = try(local.fabric_site_id_list[each.value.fabric_site_name], null)
+}
+
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
-  for_each = var.manage_global_settings ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks_fabric_site : local.global_l3_virtual_networks) : {}
+  for_each = !var.manage_global_settings && length(var.managed_sites) == 0 ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks : {}) : {}
 
   virtual_network_name = each.key
   fabric_ids = try([
@@ -145,7 +182,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
-  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn }
+  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   fabric_id                          = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   vlan_name                          = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)
@@ -154,15 +191,15 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
   fabric_enabled_wireless            = try(each.value.fabric_enabled_wireless, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.fabric_enabled_wireless, null)
   associated_l3_virtual_network_name = try(each.value.associated_l3_virtual_network_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.associated_l3_virtual_network_name, null)
 
-  depends_on = [catalystcenter_fabric_l3_virtual_network.l3_vn]
+  depends_on = [catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
-  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) }
+  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) }
 
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
-  ip_pool_name                              = try(each.value.ip_pool_name, each.key, null)
+  ip_pool_name                              = try(each.key, null)
   vlan_name                                 = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
   vlan_id                                   = try(each.value.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
   traffic_type                              = try(each.value.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -178,7 +215,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
 }
 
 locals {
@@ -188,7 +225,11 @@ locals {
 resource "catalystcenter_fabric_device" "border_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "BORDER_NODE") && contains(local.sites, try(device.fabric_site, "NONE")) }
 
-  network_device_id               = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
   fabric_id                       = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles                    = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
   border_types                    = try(local.border_devices[each.key].border_types, local.defaults.catalyst_center.fabric.border_devices.border_types, null)
@@ -204,19 +245,27 @@ resource "catalystcenter_fabric_device" "border_device" {
 resource "catalystcenter_fabric_device" "wireless_controller" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") }
 
-  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
-  fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
-  device_roles      = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+  fabric_id    = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_device.border_device]
 }
 
 resource "catalystcenter_fabric_device" "edge_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && !contains(try(device.fabric_roles, []), "BORDER_NODE") && try(device.fabric_roles, null) != null && contains(try(device.fabric_roles, []), "EDGE_NODE") && contains(local.sites, try(device.fabric_site, "NONE")) }
 
-  network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
-  fabric_id         = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
-  device_roles      = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+  fabric_id    = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, catalystcenter_fabric_device.border_device]
 }
@@ -238,7 +287,11 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
 resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "BORDER_NODE") && try(local.border_devices[device.name].sda_transit, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
 
-  network_device_id                 = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
   fabric_id                         = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   transit_network_id                = try(catalystcenter_transit_network.transit[local.border_devices[each.key].sda_transit].id, data.catalystcenter_transit_network.transit[local.border_devices[each.key].sda_transit].id, null)
   affinity_id_prime                 = try(local.border_devices[each.key].affinity_id_prime, local.defaults.catalyst_center.fabric.border_devices.affinity_id_prime, null)
@@ -250,11 +303,12 @@ resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
 }
 
 locals {
-  l3_handoffs_ip_transit = flatten([
-    for border_device in try(local.catalyst_center.fabric.border_devices, []) : [
+  l3_handoffs_ip_transit_by_device = {
+    for border_device in try(local.catalyst_center.fabric.border_devices, []) :
+    border_device.name => flatten([
       for transit in try(border_device.l3_handoffs, []) : [
         for interface in try(transit.interfaces, []) : [
-          for vn in try(interface.virtual_networks) : {
+          for vn in try(interface.virtual_networks, []) : {
             key                   = format("%s/%s/%s/%s", vn.name, interface.name, transit.name, border_device.name)
             transit_name          = try(transit.name, null)
             device_name           = try(border_device.name, null)
@@ -271,27 +325,41 @@ locals {
           }
         ]
       ]
-    ]
-  ])
+    ])
+  }
 }
 
-resource "catalystcenter_fabric_l3_handoff_ip_transit" "l3_handoff_ip_transit" {
-  for_each = { for handoff in local.l3_handoffs_ip_transit : handoff.key => handoff if strcontains(local.all_devices[handoff.device_name].state, "PROVISION") && try(local.all_devices[handoff.device_name].fabric_roles, null) != null && contains(local.sites, try(local.all_devices[handoff.device_name].fabric_site, "NONE")) }
+resource "catalystcenter_fabric_l3_handoff_ip_transits" "l3_handoff_ip_transits" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "BORDER_NODE") && length(try(local.l3_handoffs_ip_transit_by_device[device.name], [])) != 0 && contains(local.sites, try(device.fabric_site, "NONE")) }
 
-  network_device_id                  = lookup(local.device_ip_to_id, each.value.device_ip, "")
-  fabric_id                          = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
-  transit_network_id                 = try(catalystcenter_transit_network.transit[each.value.transit_name].id, data.catalystcenter_transit_network.transit[each.value.transit_name].id, null)
-  interface_name                     = try(each.value.interface_name, null)
-  virtual_network_name               = try(each.value.virtual_network_name, null)
-  vlan_id                            = try(each.value.vlan_id, null)
-  tcp_mss_adjustment                 = try(each.value.tcp_mss_adjustment, null)
-  external_connectivity_ip_pool_name = try(each.value.external_handoff_pool, null) != null ? try(each.value.external_handoff_pool, local.defaults.catalyst_center.fabric.border_devices.l3_handoffs.virtual_network.external_handoff_pool, null) : null
-  local_ip_address                   = try(each.value.external_handoff_pool, null) == null ? try(each.value.local_ip_address, null) : null
-  remote_ip_address                  = try(each.value.external_handoff_pool, null) == null ? try(each.value.peer_ip_address, null) : null
-  local_ipv6_address                 = try(each.value.external_handoff_pool, null) == null ? try(each.value.local_ipv6_address, null) : null
-  remote_ipv6_address                = try(each.value.external_handoff_pool, null) == null ? try(each.value.peer_ipv6_address, null) : null
+  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+  l3_handoffs = [for handoff in try(local.l3_handoffs_ip_transit_by_device[each.key], []) :
+    {
+      fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+      network_device_id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
+      transit_network_id                 = try(catalystcenter_transit_network.transit[handoff.transit_name].id, data.catalystcenter_transit_network.transit[handoff.transit_name].id, null)
+      interface_name                     = try(handoff.interface_name, null)
+      virtual_network_name               = try(handoff.virtual_network_name, null)
+      vlan_id                            = try(handoff.vlan_id, null)
+      tcp_mss_adjustment                 = try(handoff.tcp_mss_adjustment, null)
+      external_connectivity_ip_pool_name = try(handoff.external_handoff_pool, null) != null ? try(handoff.external_handoff_pool, local.defaults.catalyst_center.fabric.border_devices.l3_handoffs.virtual_network.external_handoff_pool, null) : null
+      local_ip_address                   = try(handoff.external_handoff_pool, null) == null ? try(handoff.local_ip_address, null) : null
+      remote_ip_address                  = try(handoff.external_handoff_pool, null) == null ? try(handoff.peer_ip_address, null) : null
+      local_ipv6_address                 = try(handoff.external_handoff_pool, null) == null ? try(handoff.local_ipv6_address, null) : null
+      remote_ipv6_address                = try(handoff.external_handoff_pool, null) == null ? try(handoff.peer_ipv6_address, null) : null
+    }
+  ]
 
-  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_device_role.role, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_site.fabric_site, catalystcenter_ip_pool_reservation.pool_reservation]
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_device_role.role, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site, catalystcenter_ip_pool_reservation.pool_reservation]
 }
 
 locals {
@@ -304,27 +372,28 @@ locals {
           device_ip        = try(local.all_devices[border_device.name].device_ip, null)
           interface_name   = try(interface, null)
           external_vlan_id = try(vn.external_vlan, null)
-          name             = try(vn.name, null)
+          ip_pool_name     = try(vn.ip_pool_name, null)
+          name             = try(vn.l3_virtual_network, null)
         }
       ]
     ]
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : "${item.name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.name].vlan_id, null)
+    for item in local.anycast_gateways : "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.ip_pool_name].vlan_id, null)
   }
 }
 
 resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
   for_each = { for handoff in local.l2_handoffs : handoff.key => handoff if strcontains(local.all_devices[handoff.device_name].state, "PROVISION") && contains(local.sites, try(local.all_devices[handoff.device_name].fabric_site, "NONE")) }
 
-  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, null)
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
   interface_name    = try(each.value.interface_name, null)
-  internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
+  internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.ip_pool_name}#_#${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
-  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_site.fabric_site]
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site]
 }
 
 locals {
@@ -353,7 +422,7 @@ locals {
 resource "catalystcenter_fabric_l2_handoff" "l2_handoff_no_anycast" {
   for_each = { for handoff in local.l2_handoffs_no_anycast : handoff.key => handoff if strcontains(local.all_devices[handoff.device_name].state, "PROVISION") && contains(local.sites, try(local.all_devices[handoff.device_name].fabric_site, "NONE")) }
 
-  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, "")
+  network_device_id = lookup(local.device_ip_to_id, each.value.device_ip, null)
   fabric_id         = try(catalystcenter_fabric_site.fabric_site[local.all_devices[each.value.device_name].fabric_site].id, null)
   interface_name    = try(each.value.interface_name, null)
   internal_vlan_id  = try(local.l2_handoff_vlan_id_map_no_anycast["${each.value.vlan_name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
@@ -378,8 +447,12 @@ locals {
             security_group_name        = try(assignment.security_group_name, local.defaults.catalyst_center.inventory.devices.port_assignments.security_group_name, null)
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
-            network_device_id          = try(local.device_ip_to_id[device.device_ip], "")
-            fabric_id                  = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
+            network_device_id = coalesce(
+              try(lookup(local.device_name_to_id, device.name, null), null),
+              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            )
+            fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
           ] : [
           {
@@ -389,8 +462,12 @@ locals {
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             security_group_name        = try(assignment.security_group_name, local.defaults.catalyst_center.inventory.devices.port_assignments.security_group_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
-            network_device_id          = try(local.device_ip_to_id[device.device_ip], "")
-            fabric_id                  = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
+            network_device_id = coalesce(
+              try(lookup(local.device_name_to_id, device.name, null), null),
+              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            )
+            fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
         ]
       )
@@ -401,9 +478,13 @@ locals {
 resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
 
-  fabric_id         = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
-  network_device_id = try(local.device_ip_to_id[each.value.device_ip], "")
-  port_assignments  = try(local.device_port_assignments[each.key], null)
+  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+  port_assignments = try(local.device_port_assignments[each.key], null)
 
   depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.provision_device, catalystcenter_anycast_gateway.anycast_gateway]
 }

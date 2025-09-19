@@ -14,9 +14,10 @@ locals {
     for project in try(local.catalyst_center.templates.projects, []) : [
       for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : merge(template,
         {
-          project_name  = project.name
-          template_name = template.name
-          template_type = contains(try(project.onboarding_templates, []), template) ? "onboarding" : "dayn"
+          project_name      = project.name
+          template_name     = template.name
+          template_type     = contains(try(project.onboarding_templates, []), template) ? "onboarding" : "dayn"
+          redeploy_template = try(template.redeploy_template, local.defaults.catalyst_center.templates.redeploy_template, null)
         }
       )
     ]
@@ -69,6 +70,8 @@ locals {
       for tag in try(device.tags, []) : {
         "tag_name" : tag,
         "device_name" : device.name
+        "device_ip" : device.device_ip
+        "fqdn_name" : device.fqdn_name
       }
     ] if try(device.tags, null) != null
   ])
@@ -77,6 +80,8 @@ locals {
     for tag_key in distinct([for t in local.tag_devices : t.tag_name]) : {
       "tag_name" : tag_key
       "device_names" : [for t in local.tag_devices : t.device_name if t.tag_name == tag_key]
+      "device_ips" : [for t in local.tag_devices : t.device_ip if t.tag_name == tag_key]
+      "fqdn_names" : [for t in local.tag_devices : t.fqdn_name if t.tag_name == tag_key]
     }
   ]
 
@@ -89,7 +94,9 @@ locals {
           "state" : try(device.state, null),
           "site" : try(device.site, null),
           "device_ip" : try(device.device_ip, null)
-          "deploy_state" : try(template.state, local.defaults.catalyst_center.inventory.devices.dayn_template.state, null)
+          "device_name" : try(device.name, null)
+          "fqdn_name" : try(device.fqdn_name, null)
+          "redeploy_template" : try(template.redeploy_template, device.dayn_templates.redeploy_template, local.templates_map[template.name].redeploy_template, null)
           "copying_config" : try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
           "force_push_template" : try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
         }
@@ -99,7 +106,7 @@ locals {
 }
 
 resource "catalystcenter_tag" "tag" {
-  for_each = { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag if var.manage_global_settings }
+  for_each = { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   name          = each.key
   description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
@@ -125,14 +132,14 @@ data "catalystcenter_template" "template" {
 }
 
 resource "catalystcenter_project" "project" {
-  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" && var.manage_global_settings }
+  for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   name        = each.key
   description = try(each.value.description, null)
 }
 
 resource "catalystcenter_template" "regular_template" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && var.manage_global_settings }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   name             = each.key
   project_id       = try(catalystcenter_project.project[each.value.project_name].id, data.catalystcenter_project.onboarding.id, null)
@@ -161,7 +168,7 @@ resource "catalystcenter_template" "regular_template" {
 }
 
 resource "time_sleep" "template_wait" {
-  count = length(try(local.templates, [])) > 0 && var.manage_global_settings ? 1 : 0
+  count = length(try(local.templates, [])) > 0 && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) ? 1 : 0
 
   create_duration = "10s"
 
@@ -169,7 +176,7 @@ resource "time_sleep" "template_wait" {
 }
 
 resource "catalystcenter_template" "composite_template" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true && var.manage_global_settings }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   name             = each.key
   project_id       = try(catalystcenter_project.project[each.value.project_name].id, data.catalystcenter_project.onboarding.id, null)
@@ -192,21 +199,27 @@ resource "catalystcenter_template" "composite_template" {
 }
 
 resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
-  for_each = { for tag in try(local.templates_to_tag, []) : tag.tag_name => tag if var.manage_global_settings }
+  for_each = { for tag in try(local.templates_to_tag, []) : tag.tag_name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   tag_id       = catalystcenter_tag.tag[each.key].id
   template_ids = [for template in each.value.template_names : try(catalystcenter_template.regular_template[template].id, catalystcenter_template.composite_template[template].id, null)]
 }
 
 resource "catalystcenter_assign_devices_to_tag" "device_to_tag" {
-  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if var.manage_global_settings }
+  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  tag_id     = catalystcenter_tag.tag[each.key].id
-  device_ids = [for device in each.value.device_names : try(local.device_name_to_id[device], null)]
+  tag_id = catalystcenter_tag.tag[each.key].id
+  device_ids = [
+    for i in range(length(each.value.device_names)) : coalesce(
+      try(local.device_name_to_id[each.value.device_names[i]], null),
+      try(local.device_name_to_id[each.value.fqdn_names[i]], null),
+      try(local.device_ip_to_id[each.value.device_ips[i]], null)
+    )
+  ]
 }
 
 resource "catalystcenter_template_version" "regular_commit_version" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && var.manage_global_settings }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   template_id = catalystcenter_template.regular_template[each.key].id
   comments    = try(md5(local.templates_content[each.key]), null)
@@ -228,16 +241,16 @@ locals {
 }
 
 resource "catalystcenter_template_version" "composite_commit_version" {
-  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true && var.manage_global_settings }
+  for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == true && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   template_id = catalystcenter_template.composite_template[each.key].id
   comments    = try(md5(local.composite_template_hashes[each.key]), null)
 }
 
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") && contains(local.sites, try(d.site, "NONE")) }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE")) }
 
-  redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
+  redeploy            = false
   template_id         = try(catalystcenter_template.regular_template[each.value.template].id, data.catalystcenter_template.template[each.value.template].id)
   copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -245,7 +258,49 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 
   target_info = [
     {
-      id                    = lookup(local.device_ip_to_id, each.value.device_ip, null)
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
+      type                  = "MANAGED_DEVICE_UUID"
+      versioned_template_id = try(catalystcenter_template.regular_template[each.value.template].id, data.catalystcenter_template.template[each.value.template].id)
+      params = try({
+        for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value
+      }, {})
+      resource_params = [
+        {
+          type  = "MANAGED_DEVICE_UUID"
+          scope = "RUNTIME"
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
+        }
+      ]
+    }
+  ]
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait]
+}
+
+resource "catalystcenter_deploy_template" "regular_template_redeploy" {
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == false && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE")) && d.redeploy_template != "NEVER" }
+
+  redeploy            = try(each.value.redeploy_template, null) == "ALWAYS" ? true : false
+  template_id         = try(catalystcenter_template.regular_template[each.value.template].id, data.catalystcenter_template.template[each.value.template].id)
+  copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+  force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite        = false
+
+  target_info = [
+    {
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
       type                  = "MANAGED_DEVICE_UUID"
       versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.value.template].id, data.catalystcenter_template.template[each.value.template].id, null)
       params = try({
@@ -255,19 +310,23 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
         {
           type  = "MANAGED_DEVICE_UUID"
           scope = "RUNTIME"
-          value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
         }
       ]
     }
   ]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait]
+  depends_on = [catalystcenter_deploy_template.regular_template_deploy]
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && strcontains(d.deploy_state, "DEPLOY") && contains(local.sites, try(d.site, "NONE")) }
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE")) }
 
-  redeploy            = try(each.value.deploy_state, null) == "REDEPLOY" ? true : false
+  redeploy            = false
   template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
   main_template_id    = catalystcenter_template.composite_template[each.value.template].id
   force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -281,7 +340,11 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
     target_info = [
       {
-        id   = lookup(local.device_ip_to_id, each.value.device_ip, null)
+        id = coalesce(
+          try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+          try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+          try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+        )
         type = "MANAGED_DEVICE_UUID"
 
         params = { for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value if item.template_name == tmpl }
@@ -289,7 +352,11 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
           {
             type  = "MANAGED_DEVICE_UUID"
             scope = "RUNTIME"
-            value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+            value = coalesce(
+              try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+              try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+            )
           }
         ]
       }
@@ -299,18 +366,93 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
 
   target_info = [
     {
-      id     = lookup(local.device_ip_to_id, each.value.device_ip, null)
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
       type   = "MANAGED_DEVICE_UUID"
       params = {}
       resource_params = [
         {
           type  = "MANAGED_DEVICE_UUID"
           scope = "RUNTIME"
-          value = lookup(local.device_ip_to_id, each.value.device_ip, null)
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
         }
       ]
     }
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait]
+}
+
+resource "catalystcenter_deploy_template" "composite_template_redeploy" {
+  for_each = { for d in try(local.combined_templates, []) : "${d.name}#_#${d.template}" => d if try(local.templates_map[d.template].composite, false) == true && local.templates_map[d.template].template_type == "dayn" && strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE")) && d.redeploy_template != "NEVER" }
+
+  redeploy            = try(each.value.redeploy_template, null) == "ALWAYS" ? true : false
+  template_id         = catalystcenter_template_version.composite_commit_version[each.value.template].id
+  main_template_id    = catalystcenter_template.composite_template[each.value.template].id
+  force_push_template = try(local.templates_map[each.value.template].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite        = true
+
+  member_template_deployment_info = [for tmpl in local.composite_templates_map[each.value.template] : {
+    template_id         = catalystcenter_template_version.regular_commit_version[tmpl].id
+    main_template_id    = catalystcenter_template.regular_template[tmpl].id
+    force_push_template = try(each.value.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+    is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
+    copying_config      = try(each.value.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+    target_info = [
+      {
+        id = coalesce(
+          try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+          try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+          try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+        )
+        type = "MANAGED_DEVICE_UUID"
+
+        params = { for item in local.all_devices[each.value.name].dayn_templates_map[each.value.template].variables : item.name => item.value if item.template_name == tmpl }
+        resource_params = [
+          {
+            type  = "MANAGED_DEVICE_UUID"
+            scope = "RUNTIME"
+            value = coalesce(
+              try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+              try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+            )
+          }
+        ]
+      }
+    ]
+    }
+  ]
+
+  target_info = [
+    {
+      id = coalesce(
+        try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+        try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+      )
+      type   = "MANAGED_DEVICE_UUID"
+      params = {}
+      resource_params = [
+        {
+          type  = "MANAGED_DEVICE_UUID"
+          scope = "RUNTIME"
+          value = coalesce(
+            try(lookup(local.device_name_to_id, each.value.device_name, null), null),
+            try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+          )
+        }
+      ]
+    }
+  ]
+
+  depends_on = [catalystcenter_deploy_template.composite_template_deploy]
 }

@@ -9,22 +9,6 @@ locals {
     "5GHz and 6GHz"   = "5 and 6 GHz"
   }
 
-  wireless_network_profiles = [
-    for i in try(local.catalyst_center.network_profiles.wireless, []) : {
-      name  = try(i.name, null)
-      sites = try(i.sites, null)
-    }
-  ]
-
-  sites_to_wireless_network_profile = flatten([
-    for np in local.wireless_network_profiles : [
-      for site in coalesce(np.sites, []) : {
-        "site" : try(site, null)
-        "network_profile" : try(np.name, null)
-      }
-    ]
-  ])
-
   wireless_controllers = length({
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
@@ -38,7 +22,7 @@ data "catalystcenter_wireless_profile" "wireless_profile" {
 }
 
 resource "catalystcenter_wireless_ssid" "ssid" {
-  for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings }
+  for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   ssid                                        = each.key
   auth_type                                   = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ssids.auth_type, null)
@@ -68,10 +52,10 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   basic_service_set_client_idle_timeout       = try(each.value.basic_service_set_client_idle_timeout, local.defaults.catalyst_center.wireless.ssids.basic_service_set_client_idle_timeout, null)
   broadcast_ssid                              = try(each.value.broadcast_ssid, local.defaults.catalyst_center.wireless.ssids.broadcast_ssid, null)
   cckm                                        = try(each.value.cckm, local.defaults.catalyst_center.wireless.ssids.cckm, null)
-  cckm_tsf_tolerance                          = try(each.value.cckm_tsf_tolerance, local.defaults.catalyst_center.wireless.ssids.cckm_tsf_tolerance, null)
+  cckm_tsf_tolerance                          = try(each.value.cckm_tsf_tolerance, 0) == 0 ? null : try(each.value.cckm_tsf_tolerance, local.defaults.catalyst_center.wireless.ssids.cckm_tsf_tolerance, null)
   client_exclusion                            = try(each.value.client_exclusion, local.defaults.catalyst_center.wireless.ssids.client_exclusion, null)
   client_exclusion_timeout                    = try(each.value.client_exclusion_timeout, local.defaults.catalyst_center.wireless.enterprise_ssids.client_exclusion_timeout, null)
-  client_rate_limit                           = try(each.value.client_rate_limit, local.defaults.catalyst_center.wireless.ssids.client_rate_limit, null)
+  client_rate_limit                           = try(each.value.client_rate_limit, 0) == 0 ? null : try(each.value.client_rate_limit, local.defaults.catalyst_center.wireless.ssids.client_rate_limit, null)
   coverage_hole_detection                     = try(each.value.coverage_hole_detection, local.defaults.catalyst_center.wireless.ssids.coverage_hole_detection, null)
   directed_multicast_service                  = try(each.value.directed_multicast_service, local.defaults.catalyst_center.wireless.ssids.directed_multicast_service, null)
   egress_qos                                  = try(each.value.egress_qos, local.defaults.catalyst_center.wireless.ssids.egress_qos, null)
@@ -110,7 +94,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
 }
 
 resource "catalystcenter_wireless_rf_profile" "rf_profile" {
-  for_each = { for rf_profile in try(local.catalyst_center.wireless.rf_profiles, []) : rf_profile.name => rf_profile }
+  for_each = { for rf_profile in try(local.catalyst_center.wireless.rf_profiles, []) : rf_profile.name => rf_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   rf_profile_name         = each.key
   default_rf_profile      = try(each.value.default_rf_profile, local.defaults.catalyst_center.wireless.rf_profiles.default_rf_profile, null)
@@ -235,23 +219,41 @@ resource "catalystcenter_wireless_rf_profile" "rf_profile" {
 }
 
 resource "catalystcenter_wireless_profile" "wireless_profile" {
-  for_each = { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile if var.manage_global_settings }
+  for_each = { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   wireless_profile_name = each.key
   ssid_details = try([for ssid in each.value.ssid_details : {
     ssid_name           = try(ssid.name, null)
     enable_fabric       = try(ssid.enable_fabric, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_fabric, null)
     enable_flex_connect = try(ssid.enable_flex_connect, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_flex_connect, null)
+    local_to_vlan       = try(ssid.enable_flex_connect, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_flex_connect, false) == true ? try(ssid.local_to_vlan, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.local_to_vlan, null) : null
     interface_name      = try(ssid.enable_fabric, false) == false ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
     wlan_profile_name   = try(ssid.wlan_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.wlan_profile_name, null)
   }], null)
+  additional_interfaces = try(each.value.additional_interfaces, null)
+  ap_zones = try([for ap_zone in each.value.ap_zones : {
+    ap_zone_name    = try(ap_zone.name, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.name, null)
+    rf_profile_name = try(ap_zone.rf_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.rf_profile_name, null)
+    ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
+  }], null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile]
 }
 
-resource "catalystcenter_associate_site_to_network_profile" "site_to_wireless_network_profile" {
-  for_each = { for s in try(local.sites_to_wireless_network_profile, []) : "${s.site}#_#${s.network_profile}" => s if contains(local.sites, s.site) }
+resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
+  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
 
-  network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.network_profile].id)
-  site_id            = local.site_id_list[each.value.site]
+  network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
+  items = [
+    for site in each.value.sites : {
+      id = local.site_id_list[site]
+    } if contains(local.sites, site)
+  ]
+}
+
+resource "catalystcenter_wireless_interface" "interface" {
+  for_each = { for iface in try(local.catalyst_center.wireless.interfaces, []) : iface.name => iface if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+
+  interface_name = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
+  vlan_id        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
 }

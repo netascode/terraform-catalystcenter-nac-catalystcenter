@@ -14,9 +14,11 @@ defaults:
           interface_name: management
     templates:
       force_push_template: true
+      description: ""
       language: JINJA
       composite: false
       copying_config: true
+      redeploy_template: NEVER
     pnp:
       devices:
         type: Default
