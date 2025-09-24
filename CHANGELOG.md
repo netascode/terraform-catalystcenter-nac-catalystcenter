@@ -1,3 +1,6 @@
+## 0.2.1 (unreleased)
+- Fix issue with assigning ip pool type `management` and `service` in `catalystcenter_ip_pool_reservation`.
+
 ## 0.2.0
 
 - Add AP Zones support under Wireless Network Profile
