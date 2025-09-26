@@ -366,7 +366,7 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
 
   site_id = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name    = each.key
-  type    = try(join("", [upper(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
+  type    = try(join("", [(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
   ipv4_global_pool = try(one([
     for pool in local.catalyst_center.network_settings.ip_pools : pool
     if pool.name == local.ip_pools_reservations[each.key].global_pool
