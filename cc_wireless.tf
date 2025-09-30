@@ -84,7 +84,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   rsn_cipher_suite_gcmp128                    = try(each.value.rsn_cipher_suite_gcmp128, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_gcmp128, null)
   rsn_cipher_suite_ccmp256                    = try(each.value.rsn_cipher_suite_ccmp256, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_ccmp256, null)
   rsn_cipher_suite_gcmp256                    = try(each.value.rsn_cipher_suite_gcmp256, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_gcmp256, null)
-  session_timeout                             = try(each.value.session_timeout, local.defaults.catalyst_center.wireless.ssids.session_timeout, null)
+  session_timeout                             = try(each.value.session_timeout, 0) == 0 ? null : try(each.value.session_timeout, local.defaults.catalyst_center.wireless.ssids.session_timeout, null)
   session_timeout_enable                      = try(each.value.session_timeout_enable, local.defaults.catalyst_center.wireless.ssids.session_timeout_enable, null)
   sleeping_client                             = try(each.value.sleeping_client, local.defaults.catalyst_center.wireless.ssids.sleeping_client, null)
   sleeping_client_timeout                     = try(each.value.sleeping_client_timeout, local.defaults.catalyst_center.wireless.ssids.sleeping_client_timeout, null)
