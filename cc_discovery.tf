@@ -20,7 +20,7 @@ locals {
 }
 
 resource "catalystcenter_discovery" "discovery" {
-  for_each                  = { for discovery in try(local.catalyst_center.inventory.discovery, []) : discovery.name => discovery }
+  for_each                  = { for discovery in try(local.catalyst_center.inventory.discovery, []) : discovery.name => discovery if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
   name                      = each.key
   discovery_type            = try(each.value.type, local.defaults.catalyst_center.inventory.discovery.type, null)
   protocol_order            = try(each.value.protocol_order, local.defaults.catalyst_center.inventory.discovery.protocol_order, null)
