@@ -222,7 +222,7 @@ resource "catalystcenter_template_version" "regular_commit_version" {
   for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   template_id = catalystcenter_template.regular_template[each.key].id
-  comments = try(md5("${local.templates_content[each.key]}${jsonencode(try(each.value.variables, []))}"), null)
+  comments    = try(md5("${local.templates_content[each.key]}${jsonencode(try(each.value.variables, []))}"), null)
 
 }
 
