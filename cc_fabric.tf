@@ -132,7 +132,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
-  for_each = !var.manage_global_settings && length(var.managed_sites) == 0 ? try(local.global_l3_virtual_networks, {}) : {}
+  for_each = var.manage_global_settings == true ? try(local.global_l3_virtual_networks, {}) : {}
 
   virtual_network_name = each.key
 
