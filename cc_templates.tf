@@ -222,7 +222,8 @@ resource "catalystcenter_template_version" "regular_commit_version" {
   for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   template_id = catalystcenter_template.regular_template[each.key].id
-  comments    = try(md5(local.templates_content[each.key]), null)
+  comments    = try(md5("${local.templates_content[each.key]}${jsonencode(try(each.value.variables, []))}"), null)
+
 }
 
 locals {
@@ -234,7 +235,10 @@ locals {
         value.description,
         value.language,
         value.software_type,
-        join(",", [for item in value.containing_templates : item.id])
+        jsonencode(try(local.templates_map[key].variables, [])), # Hash composite template's own defined variables
+        join(",", [
+          for item in value.containing_templates : "${item.id}-${jsonencode(try(local.templates_map[item.name].variables, []))}"
+        ])
       ])
     )
   }
