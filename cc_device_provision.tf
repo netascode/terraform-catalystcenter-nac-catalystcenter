@@ -75,6 +75,10 @@ resource "catalystcenter_assign_device_to_site" "devices_to_site" {
 
   device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
   site_id    = local.site_id_list[each.key]
+
+  lifecycle {
+    ignore_changes = [device_ids]
+  }
 }
 
 resource "catalystcenter_device_role" "role" {
@@ -107,6 +111,10 @@ resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
   device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
 
   site_id = local.site_id_list[each.key]
+
+  lifecycle {
+    ignore_changes = [device_ids]
+  }
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
