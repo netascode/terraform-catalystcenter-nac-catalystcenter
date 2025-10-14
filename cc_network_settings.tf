@@ -106,7 +106,7 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
 resource "catalystcenter_assign_credentials" "global_assign_credentials" {
   for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && ((var.manage_global_settings && k == "Global") || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id          = try(data.catalystcenter_area.global.id, null)
+  site_id          = try(data.catalystcenter_site.global.id, null)
   cli_id           = each.value.cli != null ? catalystcenter_credentials_cli.cli_credentials[each.value.cli].id : null
   https_read_id    = each.value.https_read != null ? catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id : null
   https_write_id   = each.value.https_write != null ? catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id : null
@@ -116,8 +116,8 @@ resource "catalystcenter_assign_credentials" "global_assign_credentials" {
 }
 
 data "catalystcenter_assign_credentials" "global_assign_credentials" {
-  id      = try(data.catalystcenter_area.global.id, null)
-  site_id = try(data.catalystcenter_area.global.id, null)
+  id      = try(data.catalystcenter_site.global.id, null)
+  site_id = try(data.catalystcenter_site.global.id, null)
 }
 
 # Network Settings
@@ -140,7 +140,7 @@ resource "catalystcenter_ntp_settings" "ntp_servers" {
 resource "catalystcenter_ntp_settings" "global_ntp_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id = try(data.catalystcenter_area.global.id, null)
+  site_id = try(data.catalystcenter_site.global.id, null)
   servers = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3]
@@ -158,7 +158,7 @@ resource "catalystcenter_dhcp_settings" "dhcp_servers" {
 resource "catalystcenter_dhcp_settings" "global_dhcp_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id = try(data.catalystcenter_area.global.id, null)
+  site_id = try(data.catalystcenter_site.global.id, null)
   servers = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
 }
 
@@ -175,7 +175,7 @@ resource "catalystcenter_dns_settings" "dns_settings" {
 resource "catalystcenter_dns_settings" "global_dns_settings" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id     = try(data.catalystcenter_area.global.id, null)
+  site_id     = try(data.catalystcenter_site.global.id, null)
   domain_name = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
   dns_servers = try(local.network_settings[each.value.network].dns_servers, local.defaults.catalyst_center.network_settings.network.dns_servers, null)
 }
@@ -192,7 +192,7 @@ resource "catalystcenter_timezone_settings" "timezone" {
 resource "catalystcenter_timezone_settings" "global_timezone" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id    = try(data.catalystcenter_area.global.id, null)
+  site_id    = try(data.catalystcenter_site.global.id, null)
   identifier = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
 }
 
@@ -209,7 +209,7 @@ resource "catalystcenter_banner_settings" "banner" {
 resource "catalystcenter_banner_settings" "global_banner" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id = try(data.catalystcenter_area.global.id, null)
+  site_id = try(data.catalystcenter_site.global.id, null)
   type    = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null) != null ? "Custom" : "Builtin"
   message = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null)
 }
@@ -235,7 +235,7 @@ resource "catalystcenter_telemetry_settings" "telemetry_settings" {
 resource "catalystcenter_telemetry_settings" "global_telemetry_settings" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id                             = try(data.catalystcenter_area.global.id, null)
+  site_id                             = try(data.catalystcenter_site.global.id, null)
   enable_wired_data_collection        = try(local.telemetry_settings[each.value.telemetry].wired_data_collection, local.defaults.catalyst_center.network_settings.telemetry.wired_data_collection, null)
   enable_wireless_telemetry           = try(local.telemetry_settings[each.value.telemetry].wireless_telemetry, local.defaults.catalyst_center.network_settings.telemetry.wireless_telemetry, null)
   use_builtin_trap_server             = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_snmp_server, null)
@@ -271,7 +271,7 @@ resource "catalystcenter_aaa_settings" "aaa_servers" {
 resource "catalystcenter_aaa_settings" "global_aaa_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && k == "Global" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
-  site_id                         = try(data.catalystcenter_area.global.id, null)
+  site_id                         = try(data.catalystcenter_site.global.id, null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
