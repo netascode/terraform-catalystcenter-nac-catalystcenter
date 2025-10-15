@@ -51,6 +51,7 @@ module "catalystcenter" {
 | <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of sites to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
 | <a name="input_model"></a> [model](#input\_model) | As an alternative to YAML files, a native Terraform data structure can be provided as well. | `map(any)` | `{}` | no |
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |
+| <a name="input_use_bulk_api"></a> [use\_bulk\_api](#input\_use\_bulk\_api) | Flag indicating whether to use the bulk API for faster operations. | `bool` | `false` | no |
 | <a name="input_write_default_values_file"></a> [write\_default\_values\_file](#input\_write\_default\_values\_file) | Write all default values to a YAML file. Value is a path pointing to the file to be created. | `string` | `""` | no |
 | <a name="input_yaml_directories"></a> [yaml\_directories](#input\_yaml\_directories) | List of paths to YAML directories. | `list(string)` | `[]` | no |
 | <a name="input_yaml_files"></a> [yaml\_files](#input\_yaml\_files) | List of paths to YAML files. | `list(string)` | `[]` | no |
@@ -128,6 +129,7 @@ module "catalystcenter" {
 | [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device) | resource |
 | [catalystcenter_pnp_device_claim_site.claim_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device_claim_site) | resource |
 | [catalystcenter_project.project](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/project) | resource |
+| [catalystcenter_provision_devices.provision_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/provision_devices) | resource |
 | [catalystcenter_tag.tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/tag) | resource |
 | [catalystcenter_telemetry_settings.global_telemetry_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/telemetry_settings) | resource |
 | [catalystcenter_telemetry_settings.telemetry_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/telemetry_settings) | resource |

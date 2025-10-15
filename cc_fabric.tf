@@ -92,7 +92,7 @@ resource "catalystcenter_transit_network" "transit" {
   is_multicast_over_transit_enabled = try(each.value.type, "") != "IP_BASED_TRANSIT" ? try(each.value.multicast_over_sda_transit, local.defaults.catalyst_center.fabric.transits.multicast_over_sda_transit, null) : null
   control_plane_network_device_ids  = try(each.value.type, "") != "IP_BASED_TRANSIT" ? [for device in try(each.value.control_plane_devices, []) : try(local.device_name_to_id[device], local.device_name_to_id[local.name_to_fqdn_mapping[device]], null)] : null
 
-  depends_on = [catalystcenter_fabric_provision_device.provision_device]
+  depends_on = [catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device]
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {
@@ -239,7 +239,7 @@ resource "catalystcenter_fabric_device" "border_device" {
   border_priority                 = try(local.border_devices[each.key].border_priority, local.defaults.catalyst_center.fabric.border_devices.border_priority, null)
   prepend_autonomous_system_count = try(local.border_devices[each.key].prepend_autonomous_system_count, local.defaults.catalyst_center.fabric.border_devices.prepend_autonomous_system_count, null)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device]
 }
 
 resource "catalystcenter_fabric_device" "wireless_controller" {
@@ -253,7 +253,7 @@ resource "catalystcenter_fabric_device" "wireless_controller" {
   fabric_id    = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_device.border_device]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_device.border_device]
 }
 
 resource "catalystcenter_fabric_device" "edge_device" {
@@ -267,7 +267,7 @@ resource "catalystcenter_fabric_device" "edge_device" {
   fabric_id    = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_fabric_provision_device.provision_device, catalystcenter_fabric_device.border_device]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device, catalystcenter_fabric_device.border_device]
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
@@ -299,7 +299,7 @@ resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
   connected_to_internet             = try(local.border_devices[each.key].connected_to_internet, local.defaults.catalyst_center.fabric.border_devices.connected_to_internet, null)
   is_multicast_over_transit_enabled = try(local.border_devices[each.key].multicast_over_transit, local.defaults.catalyst_center.fabric.border_devices.multicast_over_transit, null)
 
-  depends_on = [catalystcenter_fabric_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_transit_network.transit]
+  depends_on = [catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_transit_network.transit]
 }
 
 locals {
@@ -486,5 +486,5 @@ resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   )
   port_assignments = try(local.device_port_assignments[each.key], null)
 
-  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_provision_device.provision_device, catalystcenter_anycast_gateway.anycast_gateway]
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device, catalystcenter_anycast_gateway.anycast_gateway]
 }

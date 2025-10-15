@@ -40,6 +40,12 @@ variable "manage_specific_sites_only" {
   default     = false
 }
 
+variable "use_bulk_api" {
+  description = "Flag indicating whether to use the bulk API for faster operations."
+  type        = bool
+  default     = false
+}
+
 variable "write_default_values_file" {
   description = "Write all default values to a YAML file. Value is a path pointing to the file to be created."
   type        = string

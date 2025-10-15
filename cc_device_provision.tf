@@ -34,8 +34,13 @@ locals {
   }
 
   provisioned_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION")
+    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE"))
   ]
+
+  provisioned_devices_by_site = {
+    for site in distinct([for d in local.provisioned_devices : d.site]) :
+    site => [for d in local.provisioned_devices : d if d.site == site]
+  }
 
   provisioned_sda_transit_cp_devices = flatten([
     for transit in try(local.catalyst_center.fabric.transits, []) : [
@@ -92,11 +97,34 @@ resource "catalystcenter_device_role" "role" {
 }
 
 resource "catalystcenter_fabric_provision_device" "provision_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
   reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
+}
+
+resource "catalystcenter_provision_devices" "provision_devices" {
+  for_each = { for site, devices in try(local.provisioned_devices_by_site, {}) : site => devices if length(devices) > 0 && var.use_bulk_api }
+
+  site_id = try(local.site_id_list[each.key], null)
+  provision_devices = [for device in each.value : {
+    network_device_id = coalesce(
+      try(lookup(local.device_name_to_id, device.name, null), null),
+      try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+      try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+    )
+    site_id     = try(local.site_id_list[device.site], null)
+    reprovision = try(device.state, null) == "REPROVISION" ? true : false
+  }]
+  #   {
+  #     network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
+  #     site_id           = try(local.site_id_list[each.value.site], null)
+  #   }
+  # ]
+  #reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
 }
@@ -141,5 +169,5 @@ resource "time_sleep" "provision_device_wait" {
 
   create_duration = "10s"
 
-  depends_on = [catalystcenter_fabric_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller]
+  depends_on = [catalystcenter_fabric_provision_device.provision_device, catalystcenter_provision_devices.provision_devices, catalystcenter_wireless_device_provision.wireless_controller]
 }
