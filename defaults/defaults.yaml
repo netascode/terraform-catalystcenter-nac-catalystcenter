@@ -37,7 +37,7 @@ defaults:
         width: 30
     network_settings:
       ip_pools:
-        type: generic
+        type: Generic
         ip_address_space: IPv4
         ip_pools_reservations:
           type: Generic
