@@ -110,7 +110,7 @@ resource "time_sleep" "apply_fabric_wait" {
 
   create_duration = "5s"
 
-  depends_on = [catalystcenter_fabric_site.fabric_site[each.key]]
+  depends_on = [catalystcenter_fabric_site.fabric_site]
   lifecycle {
     replace_triggered_by = [
       catalystcenter_apply_pending_fabric_events.apply_fabric[each.key]
@@ -123,7 +123,7 @@ resource "catalystcenter_apply_pending_fabric_events" "apply_fabric" {
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
 
-  depends_on = [time_sleep.apply_fabric_wait[each.key]]
+  depends_on = [time_sleep.apply_fabric_wait]
 }
 
 locals {
