@@ -105,6 +105,27 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers]
 }
 
+resource "time_sleep" "apply_fabric_wait" {
+  for_each = catalystcenter_fabric_site.fabric_site
+
+  create_duration = "5s"
+
+  depends_on = [catalystcenter_fabric_site.fabric_site[each.key]]
+  lifecycle {
+    replace_triggered_by = [
+      catalystcenter_apply_pending_fabric_events.apply_fabric[each.key]
+    ]
+  }
+}
+
+resource "catalystcenter_apply_pending_fabric_events" "apply_fabric" {
+  for_each  = catalystcenter_fabric_site.fabric_site
+  
+  fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
+
+  depends_on = [time_sleep.apply_fabric_wait[each.key]]
+}
+
 locals {
   fabric_zones = flatten([
     for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
