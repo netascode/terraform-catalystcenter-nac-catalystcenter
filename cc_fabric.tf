@@ -119,8 +119,8 @@ resource "time_sleep" "apply_fabric_wait" {
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "apply_fabric" {
-  for_each  = catalystcenter_fabric_site.fabric_site
-  
+  for_each = catalystcenter_fabric_site.fabric_site
+
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
 
   depends_on = [time_sleep.apply_fabric_wait[each.key]]
