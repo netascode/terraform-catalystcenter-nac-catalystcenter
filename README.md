@@ -68,6 +68,7 @@ module "catalystcenter" {
 | [catalystcenter_aaa_settings.aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_aaa_settings.global_aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_anycast_gateway.anycast_gateway](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateway) | resource |
+| [catalystcenter_apply_pending_fabric_events.apply_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_pending_fabric_events) | resource |
 | [catalystcenter_area.area_0](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_1](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_2](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
@@ -150,6 +151,7 @@ module "catalystcenter" {
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [time_sleep.apply_fabric_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.provision_device_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_area.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/area) | data source |
