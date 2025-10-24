@@ -1,4 +1,10 @@
 ## 0.2.1 (unreleased)
+
+- Fix idempotency issue during brownfield import of border devices
+- BREAKING CHANGE: Update several resources to align with provider version 0.4.0 schema changes
+- Add `reconfigure` attribute to `fabric_site` for applying pending fabric configuration events
+- Add MD5 checksum to templates variable to trigger redeployment when template variables change
+- Add flag `use_bulk_api` to enable bulk API operations for faster execution
 - Fix issue with assigning ip pool type `management` and `service` in `catalystcenter_ip_pool_reservation`.
 
 ## 0.2.0
