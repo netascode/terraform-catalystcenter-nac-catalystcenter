@@ -35,7 +35,6 @@ defaults:
         length: 30
         rf_model: Cubes And Walled Offices
         width: 30
-        units_of_measure: feet
     network_settings:
       ip_pools:
         type: Generic
