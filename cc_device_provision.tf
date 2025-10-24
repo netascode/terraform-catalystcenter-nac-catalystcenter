@@ -96,7 +96,7 @@ resource "catalystcenter_device_role" "role" {
   depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3]
 }
 
-resource "catalystcenter_fabric_provision_device" "provision_device" {
+resource "catalystcenter_provision_device" "provision_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false }
 
   site_id           = try(local.site_id_list[each.value.site], null)
@@ -169,5 +169,5 @@ resource "time_sleep" "provision_device_wait" {
 
   create_duration = "10s"
 
-  depends_on = [catalystcenter_fabric_provision_device.provision_device, catalystcenter_provision_devices.provision_devices, catalystcenter_wireless_device_provision.wireless_controller]
+  depends_on = [catalystcenter_provision_device.provision_device, catalystcenter_provision_devices.provision_devices, catalystcenter_wireless_device_provision.wireless_controller]
 }

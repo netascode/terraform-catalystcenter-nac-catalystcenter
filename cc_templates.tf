@@ -283,7 +283,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     }
   ]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version]
 
   lifecycle {
     ignore_changes = [
@@ -400,7 +400,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     ]
   }
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_fabric_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version]
 }
 
 resource "catalystcenter_deploy_template" "composite_template_redeploy" {
