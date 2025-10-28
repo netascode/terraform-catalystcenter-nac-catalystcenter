@@ -16,6 +16,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   device_id         = catalystcenter_pnp_device.pnp_device[each.key].id
   site_id           = local.site_id_list[each.value.site]
   type              = try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
+  rf_profile        = try(each.value.rfProfile, local.defaults.catalyst_center.pnp.devices.rfProfile, null)
   image_id          = try(each.value.image_id, local.defaults.catalyst_center.pnp.devices.image_id, null)
   image_skip        = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, null)
   config_id         = try(catalystcenter_template.regular_template[each.value.onboarding_template.name].id, data.catalystcenter_template.template[each.value.onboarding_template.name].id, null)
@@ -25,7 +26,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
 }
 
 resource "catalystcenter_pnp_config_preview" "config_preview" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) && try(device.type, local.defaults.catalyst_center.pnp.devices.type, "Default") != "AccessPoint" }   
 
   device_id = catalystcenter_pnp_device.pnp_device[each.key].id
   site_id   = local.site_id_list[each.value.site]
