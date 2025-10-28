@@ -16,7 +16,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   device_id         = catalystcenter_pnp_device.pnp_device[each.key].id
   site_id           = local.site_id_list[each.value.site]
   type              = try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
-  rf_profile        = try(each.value.rfProfile, local.defaults.catalyst_center.pnp.devices.rfProfile, null)
+  rf_profile        = try(each.value.rf_profile, local.defaults.catalyst_center.pnp.devices.rf_profile, null)
   image_id          = try(each.value.image_id, local.defaults.catalyst_center.pnp.devices.image_id, null)
   image_skip        = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, null)
   config_id         = try(catalystcenter_template.regular_template[each.value.onboarding_template.name].id, data.catalystcenter_template.template[each.value.onboarding_template.name].id, null)
