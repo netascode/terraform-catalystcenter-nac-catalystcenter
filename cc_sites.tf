@@ -52,8 +52,8 @@ resource "catalystcenter_building" "building" {
   parent_id = try(catalystcenter_area.area_3[each.value.parent_name].id, catalystcenter_area.area_2[each.value.parent_name].id, catalystcenter_area.area_1[each.value.parent_name].id, catalystcenter_area.area_0[each.value.parent_name].id, data.catalystcenter_site.global.id, null)
   country   = try(each.value.country, local.defaults.catalyst_center.sites.buildings.country, null)
   address   = try(each.value.address, local.defaults.catalyst_center.sites.buildings.address, null)
-  latitude  = try(each.value.latitude, local.defaults.catalyst_center.sites.buildings.latitude, null)
-  longitude = try(each.value.longitude, local.defaults.catalyst_center.sites.buildings.longitude, null)
+  latitude  = try(floor(each.value.latitude * 100000 + 0.5) / 100000, local.defaults.catalyst_center.sites.buildings.latitude, null)
+  longitude = try(floor(each.value.longitude * 100000 + 0.5) / 100000, local.defaults.catalyst_center.sites.buildings.longitude, null)
 
   depends_on = [catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
