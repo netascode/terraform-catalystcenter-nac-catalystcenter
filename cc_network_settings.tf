@@ -104,7 +104,7 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
 }
 
 resource "catalystcenter_assign_credentials" "global_assign_credentials" {
-  for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && ((var.manage_global_settings && k == "Global") || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
+  for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && ((var.manage_global_settings && k == "Global") && (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   site_id          = try(data.catalystcenter_site.global.id, null)
   cli_id           = each.value.cli != null ? catalystcenter_credentials_cli.cli_credentials[each.value.cli].id : null
@@ -249,7 +249,7 @@ resource "catalystcenter_telemetry_settings" "global_telemetry_settings" {
 }
 
 resource "catalystcenter_aaa_settings" "aaa_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && contains(local.sites, k) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if(v != null && try(v.aaa_servers, null) != null && contains(local.sites, k)) || (v != null && try(v.aaa_servers, null) != null && !var.manage_global_settings && length(var.managed_sites) == 0) }
 
   site_id                         = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
