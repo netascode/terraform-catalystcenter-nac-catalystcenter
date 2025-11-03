@@ -337,6 +337,9 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
   enable_rolling_ap_upgrade = try(each.value.enable_rolling_ap_upgrade, local.defaults.catalyst_center.inventory.devices.enable_rolling_ap_upgrade, false)
   ap_reboot_percentage      = try(each.value.ap_reboot_percentage, local.defaults.catalyst_center.inventory.devices.ap_reboot_percentage, 25)
 
+  lifecycle {
+    ignore_changes = [ device_roles ]
+  }
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device]
 }
 
