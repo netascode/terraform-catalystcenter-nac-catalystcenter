@@ -1,5 +1,7 @@
 ## 0.2.1 (unreleased)
 
+- Fix issue with assigning cli credentials to site while using multi state
+- Add support for PNP access points
 - Fix idempotency issue during brownfield import of border devices
 - BREAKING CHANGE: Update several resources to align with provider version 0.4.0 schema changes
 - Add `reconfigure` attribute to `fabric_site` for applying pending fabric configuration events
