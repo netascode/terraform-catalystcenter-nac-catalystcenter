@@ -59,7 +59,7 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
-    }... if d.state == "ASSIGN"
+    }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE"))
   }
 
   wireless_devices_map = {
@@ -119,12 +119,6 @@ resource "catalystcenter_provision_devices" "provision_devices" {
     site_id     = try(local.site_id_list[device.site], null)
     reprovision = try(device.state, null) == "REPROVISION" ? true : false
   }]
-  #   {
-  #     network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
-  #     site_id           = try(local.site_id_list[each.value.site], null)
-  #   }
-  # ]
-  #reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
 }

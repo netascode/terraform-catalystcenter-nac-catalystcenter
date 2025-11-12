@@ -21,6 +21,18 @@ locals {
     ]
   ])
 
+  anycast_gateways_by_fabric_site = {
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
+    fabric_site.name => [
+      for anycast_gateway in try(fabric_site.anycast_gateways, []) : merge(
+        anycast_gateway,
+        {
+          "fabric_site_name" : try(fabric_site.name, null)
+        }
+      )
+    ]
+  }
+
   l3_virtual_networks_fabric_zone = {
     for vn in flatten([
       for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
@@ -203,7 +215,7 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
-  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) }
+  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) && var.use_bulk_api == false }
 
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
@@ -222,6 +234,36 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   security_group_name                       = try(each.value.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.security_group_name, null)
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
+
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
+}
+
+resource "catalystcenter_anycast_gateways" "anycast_gateways" {
+  for_each = { for fabric_site, anycast_gateways in try(local.anycast_gateways_by_fabric_site, {}) : fabric_site => anycast_gateways if length(anycast_gateways) > 0 && contains(local.sites, fabric_site) && var.use_bulk_api }
+
+  fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
+
+  anycast_gateways = [
+    for anycast_gateway in each.value : {
+      fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.key].id
+      virtual_network_name                      = try(anycast_gateway.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
+      ip_pool_name                              = try(anycast_gateway.ip_pool_name, null)
+      vlan_name                                 = try(anycast_gateway.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
+      vlan_id                                   = try(anycast_gateway.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
+      traffic_type                              = try(anycast_gateway.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
+      critical_pool                             = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try(anycast_gateway.critical_pool, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.critical_pool, null)
+      intra_subnet_routing_enabled              = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try(anycast_gateway.intra_subnet_routing_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.intra_subnet_routing_enabled, null)
+      ip_directed_broadcast                     = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try(anycast_gateway.ip_directed_broadcast, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.ip_directed_broadcast, null)
+      l2_flooding_enabled                       = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try(anycast_gateway.layer2_flooding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.layer2_flooding, null)
+      multiple_ip_to_mac_addresses              = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try(anycast_gateway.multiple_ip_to_mac_addresses, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.multiple_ip_to_mac_addresses, null)
+      wireless_pool                             = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try(anycast_gateway.wireless_pool, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.wireless_pool, null)
+      auto_generate_vlan_name                   = try(anycast_gateway.auto_generate_vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.auto_generate_vlan_name, null)
+      pool_type                                 = try(anycast_gateway.pool_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.pool_type, null)
+      security_group_name                       = try(anycast_gateway.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.security_group_name, null)
+      supplicant_based_extended_node_onboarding = try(anycast_gateway.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
+      tcp_mss_adjustment                        = try(anycast_gateway.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
+    }
+  ]
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
 }
