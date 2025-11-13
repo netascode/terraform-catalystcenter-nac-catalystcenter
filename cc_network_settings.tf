@@ -288,6 +288,9 @@ resource "catalystcenter_aaa_settings" "global_aaa_servers" {
 
 ### IP Pools
 
+data "catalystcenter_ip_pools" "all_ip_pools" {
+}
+
 locals {
   ip_pools_reservations = {
     for r in flatten([
@@ -394,6 +397,10 @@ locals {
 
   ip_pool_ids_v4 = { for name, r in catalystcenter_ip_pool.ip_pool_v4 : name => r.id }
   ip_pool_ids_v6 = { for name, r in catalystcenter_ip_pool.ip_pool_v6 : name => r.id }
+
+  data_source_ip_pool_ids = {
+    for pool in data.catalystcenter_ip_pools.all_ip_pools.pools : pool.name => pool.id
+  }
 }
 
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
@@ -402,13 +409,13 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   site_id             = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name                = each.key
   pool_type           = try(join("", [(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
-  ipv4_global_pool_id = lookup(local.ip_pool_ids_v4, lookup(local.reservation_parent_pool_v4, each.key, ""), null)
+  ipv4_global_pool_id = try(coalesce(lookup(local.ip_pool_ids_v4, lookup(local.reservation_parent_pool_v4, each.key, ""), null), lookup(local.data_source_ip_pool_ids, lookup(local.reservation_parent_pool_v4, each.key, ""), null)), null)
   ipv4_prefix_length  = try(local.ip_pools_reservations[each.key].prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.prefix_length, null)
   ipv4_gateway        = try(local.ip_pools_reservations[each.key].gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.gateway, null)
   ipv4_dhcp_servers   = try(local.ip_pools_reservations[each.key].dhcp_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.dhcp_servers, null)
   ipv4_dns_servers    = try(local.ip_pools_reservations[each.key].dns_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.dns_servers, null)
   ipv4_subnet         = try(local.ip_pools_reservations[each.key].subnet, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.subnet, null)
-  ipv6_global_pool_id = lookup(local.ip_pool_ids_v6, lookup(local.reservation_parent_pool_v6, each.key, ""), null)
+  ipv6_global_pool_id = try(coalesce(lookup(local.ip_pool_ids_v6, lookup(local.reservation_parent_pool_v6, each.key, ""), null), lookup(local.data_source_ip_pool_ids, lookup(local.reservation_parent_pool_v6, each.key, ""), null)), null)
   ipv6_prefix_length  = try(local.ipv6_pools_reservations[each.key], null) != null ? try(local.ipv6_pools_reservations[each.key].prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.prefix_length, null) : null
   ipv6_gateway        = try(local.ipv6_pools_reservations[each.key], null) != null ? try(local.ipv6_pools_reservations[each.key].gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.gateway, null) : null
   ipv6_dhcp_servers   = try(local.ipv6_pools_reservations[each.key], null) != null ? try(local.ipv6_pools_reservations[each.key].dhcp_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.dhcp_servers, null) : null
