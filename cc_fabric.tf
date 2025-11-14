@@ -307,7 +307,7 @@ resource "catalystcenter_fabric_device" "wireless_controller" {
 }
 
 resource "catalystcenter_fabric_device" "edge_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && !contains(try(device.fabric_roles, []), "BORDER_NODE") && try(device.fabric_roles, null) != null && contains(try(device.fabric_roles, []), "EDGE_NODE") && contains(local.sites, try(device.fabric_site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && !contains(try(device.fabric_roles, []), "BORDER_NODE") && try(device.fabric_roles, null) != null && contains(try(device.fabric_roles, []), "EDGE_NODE") && !contains(try(device.fabric_roles, []), "EWLC") && contains(local.sites, try(device.fabric_site, "NONE")) }
 
   network_device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
@@ -316,6 +316,22 @@ resource "catalystcenter_fabric_device" "edge_device" {
   )
   fabric_id    = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device]
+}
+
+resource "catalystcenter_fabric_ewlc" "ewlc_device" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "EWLC") && contains(local.sites, try(device.fabric_site, "NONE")) }
+
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+  fabric_id                 = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  enable_wireless           = try(each.value.enable_wireless, local.defaults.catalyst_center.inventory.devices.enable_wireless, true)
+  enable_rolling_ap_upgrade = try(each.value.enable_rolling_ap_upgrade, local.defaults.catalyst_center.inventory.devices.enable_rolling_ap_upgrade, false)
+  ap_reboot_percentage      = try(each.value.ap_reboot_percentage, local.defaults.catalyst_center.inventory.devices.ap_reboot_percentage, 25)
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device]
 }
