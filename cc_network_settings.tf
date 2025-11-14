@@ -398,9 +398,9 @@ locals {
   ip_pool_ids_v4 = { for name, r in catalystcenter_ip_pool.ip_pool_v4 : name => r.id }
   ip_pool_ids_v6 = { for name, r in catalystcenter_ip_pool.ip_pool_v6 : name => r.id }
 
-  data_source_ip_pool_ids = {
+  data_source_ip_pool_ids = try({
     for pool in data.catalystcenter_ip_pools.all_ip_pools.pools : pool.name => pool.id
-  }
+  }, {})
 }
 
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
