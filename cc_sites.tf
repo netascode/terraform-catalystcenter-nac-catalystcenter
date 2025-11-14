@@ -20,7 +20,7 @@ resource "catalystcenter_area" "area_1" {
   for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 1 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
-  parent_id = try(catalystcenter_area.area_0[each.value.parent_name].id, data.catalystcenter_site.global.id, null)
+  parent_id = try(catalystcenter_area.area_0[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
 
   depends_on = [catalystcenter_area.area_0, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
@@ -30,7 +30,7 @@ resource "catalystcenter_area" "area_2" {
   for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 2 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
-  parent_id = try(catalystcenter_area.area_1[each.value.parent_name].id, data.catalystcenter_site.global.id, null)
+  parent_id = try(catalystcenter_area.area_1[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
 
   depends_on = [catalystcenter_area.area_1, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
@@ -40,7 +40,7 @@ resource "catalystcenter_area" "area_3" {
   for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 3 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
-  parent_id = try(catalystcenter_area.area_2[each.value.parent_name].id, data.catalystcenter_site.global.id, null)
+  parent_id = try(catalystcenter_area.area_2[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
 
   depends_on = [catalystcenter_area.area_2, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
@@ -49,7 +49,7 @@ resource "catalystcenter_building" "building" {
   for_each = { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => building if contains(local.sites, try("${building.parent_name}/${building.name}", "")) }
 
   name      = each.value.name
-  parent_id = try(catalystcenter_area.area_3[each.value.parent_name].id, catalystcenter_area.area_2[each.value.parent_name].id, catalystcenter_area.area_1[each.value.parent_name].id, catalystcenter_area.area_0[each.value.parent_name].id, data.catalystcenter_site.global.id, null)
+  parent_id = try(catalystcenter_area.area_3[each.value.parent_name].id, catalystcenter_area.area_2[each.value.parent_name].id, catalystcenter_area.area_1[each.value.parent_name].id, catalystcenter_area.area_0[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
   country   = try(each.value.country, local.defaults.catalyst_center.sites.buildings.country, null)
   address   = try(each.value.address, local.defaults.catalyst_center.sites.buildings.address, null)
   latitude  = try(floor(each.value.latitude * 100000 + 0.5) / 100000, local.defaults.catalyst_center.sites.buildings.latitude, null)
@@ -63,7 +63,7 @@ resource "catalystcenter_floor" "floor" {
   for_each = { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => floor if contains(local.sites, try("${floor.parent_name}/${floor.name}", "")) }
 
   name             = each.value.name
-  parent_id        = try(catalystcenter_building.building[each.value.parent_name].id, data.catalystcenter_site.global.id, null)
+  parent_id        = try(catalystcenter_building.building[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
   floor_number     = try(each.value.floor_number, local.defaults.catalyst_center.sites.floors.floor_number, null)
   rf_model         = try(each.value.rf_model, local.defaults.catalyst_center.sites.floors.rf_model, null)
   width            = try(each.value.width, local.defaults.catalyst_center.sites.floors.width, null)
