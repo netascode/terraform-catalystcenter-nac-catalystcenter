@@ -280,8 +280,10 @@ resource "catalystcenter_fabric_device" "border_device" {
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
     try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
   )
-  fabric_id                       = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
-  device_roles                    = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+  fabric_id = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  device_roles = try([
+    for fabric_role in try(each.value.fabric_roles, []) : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
+  ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
   border_types                    = try(local.border_devices[each.key].border_types, local.defaults.catalyst_center.fabric.border_devices.border_types, null)
   local_autonomous_system_number  = try(local.border_devices[each.key].local_autonomous_system_number, local.defaults.catalyst_center.fabric.border_devices.local_autonomous_system_number, null)
   default_exit                    = try(local.border_devices[each.key].default_exit, local.defaults.catalyst_center.fabric.border_devices.default_exit, null)
@@ -314,8 +316,10 @@ resource "catalystcenter_fabric_device" "edge_device" {
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
     try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
   )
-  fabric_id    = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
-  device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  device_roles = try([
+    for fabric_role in try(each.value.fabric_roles, []) : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
+  ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device]
 }
