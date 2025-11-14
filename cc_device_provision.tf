@@ -83,7 +83,7 @@ resource "catalystcenter_assign_device_to_site" "devices_to_site" {
 }
 
 resource "catalystcenter_device_role" "role" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE")) && try(device.type,null) != "AccessPoint"  }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE")) && try(device.type, null) != "AccessPoint" }
 
   device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
@@ -97,7 +97,7 @@ resource "catalystcenter_device_role" "role" {
 }
 
 resource "catalystcenter_provision_device" "provision_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false && try(device.type,null) != "AccessPoint" }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false && try(device.type, null) != "AccessPoint" }
 
   site_id           = try(local.site_id_list[each.value.site], null)
   network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
@@ -158,7 +158,7 @@ resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
   depends_on = [catalystcenter_assign_device_to_site.wireless_devices_to_site]
 }
 locals {
- provisioned_access_points = [
+  provisioned_access_points = [
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.type, null) == "AccessPoint" && contains(local.sites, try(device.site, "NONE"))
   ]
 
@@ -166,10 +166,6 @@ locals {
     for site in distinct([for d in local.provisioned_access_points : d.site]) :
     site => [for d in local.provisioned_access_points : d if d.site == site]
   }
-
-access_point_to_rf_profile = {
-   for device in try(local.catalyst_center.inventory.devices, []) : device.name => device.rf_profile if strcontains(device.state, "PROVISION") && try(device.type, null) == "AccessPoint" && contains(local.sites, try(device.site, "NONE"))
-}
 }
 
 
@@ -183,9 +179,9 @@ resource "catalystcenter_provision_access_points" "access_points" {
       try(lookup(local.device_ip_to_id, device.device_ip, null), null)
     )
     reprovision = try(device.state, null) == "REPROVISION" ? true : false
-}]
+  }]
   rf_profile_name = try(each.value[0].rf_profile)
-  site_id = try(local.site_id_list[each.key], null)
+  site_id         = try(local.site_id_list[each.key], null)
 }
 
 

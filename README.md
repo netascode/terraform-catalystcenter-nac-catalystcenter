@@ -131,6 +131,7 @@ module "catalystcenter" {
 | [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device) | resource |
 | [catalystcenter_pnp_device_claim_site.claim_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device_claim_site) | resource |
 | [catalystcenter_project.project](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/project) | resource |
+| [catalystcenter_provision_access_points.access_points](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/provision_access_points) | resource |
 | [catalystcenter_provision_device.provision_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/provision_device) | resource |
 | [catalystcenter_provision_devices.provision_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/provision_devices) | resource |
 | [catalystcenter_tag.tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/tag) | resource |

@@ -1,5 +1,6 @@
 ## 0.2.1 (unreleased)
 
+- Add support for provisioing Access Points
 - Add Fabric Embedded_Wireless_Controller_Node support
 - Fix issue with sites hierarchy while using multi state
 - Fix issue with ip_v4_reservations while using multi state
