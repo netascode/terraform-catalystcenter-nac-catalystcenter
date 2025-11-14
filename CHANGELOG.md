@@ -1,5 +1,6 @@
 ## 0.2.1 (unreleased)
 
+- Fix issue with sites hierarchy while using multi state
 - Fix issue with ip_v4_reservations while using multi state
 - Fix issue with assigning cli credentials to site while using multi state
 - Add support for PNP access points
