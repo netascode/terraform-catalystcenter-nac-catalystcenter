@@ -104,6 +104,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
+| [catalystcenter_fabric_ewlc.ewlc_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_ewlc) | resource |
 | [catalystcenter_fabric_l2_handoff.l2_handoff](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_handoff) | resource |
 | [catalystcenter_fabric_l2_handoff.l2_handoff_no_anycast](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_handoff) | resource |
 | [catalystcenter_fabric_l2_virtual_network.l2_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_virtual_network) | resource |
