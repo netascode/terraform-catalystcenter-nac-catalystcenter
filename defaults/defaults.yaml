@@ -27,9 +27,6 @@ defaults:
     inventory:
       devices:
         role_source: MANUAL
-        enable_wireless: true
-        enable_rolling_ap_upgrade: false
-        ap_reboot_percentage: 25
     sites:
       areas:
         parent_name: Global
