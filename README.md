@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.8.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.4.2 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | >= 0.4.3 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -104,6 +104,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
+| [catalystcenter_fabric_devices.fabric_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_devices) | resource |
 | [catalystcenter_fabric_ewlc.ewlc_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_ewlc) | resource |
 | [catalystcenter_fabric_l2_handoff.l2_handoff](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_handoff) | resource |
 | [catalystcenter_fabric_l2_handoff.l2_handoff_no_anycast](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_handoff) | resource |
