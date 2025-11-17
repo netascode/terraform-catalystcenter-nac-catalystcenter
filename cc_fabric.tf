@@ -33,6 +33,11 @@ locals {
     ]
   }
 
+  all_vn_names = [
+    for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) :
+    try(vn.name, vn)
+  ]
+
   l3_virtual_networks_fabric_zone = {
     for vn in flatten([
       for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
@@ -67,7 +72,7 @@ locals {
   ])
 
   l3_virtual_networks = {
-    for key in keys(local.l3_virtual_networks_fabric_site) : key => concat(
+    for key in keys(local.l3_virtual_networks_fabric_site_complete) : key => concat(
       try(local.l3_virtual_networks_fabric_site[key], []),
       try(local.l3_virtual_networks_fabric_zone[key], [])
     )
@@ -75,6 +80,14 @@ locals {
 
   global_l3_virtual_networks = {
     for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) : vn.name => []
+  }
+
+  l3_virtual_networks_fabric_site_complete = {
+    for vn in local.all_vn_names :
+    vn => concat(
+      lookup(local.l3_virtual_networks_fabric_site, vn, []),
+      lookup(local.l3_virtual_networks_fabric_zone, vn, [])
+    )
   }
 
   device_name_to_id = try({
@@ -177,6 +190,8 @@ resource "catalystcenter_virtual_network_to_fabric_site" "l3_vn_to_fabric_site" 
   virtual_network_name = each.value.name
   virtual_network_id   = try(catalystcenter_fabric_l3_virtual_network.global_l3_vn[each.value.name].id, data.catalystcenter_fabric_l3_virtual_network.l3_vn[each.value.name].id)
   fabric_site_id       = try(local.fabric_site_id_list[each.value.fabric_site_name], null)
+
+  depends_on = [catalystcenter_fabric_site.fabric_site]
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
@@ -189,7 +204,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
       ? catalystcenter_fabric_site.fabric_site[site].id
       : contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
       ? catalystcenter_fabric_zone.fabric_zone[site].id
-      : try(local.data_source_fabric_site_id_list[local.data_source_site_list[site]], "DSD")
+      : try(local.data_source_fabric_site_id_list[local.data_source_site_list[site]], " ")
     )
     if(
       contains(keys(catalystcenter_fabric_site.fabric_site), site)
