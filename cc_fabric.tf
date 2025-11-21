@@ -608,3 +608,59 @@ resource "catalystcenter_fabric_port_assignments" "port_assignments" {
 
   depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_anycast_gateway.anycast_gateway]
 }
+
+
+locals {
+  fabric_multicast_configs = {
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
+    fabric_site.name => {
+      fabric_site_name = fabric_site.name
+      virtual_networks = [
+        for vn in try(fabric_site.multicast.virtual_networks, []) : {
+          virtual_network_name = try(vn.name, null)
+          ip_pool_name         = try(vn.ipPoolName, null)
+          ipv4_ssm_ranges      = try(vn.ipv4_ssm_ranges, null) != null ? [try(vn.ipv4_ssm_ranges, null)] : []
+          multicast_RPs        = try(vn.multicast_RPs, [])
+        }
+      ]
+    } if try(fabric_site.multicast, null) != null
+  }
+}
+
+resource "catalystcenter_fabric_multicast_virtual_networks" "multicast" {
+  for_each = {
+    for fabric_site, config in local.fabric_multicast_configs :
+    fabric_site => config
+    if contains(local.sites, fabric_site) && length(config.virtual_networks) > 0
+  }
+
+  fabric_id = try(catalystcenter_fabric_site.fabric_site[each.key].id, null)
+
+  virtual_networks = [
+    for vn in each.value.virtual_networks : {
+      fabric_id            = try(catalystcenter_fabric_site.fabric_site[each.key].id, null)
+      virtual_network_name = try(vn.virtual_network_name, null)
+      ip_pool_name         = try(vn.ip_pool_name, null)
+      ipv4_ssm_ranges      = try(vn.ipv4_ssm_ranges, [])
+      multicast_rps = [
+        for rp in try(vn.multicast_RPs, []) : {
+          ipv4_address       = try(rp.ipv4Address, null)
+          ipv6_address       = try(rp.ipv6Address, null)
+          ipv4_asm_ranges    = try(rp.ipv4AsmRanges, null) != null ? [try(rp.ipv4AsmRanges, null)] : null
+          ipv6_asm_ranges    = try(rp.ipv6AsmRanges, null) != null ? [try(rp.ipv6AsmRanges, null)] : null
+          is_default_v4_rp   = try(rp.isDefaultV4RP, null)
+          is_default_v6_rp   = try(rp.isDefaultV6RP, null)
+          rp_device_location = try(rp.rpLocation, null)
+          network_device_ids = try(rp.rpLocation, "") == "FABRIC" ? [
+            for device_name in try(rp.FabricRPs, []) :
+            try(local.device_name_to_id[device_name], null)
+          ] : null
+        }
+      ]
+    }
+  ]
+
+  depends_on = [
+    catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device
+  ]
+}
