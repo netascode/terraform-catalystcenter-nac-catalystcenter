@@ -664,3 +664,45 @@ resource "catalystcenter_fabric_multicast_virtual_networks" "multicast" {
     catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device
   ]
 }
+
+locals {
+  extranet_policies = flatten([
+    for policy in try(local.catalyst_center.fabric.extranet_policies, []) : {
+      name                             = try(policy.name, null)
+      provider_virtual_network_name    = try(policy.provider_virtual_network, null)
+      subscriber_virtual_network_names = try(policy.subscriber_virtual_networks, [])
+      fabric_sites                     = try(policy.fabric_sites, [])
+      policy_key                       = policy.name
+      fabric_ids = length(try(policy.fabric_sites, [])) > 0 ? [
+        for site in try(policy.fabric_sites, []) :
+        try(catalystcenter_fabric_site.fabric_site[site].id, null)
+        if contains(local.sites, site)
+        ] : (
+        var.manage_global_settings ? null : flatten([
+          for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
+          contains(local.sites, fabric_site.name) ? try(catalystcenter_fabric_site.fabric_site[fabric_site.name].id, null) : null
+        ])
+      )
+    }
+  ])
+}
+
+resource "catalystcenter_extranet_policy" "extranet_policy" {
+  for_each = {
+    for policy in local.extranet_policies : policy.policy_key => policy
+    if try(policy.name, null) != null &&
+    try(policy.provider_virtual_network_name, null) != null &&
+    length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
+    (var.manage_global_settings ||
+      length(try(policy.fabric_sites, [])) == 0 ||
+    length(try(policy.fabric_ids, [])) > 0)
+  }
+
+  extranet_policy_name             = each.value.name
+  provider_virtual_network_name    = each.value.provider_virtual_network_name
+  subscriber_virtual_network_names = toset(each.value.subscriber_virtual_network_names)
+  fabric_ids                       = try(each.value.fabric_ids, null) != null ? toset(compact(each.value.fabric_ids)) : null
+
+  depends_on = [catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_l3_virtual_network.global_l3_vn]
+}
+

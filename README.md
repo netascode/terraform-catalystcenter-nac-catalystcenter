@@ -101,6 +101,7 @@ module "catalystcenter" {
 | [catalystcenter_discovery.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/discovery) | resource |
 | [catalystcenter_dns_settings.dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
 | [catalystcenter_dns_settings.global_dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
+| [catalystcenter_extranet_policy.extranet_policy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/extranet_policy) | resource |
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
