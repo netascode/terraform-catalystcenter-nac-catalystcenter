@@ -500,7 +500,11 @@ locals {
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.ip_pool_name].vlan_id, null)
+    for item in local.anycast_gateways : "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.ip_pool_name].vlan_id, one([
+      for g in local.anycast_gateways_by_fabric_site[item.fabric_site_name] :
+      g.vlan_id
+      if g.ip_pool_name == item.ip_pool_name
+    ]), null)
   }
 }
 
