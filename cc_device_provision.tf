@@ -37,6 +37,10 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && contains(local.sites, try(device.site, "NONE"))
   ]
 
+  all_provisioned_devices = [
+    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null
+  ]
+
   provisioned_devices_by_site = {
     for site in distinct([for d in local.provisioned_devices : d.site]) :
     site => [for d in local.provisioned_devices : d if d.site == site]
@@ -47,7 +51,7 @@ locals {
       for device in try(transit.control_plane_devices, []) :
       device
       if anytrue([
-        for prov in local.provisioned_devices :
+        for prov in local.all_provisioned_devices :
         prov.name == device && prov.state == "PROVISION"
       ])
     ]
