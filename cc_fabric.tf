@@ -657,7 +657,7 @@ resource "catalystcenter_fabric_multicast_virtual_networks" "multicast" {
           rp_device_location = try(rp.rp_location, null)
           network_device_ids = try(rp.rp_location, "") == "FABRIC" ? [
             for device_name in try(rp.fabric_rps, []) :
-            try(local.device_name_to_id[device_name], null)
+            try(local.device_name_to_id[device_name], local.device_name_to_id[local.name_to_fqdn_mapping[device_name]], null)
           ] : []
         }
       ]
@@ -699,7 +699,7 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
     length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
     (var.manage_global_settings ||
       length(try(policy.fabric_sites, [])) == 0 ||
-    length(try(policy.fabric_ids, [])) > 0)
+    length([for site in try(policy.fabric_sites, []) : site if contains(local.sites, site)]) > 0)
   }
 
   extranet_policy_name             = each.value.name
