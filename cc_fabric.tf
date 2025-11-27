@@ -699,7 +699,7 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
     length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
     (var.manage_global_settings ||
       length(try(policy.fabric_sites, [])) == 0 ||
-    length(try(policy.fabric_ids, [])) > 0)
+    length([for site in try(policy.fabric_sites, []) : site if contains(local.sites, site)]) > 0)
   }
 
   extranet_policy_name             = each.value.name
