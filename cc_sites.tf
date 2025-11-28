@@ -66,9 +66,9 @@ resource "catalystcenter_floor" "floor" {
   parent_id        = try(catalystcenter_building.building[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
   floor_number     = try(each.value.floor_number, local.defaults.catalyst_center.sites.floors.floor_number, null)
   rf_model         = try(each.value.rf_model, local.defaults.catalyst_center.sites.floors.rf_model, null)
-  width            = try(each.value.width, local.defaults.catalyst_center.sites.floors.width, null)
-  length           = try(each.value.length, local.defaults.catalyst_center.sites.floors.length, null)
-  height           = try(each.value.height, local.defaults.catalyst_center.sites.floors.height, null)
+  width            = try(floor(each.value.width * 1000 + 0.5) / 1000, local.defaults.catalyst_center.sites.floors.width, null)
+  length           = try(floor(each.value.length * 1000 + 0.5) / 1000, local.defaults.catalyst_center.sites.floors.length, null)
+  height           = try(floor(each.value.height * 1000 + 0.5) / 1000, local.defaults.catalyst_center.sites.floors.height, null)
   units_of_measure = try(each.value.units_of_measure, local.defaults.catalyst_center.sites.floors.units_of_measure, null)
 
   depends_on = [catalystcenter_building.building, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
