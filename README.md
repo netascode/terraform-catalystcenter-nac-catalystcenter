@@ -82,6 +82,8 @@ module "catalystcenter" {
 | [catalystcenter_assign_devices_to_tag.device_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_devices_to_tag) | resource |
 | [catalystcenter_assign_managed_ap_locations.managed_ap_locations](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_managed_ap_locations) | resource |
 | [catalystcenter_assign_templates_to_tag.template_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_templates_to_tag) | resource |
+| [catalystcenter_authentication_policy_server.aaa](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/authentication_policy_server) | resource |
+| [catalystcenter_authentication_policy_server.ise](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/authentication_policy_server) | resource |
 | [catalystcenter_banner_settings.banner](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/banner_settings) | resource |
 | [catalystcenter_banner_settings.global_banner](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/banner_settings) | resource |
 | [catalystcenter_building.building](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/building) | resource |
@@ -120,6 +122,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_vlan_to_ssid) | resource |
 | [catalystcenter_fabric_zone.fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_zone) | resource |
 | [catalystcenter_floor.floor](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floor) | resource |
+| [catalystcenter_integrate_ise.ise](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/integrate_ise) | resource |
 | [catalystcenter_ip_pool.ip_pool_v4](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ip_pool) | resource |
 | [catalystcenter_ip_pool.ip_pool_v6](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ip_pool) | resource |
 | [catalystcenter_ip_pool_reservation.pool_reservation](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ip_pool_reservation) | resource |

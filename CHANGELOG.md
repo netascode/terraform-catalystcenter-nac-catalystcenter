@@ -1,5 +1,6 @@
 ## 0.2.1 (unreleased)
 
+- Add support for system settings Authentication Policy Servers
 - Fix issue when creating L2 VN while using multi state
 - Fix issue when creating an L3 VN without a fabric site assignment
 - Add support for provisioing Access Points
