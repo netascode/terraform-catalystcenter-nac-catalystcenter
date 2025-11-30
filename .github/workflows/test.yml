@@ -26,6 +26,55 @@ jobs:
         with:
           terraform_version: 1.10.4
 
+      - name: Go Setup
+        if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build Local Catalyst Center Provider
+        if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
+        run: |
+          echo "Setting up local Catalyst Center provider for dev branch/PR..."
+
+          # Set up Go environment
+          export GOPATH=$HOME/go
+          export PATH=$GOPATH/bin:$PATH
+          go version
+
+          # Clone and build provider from source
+          git clone https://github.com/CiscoDevNet/terraform-provider-catalystcenter.git /tmp/terraform-provider-catalystcenter
+          cd /tmp/terraform-provider-catalystcenter
+          git checkout main
+          go install
+
+          echo "Provider binary installed at: $GOPATH/bin"
+          ls -la $GOPATH/bin/terraform-provider-catalystcenter || echo "Binary not found"
+
+      - name: Configure Terraform Dev Overrides
+        if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
+        run: |
+          cat > $HOME/.terraformrc << 'EOF'
+          provider_installation {
+            # Use local provider binary built from source
+            dev_overrides {
+              "CiscoDevNet/catalystcenter" = "$HOME/go/bin"
+            }
+
+            # For all other providers, install them directly from their origin provider
+            # registries as normal. If you omit this, Terraform will _only_ use
+            # the dev_overrides block, and so no other providers will be available.
+            direct {}
+          }
+          EOF
+
+          # Expand $HOME in the config file
+          sed -i "s|\$HOME|$HOME|g" $HOME/.terraformrc
+
+          echo "Terraform configuration:"
+          cat $HOME/.terraformrc
+          echo "Using local provider build for dev branch"
+
       - name: Tflint Setup
         uses: terraform-linters/setup-tflint@v6
 
