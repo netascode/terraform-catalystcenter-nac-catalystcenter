@@ -41,9 +41,14 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null
   ]
 
+  provisioned_devices_filtered = var.bulk_site_provisioning != null ? [
+    for d in local.provisioned_devices : d
+    if d.site == var.bulk_site_provisioning || startswith(d.site, "${var.bulk_site_provisioning}/")
+  ] : local.provisioned_devices
+
   provisioned_devices_by_site = {
-    for site in distinct([for d in local.provisioned_devices : d.site]) :
-    site => [for d in local.provisioned_devices : d if d.site == site]
+    for site in distinct([for d in local.provisioned_devices_filtered : var.bulk_site_provisioning != null ? var.bulk_site_provisioning : d.site]) :
+    site => [for d in local.provisioned_devices_filtered : d if var.bulk_site_provisioning != null ? true : d.site == site]
   }
 
   provisioned_sda_transit_cp_devices = flatten([
