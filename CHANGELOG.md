@@ -1,20 +1,34 @@
 ## 0.2.1 (unreleased)
 
+**New Features:**
+- Add support for Fabric Multicast
+- Add support for Fabric Extranet Policies
+- Add `bulk_site_provisioning` variable for hierarchical device provisioning filtering
+- Add `device_name_to_ip` lookup map to support name and FQDN-based device IP resolution for border device mapping
 - Add support for system settings Authentication Policy Servers
-- Fix issue when creating L2 VN while using multi state
-- Fix issue when creating an L3 VN without a fabric site assignment
-- Add support for provisioing Access Points
+- Add support for provisioning Access Points
 - Add Fabric Embedded_Wireless_Controller_Node support
-- Fix issue with sites hierarchy while using multi state
-- Fix issue with ip_v4_reservations while using multi state
-- Fix issue with assigning cli credentials to site while using multi state
 - Add support for PNP access points
-- Fix idempotency issue during brownfield import of border devices
-- BREAKING CHANGE: Update several resources to align with provider version 0.4.0 schema changes
 - Add `reconfigure` attribute to `fabric_site` for applying pending fabric configuration events
 - Add MD5 checksum to templates variable to trigger redeployment when template variables change
 - Add flag `use_bulk_api` to enable bulk API operations for faster execution
-- Fix issue with assigning ip pool type `management` and `service` in `catalystcenter_ip_pool_reservation`.
+
+**Bug Fixes:**
+- Fix issue when creating L2 VN while using multi state
+- Fix issue when creating an L3 VN without a fabric site assignment
+- Fix issue with sites hierarchy while using multi state
+- Fix issue with ip pools reservations while using multi state
+- Fix issue with assigning cli credentials to site while using multi state
+- Fix idempotency issue during brownfield import of border devices
+- Fix issue with assigning ip pool type `management` and `service` in ip pools reservations
+- Fix EWLC provisioning
+- Fix issue with provision edge device while using embedded wireless controller
+- Fix multicast resource to tolerate both hostname and FQDN device names
+- Fix floor width, length, height rounding to 3 decimal places
+- Fix transit configuration and L2 handoff dependencies
+
+**Breaking Changes:**
+- BREAKING CHANGE: Update several resources to align with provider version 0.4.0 schema changes (removal of deprecated and internal API attributes)
 
 ## 0.2.0
 
