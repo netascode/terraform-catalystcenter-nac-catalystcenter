@@ -93,8 +93,18 @@ locals {
   device_name_to_id = try({
     for device in data.catalystcenter_network_devices.all_devices.devices : device.hostname => device.id
   }, {})
-}
 
+  device_name_to_ip = try(merge(
+    {
+      for device in try(local.catalyst_center.inventory.devices, []) : device.name => device.device_ip
+      if try(device.device_ip, null) != null
+    },
+    {
+      for device in try(local.catalyst_center.inventory.devices, []) : device.fqdn_name => device.device_ip
+      if try(device.fqdn_name, null) != null && try(device.device_ip, null) != null
+    }
+  ), {})
+}
 
 data "catalystcenter_transit_network" "transit" {
   for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? toset([for transit in try(local.catalyst_center.fabric.transits, []) : transit.name]) : toset([])
@@ -432,7 +442,7 @@ locals {
             key                   = format("%s/%s/%s/%s", vn.name, interface.name, transit.name, border_device.name)
             transit_name          = try(transit.name, null)
             device_name           = try(border_device.name, null)
-            device_ip             = try(local.all_devices[border_device.name].device_ip, null)
+            device_ip             = try(local.device_name_to_ip[border_device.name], null)
             interface_name        = try(interface.name, null)
             virtual_network_name  = try(vn.name, null)
             vlan_id               = try(vn.vlan, null)
@@ -489,7 +499,7 @@ locals {
         for interface in try(vn.interfaces) : {
           key              = format("vlan%s/%s/%s", vn.external_vlan, border_device.name, interface)
           device_name      = try(border_device.name, null)
-          device_ip        = try(local.all_devices[border_device.name].device_ip, null)
+          device_ip        = try(local.device_name_to_ip[border_device.name], null)
           interface_name   = try(interface, null)
           external_vlan_id = try(vn.external_vlan, null)
           ip_pool_name     = try(vn.ip_pool_name, null)
@@ -527,7 +537,7 @@ locals {
         for interface in try(border_device.l2_handoffs.l2_without_anycast_gateway.interfaces, []) : {
           key              = format("vlan%s/%s/%s", vlan.external_vlan, border_device.name, interface)
           device_name      = try(border_device.name, null)
-          device_ip        = try(local.all_devices[border_device.name].device_ip, null)
+          device_ip        = try(local.device_name_to_ip[border_device.name], null)
           interface_name   = try(interface, null)
           external_vlan_id = try(vlan.external_vlan, null)
           vlan_name        = try(vlan.name, null)
