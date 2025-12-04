@@ -68,7 +68,7 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
-    }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && d.type != "AccessPoint"
+    }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) != "AccessPoint"
   }
 
   assigned_access_points_map = {
@@ -77,7 +77,7 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
-    }... if(d.state == "ASSIGN" || (strcontains(d.state, "PROVISION"))) && contains(local.sites, try(d.site, "NONE")) && d.type == "AccessPoint"
+    }... if(d.state == "ASSIGN" || (strcontains(d.state, "PROVISION"))) && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
   }
 
   wireless_devices_map = {
