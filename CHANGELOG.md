@@ -1,4 +1,4 @@
-## 0.2.1 (unreleased)
+## 0.3.0 (unreleased)
 
 **New Features:**
 - Add support for Fabric Multicast
@@ -8,6 +8,8 @@
 - Add support for system settings Authentication Policy Servers
 - Add support for provisioning Access Points
 - Add Fabric Embedded_Wireless_Controller_Node support
+- Add `interface_description` support for `port_assignments`
+- Add `group_based_policy_enforcement_enabled` to `anycast_gateway(s)` for `EXTENDED_NODE` pool types
 - Add support for PNP access points
 - Add `reconfigure` attribute to `fabric_site` for applying pending fabric configuration events
 - Add MD5 checksum to templates variable to trigger redeployment when template variables change
