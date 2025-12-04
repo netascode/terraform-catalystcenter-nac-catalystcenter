@@ -68,7 +68,16 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
-    }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE"))
+    }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && d.type != "AccessPoint"
+  }
+
+  assigned_access_points_map = {
+    for d in try(local.catalyst_center.inventory.devices, []) :
+    d.site => {
+      name      = d.name
+      fqdn_name = d.fqdn_name
+      device_ip = d.device_ip
+    }... if(d.state == "ASSIGN" || (strcontains(d.state, "PROVISION"))) && contains(local.sites, try(d.site, "NONE")) && d.type == "AccessPoint"
   }
 
   wireless_devices_map = {
@@ -86,6 +95,13 @@ data "catalystcenter_network_devices" "all_devices" {
 
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
   for_each = local.assigned_devices_map
+
+  device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
+  site_id    = local.site_id_list[each.key]
+}
+
+resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
+  for_each = local.assigned_access_points_map
 
   device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
   site_id    = local.site_id_list[each.key]
@@ -191,6 +207,8 @@ resource "catalystcenter_provision_access_points" "access_points" {
   }]
   rf_profile_name = try(each.value[0].rf_profile)
   site_id         = try(local.site_id_list[each.key], null)
+
+  depends_on = [catalystcenter_assign_device_to_site.access_points_to_site]
 }
 
 
