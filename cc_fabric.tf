@@ -403,7 +403,7 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && length(try(site.wireless_ssids, [])) != 0 } : {}
+  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if((length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && var.use_bulk_api == false && length(try(site.wireless_ssids, [])) != 0) || (var.use_bulk_api == true && length(try(site.wireless_ssids, [])) != 0)) } : {}
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
@@ -413,7 +413,7 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
     }
   ])
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_wireless_profile.wireless_profile]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_anycast_gateways.anycast_gateways, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_wireless_profile.wireless_profile]
 }
 
 resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {

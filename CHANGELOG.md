@@ -16,6 +16,7 @@
 - Add flag `use_bulk_api` to enable bulk API operations for faster execution
 
 **Bug Fixes:**
+- Fix issue with Vlan to SSID mappings while using `use_bulk_api`
 - Fix issue when creating L2 VN while using multi state
 - Fix issue when creating an L3 VN without a fabric site assignment
 - Fix issue with sites hierarchy while using multi state
