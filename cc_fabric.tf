@@ -383,6 +383,10 @@ resource "catalystcenter_fabric_device" "edge_device" {
     fabric_role
   ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
+  lifecycle {
+    ignore_changes = [device_roles]
+  }
+
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_ewlc.ewlc_device]
 }
 
