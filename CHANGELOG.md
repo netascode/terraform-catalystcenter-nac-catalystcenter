@@ -15,6 +15,11 @@
 - Add MD5 checksum to templates variable to trigger redeployment when template variables change
 - Add flag `use_bulk_api` to enable bulk API operations for faster execution
 
+**Improvements:**
+  - Refactor template deployment mechanism to enable batch deployments (deploy multiple devices with same template in single API call)
+  - Consolidate template deployment resources from per-device-template to per-template grouping for improved scalability
+  - Add per-device `redeploy_template` control within `target_info` for granular deployment management
+
 **Bug Fixes:**
 - Fix issue with Vlan to SSID mappings while using `use_bulk_api`
 - Fix issue when creating L2 VN while using multi state
