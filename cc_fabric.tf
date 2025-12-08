@@ -93,8 +93,18 @@ locals {
   device_name_to_id = try({
     for device in data.catalystcenter_network_devices.all_devices.devices : device.hostname => device.id
   }, {})
-}
 
+  device_name_to_ip = try(merge(
+    {
+      for device in try(local.catalyst_center.inventory.devices, []) : device.name => device.device_ip
+      if try(device.device_ip, null) != null
+    },
+    {
+      for device in try(local.catalyst_center.inventory.devices, []) : device.fqdn_name => device.device_ip
+      if try(device.fqdn_name, null) != null && try(device.device_ip, null) != null
+    }
+  ), {})
+}
 
 data "catalystcenter_transit_network" "transit" {
   for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? toset([for transit in try(local.catalyst_center.fabric.transits, []) : transit.name]) : toset([])
@@ -249,6 +259,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   security_group_name                       = try(each.value.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.security_group_name, null)
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
+  group_based_policy_enforcement_enabled    = lookup(each.value, "pool_type", "") == "EXTENDED_NODE" ? try(each.value.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
 }
@@ -277,6 +288,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways" {
       security_group_name                       = try(anycast_gateway.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.security_group_name, null)
       supplicant_based_extended_node_onboarding = try(anycast_gateway.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
       tcp_mss_adjustment                        = try(anycast_gateway.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
+      group_based_policy_enforcement_enabled    = lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? try(anycast_gateway.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
     }
   ]
 
@@ -316,7 +328,7 @@ resource "catalystcenter_fabric_devices" "fabric_devices" {
     prepend_autonomous_system_count = try(local.border_devices[device.name].prepend_autonomous_system_count, 0) == 0 ? null : try(local.border_devices[device.name].prepend_autonomous_system_count, local.defaults.catalyst_center.fabric.border_devices.prepend_autonomous_system_count, null)
   }]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller]
 }
 
 resource "catalystcenter_fabric_device" "border_device" {
@@ -391,7 +403,7 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && length(try(site.wireless_ssids, [])) != 0 } : {}
+  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if((length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && var.use_bulk_api == false && length(try(site.wireless_ssids, [])) != 0) || (var.use_bulk_api == true && length(try(site.wireless_ssids, [])) != 0)) } : {}
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
@@ -401,7 +413,7 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
     }
   ])
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_wireless_profile.wireless_profile]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_anycast_gateways.anycast_gateways, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_wireless_profile.wireless_profile]
 }
 
 resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
@@ -432,7 +444,7 @@ locals {
             key                   = format("%s/%s/%s/%s", vn.name, interface.name, transit.name, border_device.name)
             transit_name          = try(transit.name, null)
             device_name           = try(border_device.name, null)
-            device_ip             = try(local.all_devices[border_device.name].device_ip, null)
+            device_ip             = try(local.device_name_to_ip[border_device.name], null)
             interface_name        = try(interface.name, null)
             virtual_network_name  = try(vn.name, null)
             vlan_id               = try(vn.vlan, null)
@@ -489,7 +501,7 @@ locals {
         for interface in try(vn.interfaces) : {
           key              = format("vlan%s/%s/%s", vn.external_vlan, border_device.name, interface)
           device_name      = try(border_device.name, null)
-          device_ip        = try(local.all_devices[border_device.name].device_ip, null)
+          device_ip        = try(local.device_name_to_ip[border_device.name], null)
           interface_name   = try(interface, null)
           external_vlan_id = try(vn.external_vlan, null)
           ip_pool_name     = try(vn.ip_pool_name, null)
@@ -500,7 +512,11 @@ locals {
   ])
 
   l2_handoff_vlan_id_map = {
-    for item in local.anycast_gateways : "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.ip_pool_name].vlan_id, null)
+    for item in local.anycast_gateways : "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => try(catalystcenter_anycast_gateway.anycast_gateway[item.ip_pool_name].vlan_id, one([
+      for g in local.anycast_gateways_by_fabric_site[item.fabric_site_name] :
+      g.vlan_id
+      if g.ip_pool_name == item.ip_pool_name
+    ]), null)
   }
 }
 
@@ -513,7 +529,7 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
   internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.ip_pool_name}#_#${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
-  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site]
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways]
 }
 
 locals {
@@ -523,7 +539,7 @@ locals {
         for interface in try(border_device.l2_handoffs.l2_without_anycast_gateway.interfaces, []) : {
           key              = format("vlan%s/%s/%s", vlan.external_vlan, border_device.name, interface)
           device_name      = try(border_device.name, null)
-          device_ip        = try(local.all_devices[border_device.name].device_ip, null)
+          device_ip        = try(local.device_name_to_ip[border_device.name], null)
           interface_name   = try(interface, null)
           external_vlan_id = try(vlan.external_vlan, null)
           vlan_name        = try(vlan.name, null)
@@ -567,6 +583,7 @@ locals {
             security_group_name        = try(assignment.security_group_name, local.defaults.catalyst_center.inventory.devices.port_assignments.security_group_name, null)
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
+            interface_description      = try(assignment.interface_description, local.defaults.catalyst_center.inventory.devices.port_assignments.interface_description, null)
             network_device_id = coalesce(
               try(lookup(local.device_name_to_id, device.name, null), null),
               try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
@@ -582,6 +599,7 @@ locals {
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             security_group_name        = try(assignment.security_group_name, local.defaults.catalyst_center.inventory.devices.port_assignments.security_group_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
+            interface_description      = try(assignment.interface_description, local.defaults.catalyst_center.inventory.devices.port_assignments.interface_description, null)
             network_device_id = coalesce(
               try(lookup(local.device_name_to_id, device.name, null), null),
               try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
@@ -606,5 +624,102 @@ resource "catalystcenter_fabric_port_assignments" "port_assignments" {
   )
   port_assignments = try(local.device_port_assignments[each.key], null)
 
-  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_anycast_gateway.anycast_gateway]
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways]
+}
+
+
+locals {
+  fabric_multicast_configs = {
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
+    fabric_site.name => {
+      fabric_site_name = fabric_site.name
+      virtual_networks = [
+        for vn in try(fabric_site.multicast.virtual_networks, []) : {
+          virtual_network_name = try(vn.name, null)
+          ip_pool_name         = try(vn.ip_pool_name, null)
+          ipv4_ssm_ranges      = try(vn.ipv4_ssm_ranges, [])
+          multicast_rps        = try(vn.multicast_rps, [])
+        }
+      ]
+    } if try(fabric_site.multicast, null) != null
+  }
+}
+
+resource "catalystcenter_fabric_multicast_virtual_networks" "multicast" {
+  for_each = {
+    for fabric_site, config in local.fabric_multicast_configs :
+    fabric_site => config
+    if contains(local.sites, fabric_site) && length(config.virtual_networks) > 0
+  }
+
+  fabric_id = try(catalystcenter_fabric_site.fabric_site[each.key].id, null)
+
+  virtual_networks = [
+    for vn in each.value.virtual_networks : {
+      fabric_id            = try(catalystcenter_fabric_site.fabric_site[each.key].id, null)
+      virtual_network_name = try(vn.virtual_network_name, null)
+      ip_pool_name         = try(vn.ip_pool_name, null)
+      ipv4_ssm_ranges      = try(vn.ipv4_ssm_ranges, [])
+      multicast_rps = [
+        for rp in try(vn.multicast_rps, []) : {
+          ipv4_address       = try(rp.ipv4_address, null)
+          ipv6_address       = try(rp.ipv6_address, null)
+          ipv4_asm_ranges    = try(rp.ipv4_asm_ranges, [])
+          ipv6_asm_ranges    = try(rp.ipv6_asm_ranges, [])
+          is_default_v4_rp   = try(rp.is_default_v4_rp, null)
+          is_default_v6_rp   = try(rp.is_default_v6_rp, null)
+          rp_device_location = try(rp.rp_location, null)
+          network_device_ids = try(rp.rp_location, "") == "FABRIC" ? [
+            for device_name in try(rp.fabric_rps, []) :
+            try(local.device_name_to_id[device_name], local.device_name_to_id[local.name_to_fqdn_mapping[device_name]], null)
+          ] : []
+        }
+      ]
+    }
+  ]
+
+  depends_on = [
+    catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device
+  ]
+}
+
+locals {
+  extranet_policies = flatten([
+    for policy in try(local.catalyst_center.fabric.extranet_policies, []) : {
+      name                             = try(policy.name, null)
+      provider_virtual_network_name    = try(policy.provider_virtual_network, null)
+      subscriber_virtual_network_names = try(policy.subscriber_virtual_networks, [])
+      fabric_sites                     = try(policy.fabric_sites, [])
+      policy_key                       = policy.name
+      fabric_ids = length(try(policy.fabric_sites, [])) > 0 ? [
+        for site in try(policy.fabric_sites, []) :
+        try(catalystcenter_fabric_site.fabric_site[site].id, null)
+        if contains(local.sites, site)
+        ] : (
+        var.manage_global_settings ? null : flatten([
+          for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
+          contains(local.sites, fabric_site.name) ? try(catalystcenter_fabric_site.fabric_site[fabric_site.name].id, null) : null
+        ])
+      )
+    }
+  ])
+}
+
+resource "catalystcenter_extranet_policy" "extranet_policy" {
+  for_each = {
+    for policy in local.extranet_policies : policy.policy_key => policy
+    if try(policy.name, null) != null &&
+    try(policy.provider_virtual_network_name, null) != null &&
+    length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
+    (var.manage_global_settings ||
+      length(try(policy.fabric_sites, [])) == 0 ||
+    length([for site in try(policy.fabric_sites, []) : site if contains(local.sites, site)]) > 0)
+  }
+
+  extranet_policy_name             = each.value.name
+  provider_virtual_network_name    = each.value.provider_virtual_network_name
+  subscriber_virtual_network_names = toset(each.value.subscriber_virtual_network_names)
+  fabric_ids                       = try(each.value.fabric_ids, null) != null ? toset(compact(each.value.fabric_ids)) : null
+
+  depends_on = [catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_l3_virtual_network.global_l3_vn]
 }

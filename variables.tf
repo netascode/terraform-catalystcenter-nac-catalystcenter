@@ -46,6 +46,17 @@ variable "use_bulk_api" {
   default     = false
 }
 
+variable "bulk_site_provisioning" {
+  description = "Site path for bulk device provisioning. When set with use_bulk_api=true, provisions all devices from this site and all child sites in a single bulk operation. Example: 'Global/Poland' will provision all devices under Poland hierarchy."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.bulk_site_provisioning == null || var.use_bulk_api == true
+    error_message = "The bulk_site_provisioning variable can only be used when use_bulk_api is set to true."
+  }
+}
+
 variable "write_default_values_file" {
   description = "Write all default values to a YAML file. Value is a path pointing to the file to be created."
   type        = string
