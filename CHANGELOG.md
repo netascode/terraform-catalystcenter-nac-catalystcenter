@@ -1,4 +1,4 @@
-## 0.3.0 (unreleased)
+## 0.3.0
 
 **New Features:**
 - Add support for Fabric Multicast

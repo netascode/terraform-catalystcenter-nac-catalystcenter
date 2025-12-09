@@ -4,7 +4,7 @@ terraform {
   required_providers {
     catalystcenter = {
       source  = "CiscoDevNet/catalystcenter"
-      version = ">= 0.4.4"
+      version = ">= 0.4.5"
     }
     utils = {
       source  = "netascode/utils"
