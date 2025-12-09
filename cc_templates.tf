@@ -264,7 +264,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
   }
 
   template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id)
-  redeploy            = try(each.value[0].redeploy_template, local.templates_map[each.key].redeploy_template, "NEVER")
+  redeploy            = try(local.templates_map[each.key].redeploy_template, "NEVER")
   copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
@@ -307,7 +307,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     length([for d in devices : d if strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
-  redeploy            = try(each.value[0].redeploy_template, local.templates_map[each.key].redeploy_template, "NEVER")
+  redeploy            = try(local.templates_map[each.key].redeploy_template, "NEVER")
   template_id         = catalystcenter_template_version.composite_commit_version[each.key].id
   main_template_id    = catalystcenter_template.composite_template[each.key].id
   force_push_template = try(local.templates_map[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
