@@ -608,7 +608,7 @@ locals {
               try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
               try(lookup(local.device_ip_to_id, device.device_ip, null), null)
             )
-            fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
+            fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], try(local.data_source_fabric_site_id_list[local.data_source_site_list[device.fabric_site]], " "), null)
           }
         ]
       )
@@ -617,9 +617,9 @@ locals {
 }
 
 resource "catalystcenter_fabric_port_assignments" "port_assignments" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null && (contains(local.sites, try(device.fabric_site, "NONE")) || contains(keys(local.data_source_site_list), try(device.fabric_site, "NONE"))) }
 
-  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, try(local.data_source_fabric_site_id_list[local.data_source_site_list[each.value.fabric_site]], " "), null)
   network_device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
