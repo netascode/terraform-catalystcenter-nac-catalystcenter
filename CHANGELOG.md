@@ -1,3 +1,12 @@
+## 0.3.1
+
+**Improvements:**
+- Add `device_discovery_validation` check block to validate device presence in Catalyst Center inventory during plan phase
+- Improve error handling for devices not found in inventory by filtering them out from resource operations instead of failing with coalesce errors
+
+**Bug Fixes:**
+- Fix issue with L2 virtual networks while using single state deployment
+
 ## 0.3.0
 
 **New Features:**
