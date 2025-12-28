@@ -69,6 +69,11 @@ locals {
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
     }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) != "AccessPoint"
+    && (
+      lookup(local.device_name_to_id, d.name, null) != null ||
+      lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, d.device_ip, null) != null
+    )
   }
 
   assigned_access_points_map = {
@@ -78,6 +83,11 @@ locals {
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
     }... if(d.state == "ASSIGN" || (strcontains(d.state, "PROVISION"))) && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
+    && (
+      lookup(local.device_name_to_id, d.name, null) != null ||
+      lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, d.device_ip, null) != null
+    )
   }
 
   wireless_devices_map = {
@@ -87,6 +97,11 @@ locals {
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
     }... if strcontains(d.state, "PROVISION") && try(d.primary_managed_ap_locations, null) != null && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
+    && (
+      lookup(local.device_name_to_id, d.name, null) != null ||
+      lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, d.device_ip, null) != null
+    )
   }
 }
 
@@ -117,15 +132,31 @@ check "device_discovery_validation" {
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
   for_each = local.assigned_devices_map
 
-  device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
-  site_id    = local.site_id_list[each.key]
+  device_ids = [
+    for device in each.value :
+    try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])
+    if(
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
+    )
+  ]
+  site_id = local.site_id_list[each.key]
 }
 
 resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
   for_each = local.assigned_access_points_map
 
-  device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
-  site_id    = local.site_id_list[each.key]
+  device_ids = [
+    for device in each.value :
+    try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])
+    if(
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
+    )
+  ]
+  site_id = local.site_id_list[each.key]
 }
 
 resource "catalystcenter_device_role" "role" {
@@ -190,7 +221,15 @@ resource "catalystcenter_provision_devices" "provision_devices" {
 resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
   for_each = local.wireless_devices_map
 
-  device_ids = [for device in each.value : try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])]
+  device_ids = [
+    for device in each.value :
+    try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])
+    if(
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
+    )
+  ]
 
   site_id = local.site_id_list[each.key]
 }
