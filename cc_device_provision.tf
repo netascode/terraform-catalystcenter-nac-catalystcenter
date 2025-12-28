@@ -93,6 +93,27 @@ locals {
 data "catalystcenter_network_devices" "all_devices" {
 }
 
+locals {
+  missing_devices = [
+    for device in try(local.catalyst_center.inventory.devices, []) :
+    device
+    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
+    && try(device.type, null) != "AccessPoint"
+    && lookup(local.device_name_to_id, device.name, null) == null
+    && lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) == null
+    && lookup(local.device_ip_to_id, device.device_ip, null) == null
+  ]
+
+  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${d.device_ip}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+}
+
+check "device_discovery_validation" {
+  assert {
+    condition     = length(local.missing_devices) == 0
+    error_message = local.missing_devices_error
+  }
+}
+
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
   for_each = local.assigned_devices_map
 
@@ -108,7 +129,18 @@ resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
 }
 
 resource "catalystcenter_device_role" "role" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE")) && try(device.type, null) != "AccessPoint" }
+  for_each = {
+    for device in try(local.catalyst_center.inventory.devices, []) :
+    device.name => device
+    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
+    && contains(local.sites, try(device.site, "NONE"))
+    && try(device.type, null) != "AccessPoint"
+    && (
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
+    )
+  }
 
   device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
@@ -135,15 +167,22 @@ resource "catalystcenter_provision_devices" "provision_devices" {
   for_each = { for site, devices in try(local.provisioned_devices_by_site, {}) : site => devices if length(devices) > 0 && var.use_bulk_api }
 
   site_id = try(local.site_id_list[each.key], null)
-  provision_devices = [for device in each.value : {
-    network_device_id = coalesce(
-      try(lookup(local.device_name_to_id, device.name, null), null),
-      try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-      try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+  provision_devices = [
+    for device in each.value : {
+      network_device_id = coalesce(
+        try(lookup(local.device_name_to_id, device.name, null), null),
+        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+      )
+      site_id     = try(local.site_id_list[device.site], null)
+      reprovision = try(device.state, null) == "REPROVISION" ? true : false
+    }
+    if(
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
     )
-    site_id     = try(local.site_id_list[device.site], null)
-    reprovision = try(device.state, null) == "REPROVISION" ? true : false
-  }]
+  ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
 }
