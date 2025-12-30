@@ -38,6 +38,11 @@ variable "manage_specific_sites_only" {
   description = "If true, manage only the specified site listed in managed_sites. If false, also manage all child sites under each managed site."
   type        = bool
   default     = false
+
+  validation {
+    condition     = !var.manage_specific_sites_only || length(var.managed_sites) > 0
+    error_message = "The manage_specific_sites_only variable can only be set to true when managed_sites is not empty."
+  }
 }
 
 variable "use_bulk_api" {
