@@ -6,6 +6,7 @@
 
 **Bug Fixes:**
 - Fix issue with L2 virtual networks while using single state deployment
+- Fix credential assignment to Global site in multi-state deployments
 
 ## 0.3.0
 
