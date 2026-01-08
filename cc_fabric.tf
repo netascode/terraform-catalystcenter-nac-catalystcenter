@@ -722,8 +722,8 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
     if try(policy.name, null) != null &&
     try(policy.provider_virtual_network_name, null) != null &&
     length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
-    (var.manage_global_settings ||
-      length(try(policy.fabric_sites, [])) == 0 ||
+    !var.manage_global_settings &&
+    (length(try(policy.fabric_sites, [])) == 0 ||
     length([for site in try(policy.fabric_sites, []) : site if contains(local.sites, site)]) > 0)
   }
 
