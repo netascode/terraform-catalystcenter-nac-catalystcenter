@@ -227,7 +227,8 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
-  for_each                           = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn if(var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) || (!var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) }
+  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn if(var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) || (!var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) }
+
   fabric_id                          = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   vlan_name                          = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)
   vlan_id                            = try(each.value.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_id, null)
@@ -309,23 +310,30 @@ resource "catalystcenter_fabric_devices" "fabric_devices" {
   for_each = { for fabric_site, devices in try(local.fabric_devices_by_site, {}) : fabric_site => devices if length(devices) > 0 && var.use_bulk_api }
 
   fabric_id = try(local.fabric_site_id_list[each.key], null)
-  fabric_devices = [for device in each.value : {
-    network_device_id = coalesce(
-      try(lookup(local.device_name_to_id, device.name, null), null),
-      try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-      try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+  fabric_devices = [
+    for device in each.value : {
+      network_device_id = coalesce(
+        try(lookup(local.device_name_to_id, device.name, null), null),
+        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+      )
+      fabric_id = try(catalystcenter_fabric_site.fabric_site[device.fabric_site].id, null)
+      device_roles = try([
+        for fabric_role in try(device.fabric_roles, []) : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
+      ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+      border_types                    = try(local.border_devices[device.name].border_types, local.defaults.catalyst_center.fabric.border_devices.border_types, null)
+      local_autonomous_system_number  = try(local.border_devices[device.name].local_autonomous_system_number, local.defaults.catalyst_center.fabric.border_devices.local_autonomous_system_number, null)
+      default_exit                    = try(local.border_devices[device.name].default_exit, local.defaults.catalyst_center.fabric.border_devices.default_exit, null)
+      import_external_routes          = try(local.border_devices[device.name].import_external_routes, local.defaults.catalyst_center.fabric.border_devices.import_external_routes, null)
+      border_priority                 = try(local.border_devices[device.name].border_priority, 10) == 10 ? null : try(local.border_devices[device.name].border_priority, local.defaults.catalyst_center.fabric.border_devices.border_priority, null)
+      prepend_autonomous_system_count = try(local.border_devices[device.name].prepend_autonomous_system_count, 0) == 0 ? null : try(local.border_devices[device.name].prepend_autonomous_system_count, local.defaults.catalyst_center.fabric.border_devices.prepend_autonomous_system_count, null)
+    }
+    if(
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
     )
-    fabric_id = try(catalystcenter_fabric_site.fabric_site[device.fabric_site].id, null)
-    device_roles = try([
-      for fabric_role in try(device.fabric_roles, []) : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
-    ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
-    border_types                    = try(local.border_devices[device.name].border_types, local.defaults.catalyst_center.fabric.border_devices.border_types, null)
-    local_autonomous_system_number  = try(local.border_devices[device.name].local_autonomous_system_number, local.defaults.catalyst_center.fabric.border_devices.local_autonomous_system_number, null)
-    default_exit                    = try(local.border_devices[device.name].default_exit, local.defaults.catalyst_center.fabric.border_devices.default_exit, null)
-    import_external_routes          = try(local.border_devices[device.name].import_external_routes, local.defaults.catalyst_center.fabric.border_devices.import_external_routes, null)
-    border_priority                 = try(local.border_devices[device.name].border_priority, 10) == 10 ? null : try(local.border_devices[device.name].border_priority, local.defaults.catalyst_center.fabric.border_devices.border_priority, null)
-    prepend_autonomous_system_count = try(local.border_devices[device.name].prepend_autonomous_system_count, 0) == 0 ? null : try(local.border_devices[device.name].prepend_autonomous_system_count, local.defaults.catalyst_center.fabric.border_devices.prepend_autonomous_system_count, null)
-  }]
+  ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller]
 }
@@ -714,8 +722,8 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
     if try(policy.name, null) != null &&
     try(policy.provider_virtual_network_name, null) != null &&
     length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
-    (var.manage_global_settings ||
-      length(try(policy.fabric_sites, [])) == 0 ||
+    !var.manage_global_settings &&
+    (length(try(policy.fabric_sites, [])) == 0 ||
     length([for site in try(policy.fabric_sites, []) : site if contains(local.sites, site)]) > 0)
   }
 
