@@ -1,6 +1,7 @@
 ## 0.3.1 (unreleased)
 
 **Improvements:**
+- Add `catalystcenter_areas`, `catalystcenter_buildings`, `catalystcenter_floors` bulk resources for efficiently managing multiple sites at scale with a single resource declaration (enabled when `use_bulk_api = true`)
 - Add `device_discovery_validation` check block to validate device presence in Catalyst Center inventory during plan phase, and improve error handling for devices not found in inventory by filtering them out from resource operations instead of failing with coalesce errors
 - Add validation for `managed_sites` variable to ensure all sites specified exist in YAML configuration with precondition check
 
