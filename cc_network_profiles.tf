@@ -41,7 +41,7 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_network
   network_profile_id = try(catalystcenter_network_profile.switching_network_profile[each.key].id, data.catalystcenter_network_profile.switching_network_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = local.site_id_list[site]
+      id = var.use_bulk_api ? local.site_id_list_bulk[site] : local.site_id_list[site]
     } if contains(local.sites, site)
   ]
 }
