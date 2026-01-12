@@ -47,13 +47,13 @@ resource "catalystcenter_area" "area_3" {
 
 # Bulk areas resource
 resource "catalystcenter_areas" "areas" {
-  count = var.use_bulk_api && length([for area in try(local.catalyst_center.sites.areas, []) : area if contains(local.sites, "${area.parent_name}/${area.name}")]) > 0 ? 1 : 0
+  count = var.use_bulk_api && length([for area in try(local.catalyst_center.sites.areas, []) : area if contains(local.sites, "${try(area.parent_name, local.defaults.catalyst_center.sites.areas.parent_name)}/${area.name}")]) > 0 ? 1 : 0
 
   areas = [
     for area in try(local.catalyst_center.sites.areas, []) : {
-      parent_name_hierarchy = area.parent_name
+      parent_name_hierarchy = try(area.parent_name, local.defaults.catalyst_center.sites.areas.parent_name)
       name                  = area.name
-    } if contains(local.sites, "${area.parent_name}/${area.name}")
+    } if contains(local.sites, "${try(area.parent_name, local.defaults.catalyst_center.sites.areas.parent_name)}/${area.name}")
   ]
 
   depends_on = [catalystcenter_discovery.discovery, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
