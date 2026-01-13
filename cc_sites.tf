@@ -165,11 +165,3 @@ locals {
     } : {}
   )
 }
-
-output "data_source_site_list" {
-  value = local.data_source_created_sites_list
-}
-
-output "site_id_list_bulk" {
-  value = local.site_id_list_bulk
-} 

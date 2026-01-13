@@ -90,9 +90,9 @@ resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
 }
 
 resource "catalystcenter_assign_credentials" "assign_credentials" {
-  for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && contains(local.sites, k) && k != "Global" }
 
-  site_id          = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id          = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   cli_id           = each.value.cli != null ? try(catalystcenter_credentials_cli.cli_credentials[each.value.cli].id, data.catalystcenter_assign_credentials.global_assign_credentials.cli_id) : null
   https_read_id    = each.value.https_read != null ? try(catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_read_id) : null
   https_write_id   = each.value.https_write != null ? try(catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_write_id) : null
@@ -129,9 +129,9 @@ locals {
 }
 
 resource "catalystcenter_ntp_settings" "ntp_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   servers = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, data.catalystcenter_sites.created_sites]
@@ -147,9 +147,9 @@ resource "catalystcenter_ntp_settings" "global_ntp_servers" {
 }
 
 resource "catalystcenter_dhcp_settings" "dhcp_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   servers = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, data.catalystcenter_sites.created_sites]
@@ -163,9 +163,9 @@ resource "catalystcenter_dhcp_settings" "global_dhcp_servers" {
 }
 
 resource "catalystcenter_dns_settings" "dns_settings" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id     = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   domain_name = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
   dns_servers = try(local.network_settings[each.value.network].dns_servers, local.defaults.catalyst_center.network_settings.network.dns_servers, null)
 
@@ -181,9 +181,9 @@ resource "catalystcenter_dns_settings" "global_dns_settings" {
 }
 
 resource "catalystcenter_timezone_settings" "timezone" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id    = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id    = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   identifier = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, data.catalystcenter_sites.created_sites]
@@ -197,9 +197,9 @@ resource "catalystcenter_timezone_settings" "global_timezone" {
 }
 
 resource "catalystcenter_banner_settings" "banner" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   type    = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null) != null ? "Custom" : "Builtin"
   message = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null)
 
@@ -215,7 +215,7 @@ resource "catalystcenter_banner_settings" "global_banner" {
 }
 
 resource "catalystcenter_telemetry_settings" "telemetry_settings" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null && contains(local.sites, k) && k != "Global" }
 
   site_id                             = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   enable_wired_data_collection        = try(local.telemetry_settings[each.value.telemetry].wired_data_collection, local.defaults.catalyst_center.network_settings.telemetry.wired_data_collection, null)

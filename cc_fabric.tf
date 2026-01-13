@@ -134,14 +134,14 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
-  site_id                     = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], null)
+  site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
-  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) && try(site.reconfigure, false) == true && (var.use_bulk_api ? try(local.data_source_created_sites_list[site.name], null) != null : try(local.site_id_list[site.name], null) != null) }
+  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) && try(site.reconfigure, false) == true }
 
   fabric_id = try(catalystcenter_fabric_site.fabric_site[each.key].id, null)
 
@@ -157,10 +157,10 @@ locals {
 }
 
 resource "catalystcenter_fabric_zone" "fabric_zone" {
-  for_each = { for zone in try(local.fabric_zones, []) : zone.name => zone if contains(local.sites, zone.name) && (var.use_bulk_api ? try(local.data_source_created_sites_list[zone.name], null) != null : try(local.site_id_list[zone.name], null) != null) }
+  for_each = { for zone in try(local.fabric_zones, []) : zone.name => zone if contains(local.sites, zone.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
-  site_id                     = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], each.key, null)
+  site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
 
   depends_on = [catalystcenter_fabric_site.fabric_site]
 }
@@ -227,7 +227,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
-  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn if((var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) || (!var.manage_global_settings && contains(local.sites, vn.fabric_site_name))) && (var.use_bulk_api ? try(local.data_source_created_sites_list[vn.fabric_site_name], null) != null : try(local.site_id_list[vn.fabric_site_name], null) != null) }
+  for_each = { for vn in try(local.l2_virtual_networks, []) : "${vn.name}#_#${vn.fabric_site_name}" => vn if(var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) || (!var.manage_global_settings && contains(local.sites, vn.fabric_site_name)) }
 
   fabric_id                          = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   vlan_name                          = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)
@@ -240,7 +240,7 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
-  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) && var.use_bulk_api == false && (var.use_bulk_api ? try(local.data_source_created_sites_list[anycast_gateway.fabric_site_name], null) != null : try(local.site_id_list[anycast_gateway.fabric_site_name], null) != null) }
+  for_each = { for anycast_gateway in local.anycast_gateways : anycast_gateway.ip_pool_name => anycast_gateway if contains(local.sites, anycast_gateway.fabric_site_name) && var.use_bulk_api == false }
 
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
@@ -414,7 +414,7 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if((length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && var.use_bulk_api == false && length(try(site.wireless_ssids, [])) != 0) || (var.use_bulk_api == true && length(try(site.wireless_ssids, [])) != 0)) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site.name], null) != null : try(local.site_id_list[site.name], null) != null) } : {}
+  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if((length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && var.use_bulk_api == false && length(try(site.wireless_ssids, [])) != 0) || (var.use_bulk_api == true && length(try(site.wireless_ssids, [])) != 0)) } : {}
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
