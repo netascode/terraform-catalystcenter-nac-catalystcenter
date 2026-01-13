@@ -135,25 +135,17 @@ locals {
     { for k, v in catalystcenter_floor.floor : k => v.id }
   )
 
-  site_id_list_bulk = merge(
-    var.use_bulk_api && length(catalystcenter_areas.areas) > 0 ?
-    {
-      for s in catalystcenter_areas.areas[0].areas :
-      "${s.parent_name_hierarchy}/${s.name}" => s.id
-    } : {},
-
-    var.use_bulk_api && length(catalystcenter_buildings.buildings) > 0 ?
-    {
-      for b in catalystcenter_buildings.buildings[0].buildings :
-      "${b.parent_name_hierarchy}/${b.name}" => b.id
-    } : {},
-
-    var.use_bulk_api && length(catalystcenter_floors.floors) > 0 ?
-    {
-      for f in catalystcenter_floors.floors[0].floors :
-      "${f.parent_name_hierarchy}/${f.name}" => f.id
-    } : {}
-  )
-
   data_source_site_list = { for site in data.catalystcenter_sites.all_sites.sites : coalesce(site.name_hierarchy, site.name) => site.id }
+}
+
+data "catalystcenter_sites" "created_sites" {
+  depends_on = [catalystcenter_areas.areas, catalystcenter_buildings.buildings, catalystcenter_floors.floors]
+}
+
+locals {
+  data_source_created_sites_list = { for site in data.catalystcenter_sites.created_sites.sites : coalesce(site.name_hierarchy, site.name) => site.id }
+}
+
+output "data_source_site_list" {
+  value = local.data_source_created_sites_list
 }

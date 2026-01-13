@@ -11,10 +11,10 @@ resource "catalystcenter_pnp_device" "pnp_device" {
 }
 
 resource "catalystcenter_pnp_device_claim_site" "claim_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) && (var.use_bulk_api ? try(local.site_id_list_bulk[device.site], null) != null : try(local.site_id_list[device.site], null) != null) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) && (var.use_bulk_api ? try(local.data_source_created_sites_list[device.site], null) != null : try(local.site_id_list[device.site], null) != null) }
 
   device_id         = catalystcenter_pnp_device.pnp_device[each.key].id
-  site_id           = var.use_bulk_api ? local.site_id_list_bulk[each.value.site] : local.site_id_list[each.value.site]
+  site_id           = var.use_bulk_api ? local.data_source_created_sites_list[each.value.site] : local.site_id_list[each.value.site]
   type              = try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
   rf_profile        = try(each.value.rf_profile, local.defaults.catalyst_center.pnp.devices.rf_profile, null)
   image_id          = try(each.value.image_id, local.defaults.catalyst_center.pnp.devices.image_id, null)
@@ -26,10 +26,10 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
 }
 
 resource "catalystcenter_pnp_config_preview" "config_preview" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) && try(device.type, local.defaults.catalyst_center.pnp.devices.type, "Default") != "AccessPoint" && (var.use_bulk_api ? try(local.site_id_list_bulk[device.site], null) != null : try(local.site_id_list[device.site], null) != null) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) && try(device.type, local.defaults.catalyst_center.pnp.devices.type, "Default") != "AccessPoint" && (var.use_bulk_api ? try(local.data_source_created_sites_list[device.site], null) != null : try(local.site_id_list[device.site], null) != null) }
 
   device_id = catalystcenter_pnp_device.pnp_device[each.key].id
-  site_id   = var.use_bulk_api ? local.site_id_list_bulk[each.value.site] : local.site_id_list[each.value.site]
+  site_id   = var.use_bulk_api ? local.data_source_created_sites_list[each.value.site] : local.site_id_list[each.value.site]
   type      = try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
 
   depends_on = [catalystcenter_pnp_device_claim_site.claim_device]

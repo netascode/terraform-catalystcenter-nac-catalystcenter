@@ -246,8 +246,8 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
   network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? local.site_id_list_bulk[site] : local.site_id_list[site]
-    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.site_id_list_bulk[site], null) != null : try(local.site_id_list[site], null) != null)
+      id = var.use_bulk_api ? local.data_source_created_sites_list[site] : local.site_id_list[site]
+    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
   ]
 }
 
