@@ -217,7 +217,7 @@ resource "catalystcenter_banner_settings" "global_banner" {
 resource "catalystcenter_telemetry_settings" "telemetry_settings" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
 
-  site_id                             = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id                             = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   enable_wired_data_collection        = try(local.telemetry_settings[each.value.telemetry].wired_data_collection, local.defaults.catalyst_center.network_settings.telemetry.wired_data_collection, null)
   enable_wireless_telemetry           = try(local.telemetry_settings[each.value.telemetry].wireless_telemetry, local.defaults.catalyst_center.network_settings.telemetry.wireless_telemetry, null)
   use_builtin_trap_server             = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_snmp_server, null)
@@ -249,9 +249,9 @@ resource "catalystcenter_telemetry_settings" "global_telemetry_settings" {
 }
 
 resource "catalystcenter_aaa_settings" "aaa_servers" {
-  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && contains(local.sites, k) && k != "Global" && (var.use_bulk_api ? try(local.data_source_created_sites_list[k], null) != null : try(local.site_id_list[k], local.data_source_site_list[k], null) != null) }
+  for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id                         = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id                         = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
@@ -404,9 +404,9 @@ locals {
 }
 
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
-  for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if(contains(local.sites, v) || (!var.manage_global_settings && length(var.managed_sites) == 0)) && (var.use_bulk_api ? try(local.data_source_created_sites_list[v], null) != null : try(local.site_id_list[v], null) != null) }
+  for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if contains(local.sites, v) || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  site_id             = try(var.use_bulk_api ? local.data_source_created_sites_list[local.ip_pools_reservation_to_site_map[each.key]] : local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
+  site_id             = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[local.ip_pools_reservation_to_site_map[each.key]], local.data_source_created_sites_list[local.ip_pools_reservation_to_site_map[each.key]]) : local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name                = each.key
   pool_type           = try(join("", [(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
   ipv4_global_pool_id = try(coalesce(lookup(local.ip_pool_ids_v4, lookup(local.reservation_parent_pool_v4, each.key, ""), null), lookup(local.data_source_ip_pool_ids, lookup(local.reservation_parent_pool_v4, each.key, ""), null)), null)

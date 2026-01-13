@@ -131,7 +131,7 @@ resource "catalystcenter_transit_network" "transit" {
 }
 
 resource "catalystcenter_fabric_site" "fabric_site" {
-  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site.name], null) != null : try(local.site_id_list[site.name], null) != null) }
+  for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
   site_id                     = try(var.use_bulk_api ? local.data_source_created_sites_list[each.key] : local.site_id_list[each.key], null)
@@ -265,7 +265,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
 }
 
 resource "catalystcenter_anycast_gateways" "anycast_gateways" {
-  for_each = { for fabric_site, anycast_gateways in try(local.anycast_gateways_by_fabric_site, {}) : fabric_site => anycast_gateways if length(anycast_gateways) > 0 && contains(local.sites, fabric_site) && var.use_bulk_api && (var.use_bulk_api ? try(local.data_source_created_sites_list[fabric_site], null) != null : try(local.site_id_list[fabric_site], null) != null) }
+  for_each = { for fabric_site, anycast_gateways in try(local.anycast_gateways_by_fabric_site, {}) : fabric_site => anycast_gateways if length(anycast_gateways) > 0 && contains(local.sites, fabric_site) && var.use_bulk_api }
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
 
