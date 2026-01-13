@@ -161,6 +161,7 @@ module "catalystcenter" {
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
+| [terraform_data.bulk_site_provisioning_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.managed_sites_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [time_sleep.provision_device_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
