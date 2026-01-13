@@ -130,7 +130,7 @@ check "device_discovery_validation" {
 }
 
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
-  for_each = local.assigned_devices_map
+  for_each = { for k, v in local.assigned_devices_map : k => v if(var.use_bulk_api ? try(local.site_id_list_bulk[k], null) != null : try(local.site_id_list[k], null) != null) }
 
   device_ids = [
     for device in each.value :
@@ -145,7 +145,7 @@ resource "catalystcenter_assign_device_to_site" "devices_to_site" {
 }
 
 resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
-  for_each = local.assigned_access_points_map
+  for_each = { for k, v in local.assigned_access_points_map : k => v if(var.use_bulk_api ? try(local.site_id_list_bulk[k], null) != null : try(local.site_id_list[k], null) != null) }
 
   device_ids = [
     for device in each.value :
@@ -195,7 +195,7 @@ resource "catalystcenter_provision_device" "provision_device" {
 }
 
 resource "catalystcenter_provision_devices" "provision_devices" {
-  for_each = { for site, devices in try(local.provisioned_devices_by_site, {}) : site => devices if length(devices) > 0 && var.use_bulk_api }
+  for_each = { for site, devices in try(local.provisioned_devices_by_site, {}) : site => devices if length(devices) > 0 && var.use_bulk_api && try(local.site_id_list_bulk[site], null) != null }
 
   site_id = try(local.site_id_list_bulk[each.key], null)
   provision_devices = [
@@ -219,7 +219,7 @@ resource "catalystcenter_provision_devices" "provision_devices" {
 }
 
 resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
-  for_each = local.wireless_devices_map
+  for_each = { for k, v in local.wireless_devices_map : k => v if(var.use_bulk_api ? try(local.site_id_list_bulk[k], null) != null : try(local.site_id_list[k], null) != null) }
 
   device_ids = [
     for device in each.value :
@@ -273,7 +273,7 @@ locals {
 
 
 resource "catalystcenter_provision_access_points" "access_points" {
-  for_each = { for site, devices in try(local.provisioned_access_points_by_site, {}) : site => devices if length(devices) > 0 }
+  for_each = { for site, devices in try(local.provisioned_access_points_by_site, {}) : site => devices if length(devices) > 0 && (var.use_bulk_api ? try(local.site_id_list_bulk[site], null) != null : try(local.site_id_list[site], null) != null) }
 
   network_devices = [for device in each.value : {
     device_id = coalesce(

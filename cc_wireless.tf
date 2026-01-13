@@ -247,7 +247,7 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
   items = [
     for site in each.value.sites : {
       id = var.use_bulk_api ? local.site_id_list_bulk[site] : local.site_id_list[site]
-    } if contains(local.sites, site)
+    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.site_id_list_bulk[site], null) != null : try(local.site_id_list[site], null) != null)
   ]
 }
 

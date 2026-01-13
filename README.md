@@ -62,6 +62,7 @@ module "catalystcenter" {
 |------|-------------|
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
+| <a name="output_site_id_list_bulk"></a> [site\_id\_list\_bulk](#output\_site\_id\_list\_bulk) | n/a |
 | <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
 ## Resources
 
