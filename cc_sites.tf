@@ -45,17 +45,68 @@ resource "catalystcenter_area" "area_3" {
   depends_on = [catalystcenter_area.area_2, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
 
+resource "catalystcenter_area" "area_4" {
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 4 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+
+  name      = each.value.name
+  parent_id = try(catalystcenter_area.area_3[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+
+  depends_on = [catalystcenter_area.area_3, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+}
+
+resource "catalystcenter_area" "area_5" {
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 5 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+
+  name       = each.value.name
+  parent_id  = try(catalystcenter_area.area_4[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+  depends_on = [catalystcenter_area.area_4, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+}
+
+resource "catalystcenter_area" "area_6" {
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 6 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+
+  name      = each.value.name
+  parent_id = try(catalystcenter_area.area_5[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+
+  depends_on = [catalystcenter_area.area_5, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+}
+
+
+resource "catalystcenter_area" "area_7" {
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 7 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+
+  name       = each.value.name
+  parent_id  = try(catalystcenter_area.area_6[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+  depends_on = [catalystcenter_area.area_6, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+}
+resource "catalystcenter_area" "area_8" {
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 8 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+
+  name      = each.value.name
+  parent_id = try(catalystcenter_area.area_7[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+
+  depends_on = [catalystcenter_area.area_7, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+}
+
+resource "catalystcenter_area" "area_9" {
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 9 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+
+  name      = each.value.name
+  parent_id = try(catalystcenter_area.area_8[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+
+  depends_on = [catalystcenter_area.area_8, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+}
 resource "catalystcenter_building" "building" {
   for_each = { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => building if contains(local.sites, try("${building.parent_name}/${building.name}", "")) }
 
   name      = each.value.name
-  parent_id = try(catalystcenter_area.area_3[each.value.parent_name].id, catalystcenter_area.area_2[each.value.parent_name].id, catalystcenter_area.area_1[each.value.parent_name].id, catalystcenter_area.area_0[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
+  parent_id = try(catalystcenter_area.area_9[each.value.parent_name].id, catalystcenter_area.area_8[each.value.parent_name].id, catalystcenter_area.area_7[each.value.parent_name].id, catalystcenter_area.area_6[each.value.parent_name].id, catalystcenter_area.area_5[each.value.parent_name].id, catalystcenter_area.area_4[each.value.parent_name].id, catalystcenter_area.area_3[each.value.parent_name].id, catalystcenter_area.area_2[each.value.parent_name].id, catalystcenter_area.area_1[each.value.parent_name].id, catalystcenter_area.area_0[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
   country   = try(each.value.country, local.defaults.catalyst_center.sites.buildings.country, null)
   address   = try(each.value.address, local.defaults.catalyst_center.sites.buildings.address, null)
   latitude  = try(floor(each.value.latitude * 100000 + 0.5) / 100000, local.defaults.catalyst_center.sites.buildings.latitude, null)
   longitude = try(floor(each.value.longitude * 100000 + 0.5) / 100000, local.defaults.catalyst_center.sites.buildings.longitude, null)
 
-  depends_on = [catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
+  depends_on = [catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
 
 
@@ -80,6 +131,12 @@ locals {
     { for k, v in catalystcenter_area.area_1 : k => v.id },
     { for k, v in catalystcenter_area.area_2 : k => v.id },
     { for k, v in catalystcenter_area.area_3 : k => v.id },
+    { for k, v in catalystcenter_area.area_4 : k => v.id },
+    { for k, v in catalystcenter_area.area_5 : k => v.id },
+    { for k, v in catalystcenter_area.area_6 : k => v.id },
+    { for k, v in catalystcenter_area.area_7 : k => v.id },
+    { for k, v in catalystcenter_area.area_8 : k => v.id },
+    { for k, v in catalystcenter_area.area_9 : k => v.id },
     { for k, v in catalystcenter_building.building : k => v.id },
     { for k, v in catalystcenter_floor.floor : k => v.id }
   )
