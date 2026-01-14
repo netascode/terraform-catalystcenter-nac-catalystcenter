@@ -104,7 +104,7 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
 }
 
 resource "catalystcenter_assign_credentials" "global_assign_credentials" {
-  for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && ((var.manage_global_settings && k == "Global") || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
+  for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && ((var.manage_global_settings && k == "Global") || (!var.manage_global_settings && length(var.managed_sites) == 0)) && k == "Global" }
 
   site_id          = try(data.catalystcenter_site.global.id, null)
   cli_id           = each.value.cli != null ? catalystcenter_credentials_cli.cli_credentials[each.value.cli].id : null
