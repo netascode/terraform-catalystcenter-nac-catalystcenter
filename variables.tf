@@ -65,9 +65,9 @@ variable "bulk_site_provisioning" {
     condition = (
       var.bulk_site_provisioning == null ||
       (
+        var.use_bulk_api == true &&
         can(regex("^Global(\\/[^/]+)*$", var.bulk_site_provisioning)) &&
-        var.bulk_site_provisioning != null &&
-        length(split("/", var.bulk_site_provisioning)) <= 5
+        can(length(regexall("/", var.bulk_site_provisioning)) <= 4)
       )
     )
     error_message = "The bulk_site_provisioning must be a valid site hierarchy path starting with 'Global' (e.g., 'Global/Poland' or 'Global/Area1/Area2') with a maximum of 5 levels."
