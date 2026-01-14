@@ -137,7 +137,7 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   site_id                     = try(local.site_id_list[each.key], each.key, null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers]
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
