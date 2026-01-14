@@ -157,7 +157,7 @@ resource "catalystcenter_assign_device_to_site" "devices_to_site" {
       lookup(local.device_ip_to_id, device.device_ip, null) != null
     )
   ]
-  site_id = local.site_id_list[each.key]
+  site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
 }
 
 resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
@@ -172,7 +172,7 @@ resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
       lookup(local.device_ip_to_id, device.device_ip, null) != null
     )
   ]
-  site_id = local.site_id_list[each.key]
+  site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
 }
 
 resource "catalystcenter_device_role" "role" {
@@ -197,7 +197,7 @@ resource "catalystcenter_device_role" "role" {
   role        = try(each.value.device_role, local.defaults.catalyst_center.inventory.devices.device_role, null)
   role_source = try(each.value.role_source, local.defaults.catalyst_center.inventory.devices.role_source, null)
 
-  depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3]
+  depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_provision_device" "provision_device" {
@@ -213,7 +213,7 @@ resource "catalystcenter_provision_device" "provision_device" {
 resource "catalystcenter_provision_devices" "provision_devices" {
   for_each = { for site, devices in try(local.provisioned_devices_by_site, {}) : site => devices if length(devices) > 0 && var.use_bulk_api }
 
-  site_id = try(local.site_id_list[each.key], null)
+  site_id = coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key])
   provision_devices = [
     for device in each.value : {
       network_device_id = coalesce(
@@ -221,7 +221,7 @@ resource "catalystcenter_provision_devices" "provision_devices" {
         try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
         try(lookup(local.device_ip_to_id, device.device_ip, null), null)
       )
-      site_id     = try(local.site_id_list[device.site], null)
+      site_id     = coalesce(local.site_id_list_bulk[device.site], local.data_source_created_sites_list[device.site])
       reprovision = try(device.state, null) == "REPROVISION" ? true : false
     }
     if(
@@ -247,7 +247,7 @@ resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
     )
   ]
 
-  site_id = local.site_id_list[each.key]
+  site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
@@ -260,14 +260,14 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   )
   reprovision = try(each.value.state, null) == "REPROVISION" ? true : false
 
-  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile]
+  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null) && contains(local.sites, try(device.site, "NONE")) }
 
-  primary_managed_ap_locations_site_ids   = [for site in try(each.value.primary_managed_ap_locations, []) : try(local.site_id_list[each.value.primary_managed_ap_locations], local.site_id_list[site], null)]
-  secondary_managed_ap_locations_site_ids = [for site in try(each.value.secondary_managed_ap_locations, []) : try(local.site_id_list[each.value.secondary_managed_ap_locations], local.site_id_list[each.value.site], null)]
+  primary_managed_ap_locations_site_ids   = [for site in try(each.value.primary_managed_ap_locations, []) : try(local.site_id_list[each.value.primary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
+  secondary_managed_ap_locations_site_ids = [for site in try(each.value.secondary_managed_ap_locations, []) : try(local.site_id_list[each.value.secondary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
   device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
@@ -300,7 +300,7 @@ resource "catalystcenter_provision_access_points" "access_points" {
     reprovision = try(device.state, null) == "REPROVISION" ? true : false
   }]
   rf_profile_name = try(each.value[0].rf_profile)
-  site_id         = try(local.site_id_list[each.key], null)
+  site_id         = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
 
   depends_on = [catalystcenter_assign_device_to_site.access_points_to_site]
 }
