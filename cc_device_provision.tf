@@ -130,9 +130,11 @@ check "device_discovery_validation" {
 }
 
 resource "terraform_data" "bulk_site_provisioning_validation" {
+  count = var.bulk_site_provisioning != null && var.use_bulk_api ? 1 : 0
+
   lifecycle {
     precondition {
-      condition     = var.bulk_site_provisioning == null || contains(local.sites, var.bulk_site_provisioning)
+      condition     = contains(local.sites, var.bulk_site_provisioning)
       error_message = <<-EOT
         ❌ The bulk_site_provisioning site '${var.bulk_site_provisioning}' is not defined in your YAML configuration.
 
