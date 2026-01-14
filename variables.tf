@@ -60,6 +60,14 @@ variable "bulk_site_provisioning" {
     condition     = var.bulk_site_provisioning == null || var.use_bulk_api == true
     error_message = "The bulk_site_provisioning variable can only be used when use_bulk_api is set to true."
   }
+
+  validation {
+    condition = var.bulk_site_provisioning == null || (
+      can(regex("^Global(\\/[^/]+)*$", var.bulk_site_provisioning)) &&
+      length(split("/", var.bulk_site_provisioning)) <= 5
+    )
+    error_message = "The bulk_site_provisioning must be a valid site hierarchy path starting with 'Global' (e.g., 'Global/Poland' or 'Global/Area1/Area2') with a maximum of 5 levels."
+  }
 }
 
 variable "write_default_values_file" {

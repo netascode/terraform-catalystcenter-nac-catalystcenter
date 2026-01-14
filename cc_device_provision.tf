@@ -129,6 +129,24 @@ check "device_discovery_validation" {
   }
 }
 
+resource "terraform_data" "bulk_site_provisioning_validation" {
+  count = var.bulk_site_provisioning != null && var.use_bulk_api ? 1 : 0
+
+  lifecycle {
+    precondition {
+      condition     = contains(local.sites, var.bulk_site_provisioning)
+      error_message = <<-EOT
+        ❌ The bulk_site_provisioning site '${var.bulk_site_provisioning}' is not defined in your YAML configuration.
+
+        Available sites in your configuration:
+        ${join("\n  ", sort(local.sites))}
+
+        Action required: Ensure the site exists in your YAML configuration or adjust the bulk_site_provisioning variable.
+      EOT
+    }
+  }
+}
+
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
   for_each = local.assigned_devices_map
 
