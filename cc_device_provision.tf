@@ -276,7 +276,7 @@ resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
     try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
   )
 
-  depends_on = [catalystcenter_assign_device_to_site.wireless_devices_to_site]
+  depends_on = [catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
 }
 locals {
   provisioned_access_points = [
