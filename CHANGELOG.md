@@ -1,5 +1,8 @@
 ## 0.3.1 (unreleased)
 
+**New Features:**
+- Add support for 6 additional site hierarchy area levels, extending total support to 10 area levels enabling deep organizational hierarchies up to `Global/area/area/area/area/area/area/area/area/area/area`
+
 **Improvements:**
 - Add `device_discovery_validation` check block to validate device presence in Catalyst Center inventory during plan phase, and improve error handling for devices not found in inventory by filtering them out from resource operations instead of failing with coalesce errors
 - Add validation for `managed_sites` variable to ensure all sites specified exist in YAML configuration with precondition check
@@ -8,6 +11,7 @@
 **Bug Fixes:**
 - Fix issue with L2 virtual networks while using single state deployment
 - Fix credential assignment to Global site in multi-state deployments
+- Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
 
 ## 0.3.0
 
