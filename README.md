@@ -76,6 +76,12 @@ module "catalystcenter" {
 | [catalystcenter_area.area_1](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_2](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_3](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_4](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_5](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_6](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_7](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_8](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_9](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_assign_credentials.assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_device_to_site.access_points_to_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_device_to_site) | resource |
