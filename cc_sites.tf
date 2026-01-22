@@ -127,6 +127,7 @@ resource "catalystcenter_floor" "floor" {
 
 locals {
   site_id_list = merge(
+    { (data.catalystcenter_site.global.name) : data.catalystcenter_site.global.id },
     { for k, v in catalystcenter_area.area_0 : k => v.id },
     { for k, v in catalystcenter_area.area_1 : k => v.id },
     { for k, v in catalystcenter_area.area_2 : k => v.id },
