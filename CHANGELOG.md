@@ -10,6 +10,7 @@
 - Add validation for `bulk_site_provisioning` variable to verify site hierarchy format and existence in YAML configuration
 
 **Bug Fixes:**
+- Fix template parameter handling to correctly process both single string values and list values during deployment
 - Fix issue with L2 virtual networks while using single state deployment
 - Fix credential assignment to Global site in multi-state deployments
 - Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
