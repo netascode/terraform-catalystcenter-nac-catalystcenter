@@ -16,18 +16,22 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => merge(device,
       {
         dayn_templates_map = merge(
-          tomap({
-            for template in try(device.dayn_templates.regular, []) : template.name => merge(
-              template,
-              {
-                variables           = try(template.variables, []),
-                copying_config      = try(template.copying_config, null)
-                force_push_template = try(template.force_push_template, null)
-              }
-          ) }),
-          tomap({
-            for template in try(device.dayn_templates.composite, []) : template.name => merge(template, { variables = try(template.variables, []) })
-          })
+          {
+            for template in try(device.dayn_templates.regular, []) : template.name => {
+              name                = try(template.name, null)
+              variables           = try(template.variables, [])
+              copying_config      = try(template.copying_config, null)
+              force_push_template = try(template.force_push_template, null)
+            }
+          },
+          {
+            for template in try(device.dayn_templates.composite, []) : template.name => {
+              name                = try(template.name, null)
+              variables           = try(template.variables, [])
+              copying_config      = try(template.copying_config, null)
+              force_push_template = try(template.force_push_template, null)
+            }
+          }
         )
       }
     )
