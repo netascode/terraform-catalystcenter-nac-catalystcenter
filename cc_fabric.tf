@@ -628,10 +628,11 @@ locals {
             voice_vlan_name            = try(assignment.voice_vlan_name, local.defaults.catalyst_center.inventory.devices.port_assignments.voice_vlan_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
             interface_description      = try(assignment.interface_description, local.defaults.catalyst_center.inventory.devices.port_assignments.interface_description, null)
-            network_device_id = coalesce(
-              try(lookup(local.device_name_to_id, device.name, null), null),
-              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            network_device_id = try(
+              lookup(local.device_name_to_id, device.name, null),
+              lookup(local.device_name_to_id, device.fqdn_name, null),
+              lookup(local.device_ip_to_id, device.device_ip, null),
+              null
             )
             fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
@@ -645,9 +646,10 @@ locals {
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
             interface_description      = try(assignment.interface_description, local.defaults.catalyst_center.inventory.devices.port_assignments.interface_description, null)
             network_device_id = try(
-              try(lookup(local.device_name_to_id, device.name, null), null),
-              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+              lookup(local.device_name_to_id, device.name, null),
+              lookup(local.device_name_to_id, device.fqdn_name, null),
+              lookup(local.device_ip_to_id, device.device_ip, null),
+              null
             )
             fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
