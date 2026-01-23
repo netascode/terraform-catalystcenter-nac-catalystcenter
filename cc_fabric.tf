@@ -644,7 +644,7 @@ locals {
             security_group_name        = try(assignment.security_group_name, local.defaults.catalyst_center.inventory.devices.port_assignments.security_group_name, null)
             authenticate_template_name = try(assignment.authenticate_template_name, local.defaults.catalyst_center.inventory.devices.port_assignments.authenticate_template_name, null)
             interface_description      = try(assignment.interface_description, local.defaults.catalyst_center.inventory.devices.port_assignments.interface_description, null)
-            network_device_id = coalesce(
+            network_device_id = try(
               try(lookup(local.device_name_to_id, device.name, null), null),
               try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
               try(lookup(local.device_ip_to_id, device.device_ip, null), null)
