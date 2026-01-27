@@ -92,7 +92,7 @@ resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
 resource "catalystcenter_assign_credentials" "assign_credentials" {
   for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && contains(local.sites, k) && k != "Global" }
 
-  site_id          = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id          = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   cli_id           = each.value.cli != null ? try(catalystcenter_credentials_cli.cli_credentials[each.value.cli].id, data.catalystcenter_assign_credentials.global_assign_credentials.cli_id) : null
   https_read_id    = each.value.https_read != null ? try(catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_read_id) : null
   https_write_id   = each.value.https_write != null ? try(catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_write_id) : null
@@ -100,7 +100,7 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
   snmp_v2_write_id = each.value.snmpv2_write != null ? try(catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v2_write_id) : null
   snmp_v3_id       = each.value.snmpv3 != null ? try(catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v3_id) : null
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_assign_credentials" "global_assign_credentials" {
@@ -131,10 +131,10 @@ locals {
 resource "catalystcenter_ntp_settings" "ntp_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].ntp_servers, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   servers = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_aaa_settings.global_aaa_servers]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_aaa_settings.global_aaa_servers, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_ntp_settings" "global_ntp_servers" {
@@ -143,16 +143,16 @@ resource "catalystcenter_ntp_settings" "global_ntp_servers" {
   site_id = try(data.catalystcenter_site.global.id, null)
   servers = try(local.network_settings[each.value.network].ntp_servers, local.defaults.catalyst_center.network_settings.network.ntp_servers, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_dhcp_settings" "dhcp_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].dhcp_servers, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   servers = try(local.network_settings[each.value.network].dhcp_servers, local.defaults.catalyst_center.network_settings.network.dhcp_servers, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_ntp_settings.ntp_servers]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_ntp_settings.ntp_servers, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_dhcp_settings" "global_dhcp_servers" {
@@ -167,11 +167,11 @@ resource "catalystcenter_dhcp_settings" "global_dhcp_servers" {
 resource "catalystcenter_dns_settings" "dns_settings" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].domain_name, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id     = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   domain_name = try(local.network_settings[each.value.network].domain_name, local.defaults.catalyst_center.network_settings.network.domain_name, null)
   dns_servers = try(local.network_settings[each.value.network].dns_servers, local.defaults.catalyst_center.network_settings.network.dns_servers, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_dhcp_settings.dhcp_servers]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_dhcp_settings.dhcp_servers, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_dns_settings" "global_dns_settings" {
@@ -187,10 +187,10 @@ resource "catalystcenter_dns_settings" "global_dns_settings" {
 resource "catalystcenter_timezone_settings" "timezone" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].timezone, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id    = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id    = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   identifier = try(local.network_settings[each.value.network].timezone, local.defaults.catalyst_center.network_settings.network.timezone, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_dns_settings.dns_settings]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_dns_settings.dns_settings, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_timezone_settings" "global_timezone" {
@@ -205,11 +205,11 @@ resource "catalystcenter_timezone_settings" "global_timezone" {
 resource "catalystcenter_banner_settings" "banner" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(local.network_settings[v.network].banner, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   type    = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null) != null ? "Custom" : "Builtin"
   message = try(local.network_settings[each.value.network].banner, local.defaults.catalyst_center.network_settings.network.banner, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_timezone_settings.timezone]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_timezone_settings.timezone, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_banner_settings" "global_banner" {
@@ -225,7 +225,7 @@ resource "catalystcenter_banner_settings" "global_banner" {
 resource "catalystcenter_telemetry_settings" "telemetry_settings" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if try(v.telemetry, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id                             = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id                             = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   enable_wired_data_collection        = try(local.telemetry_settings[each.value.telemetry].wired_data_collection, local.defaults.catalyst_center.network_settings.telemetry.wired_data_collection, null)
   enable_wireless_telemetry           = try(local.telemetry_settings[each.value.telemetry].wireless_telemetry, local.defaults.catalyst_center.network_settings.telemetry.wireless_telemetry, null)
   use_builtin_trap_server             = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_snmp_server, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_snmp_server, null)
@@ -237,7 +237,7 @@ resource "catalystcenter_telemetry_settings" "telemetry_settings" {
   netflow_collector_ip_address        = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_network_collector, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_network_collector, null) == false ? try(local.telemetry_settings[each.value.telemetry].netflow_collector_ip_address, local.defaults.catalyst_center.network_settings.telemetry.netflow_collector_ip_address, null) : null
   netflow_collector_port              = try(local.telemetry_settings[each.value.telemetry].catalyst_center_as_network_collector, local.defaults.catalyst_center.network_settings.telemetry.catalyst_center_as_network_collector, null) == false ? try(local.telemetry_settings[each.value.telemetry].netflow_collector_port, local.defaults.catalyst_center.network_settings.telemetry.netflow_collector_port, null) : null
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_banner_settings.banner]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_banner_settings.banner, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_telemetry_settings" "global_telemetry_settings" {
@@ -261,7 +261,7 @@ resource "catalystcenter_telemetry_settings" "global_telemetry_settings" {
 resource "catalystcenter_aaa_settings" "aaa_servers" {
   for_each = { for k, v in try(local.sites_to_settings_map, {}) : k => v if v != null && try(v.aaa_servers, null) != null && contains(local.sites, k) && k != "Global" }
 
-  site_id                         = try(local.site_id_list[each.key], local.data_source_site_list[each.key], null)
+  site_id                         = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
   network_aaa_server_type         = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.server_type, null)
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
@@ -275,7 +275,7 @@ resource "catalystcenter_aaa_settings" "aaa_servers" {
   client_aaa_shared_secret        = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret, null)
   client_aaa_pan                  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.pan, local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.pan, null) : null
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_aaa_settings" "global_aaa_servers" {
@@ -418,7 +418,7 @@ locals {
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if contains(local.sites, v) || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  site_id             = try(local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
+  site_id             = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[local.ip_pools_reservation_to_site_map[each.key]], local.data_source_created_sites_list[local.ip_pools_reservation_to_site_map[each.key]]) : local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
   name                = each.key
   pool_type           = try(join("", [(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
   ipv4_global_pool_id = try(coalesce(lookup(local.ip_pool_ids_v4, lookup(local.reservation_parent_pool_v4, each.key, ""), null), lookup(local.data_source_ip_pool_ids, lookup(local.reservation_parent_pool_v4, each.key, ""), null)), null)
@@ -435,5 +435,5 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   ipv6_subnet         = try(local.ipv6_pools_reservations[each.key], null) != null ? try(local.ipv6_pools_reservations[each.key].subnet, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.subnet, null) : null
   ipv6_slaac_support  = try(local.ipv6_pools_reservations[each.key], null) != null && try(local.ipv6_pools_reservations[each.key].prefix_length, 0) == 64 ? true : null
 
-  depends_on = [catalystcenter_ip_pool.ip_pool_v4, catalystcenter_ip_pool.ip_pool_v6]
+  depends_on = [catalystcenter_ip_pool.ip_pool_v4, catalystcenter_ip_pool.ip_pool_v6, data.catalystcenter_sites.created_sites]
 }
