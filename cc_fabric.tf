@@ -527,7 +527,11 @@ locals {
     "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => (
       var.use_bulk_api ?
       try(
-        data.catalystcenter_anycast_gateway.created_gateways[item.ip_pool_name].vlan_id,
+        one([
+          for g in data.catalystcenter_anycast_gateways.created_gateways[item.fabric_site_name].anycast_gateways :
+          g.vlan_id
+          if g.ip_pool_name == item.ip_pool_name && g.virtual_network_name == item.l3_virtual_network
+        ]),
         one([
           for g in local.anycast_gateways_by_fabric_site[item.fabric_site_name] :
           g.vlan_id
@@ -548,16 +552,15 @@ locals {
   }
 }
 
-data "catalystcenter_anycast_gateway" "created_gateways" {
+data "catalystcenter_anycast_gateways" "created_gateways" {
   for_each = var.use_bulk_api ? {
-    for item in local.anycast_gateways :
-    item.ip_pool_name => item
-    if contains(local.sites, item.fabric_site_name)
+    for fabric_site, gateways in local.anycast_gateways_by_fabric_site :
+    fabric_site => catalystcenter_fabric_site.fabric_site[fabric_site].id
+    if length(gateways) > 0 && contains(local.sites, fabric_site)
   } : {}
 
-  fabric_id            = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
-  virtual_network_name = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network)
-  ip_pool_name         = each.value.ip_pool_name
+  id        = each.value
+  fabric_id = each.value
 
   depends_on = [catalystcenter_anycast_gateways.anycast_gateways]
 }
@@ -572,7 +575,7 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
   internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.ip_pool_name}#_#${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
-  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways, data.catalystcenter_anycast_gateway.created_gateways]
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways, data.catalystcenter_anycast_gateways.created_gateways]
 
 }
 
