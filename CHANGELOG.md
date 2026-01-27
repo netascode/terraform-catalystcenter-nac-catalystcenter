@@ -4,6 +4,7 @@
 - Add support for 6 additional site hierarchy area levels, extending total support to 10 area levels enabling deep organizational hierarchies up to `Global/area/area/area/area/area/area/area/area/area/area`
 
 **Improvements:**
+- Add bulk site resource support via `use_bulk_api` flag for areas, buildings, and floors using new map-based provider resource (`catalystcenter_areas`, `catalystcenter_buildings`, `catalystcenter_floors`)
 - Add sequential dependencies to network settings resources to prevent concurrent operations and "Global Settings Save is in progress" API errors
 - Add `device_discovery_validation` check block to validate device presence in Catalyst Center inventory during plan phase, and improve error handling for devices not found in inventory by filtering them out from resource operations instead of failing with coalesce errors
 - Add validation for `managed_sites` variable to ensure all sites specified exist in YAML configuration with precondition check

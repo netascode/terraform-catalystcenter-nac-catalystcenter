@@ -134,10 +134,10 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
-  site_id                     = try(local.site_id_list[each.key], each.key, null)
+  site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
@@ -157,10 +157,10 @@ locals {
 }
 
 resource "catalystcenter_fabric_zone" "fabric_zone" {
-  for_each = { for zone in try(local.fabric_zones, []) : zone.name => zone }
+  for_each = { for zone in try(local.fabric_zones, []) : zone.name => zone if contains(local.sites, zone.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
-  site_id                     = try(local.site_id_list[each.key], each.key, null)
+  site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
 
   depends_on = [catalystcenter_fabric_site.fabric_site]
 }
