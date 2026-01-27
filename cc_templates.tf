@@ -229,7 +229,22 @@ resource "catalystcenter_template_version" "regular_commit_version" {
   for_each = { for template in try(concat(local.templates), []) : template.template_name => template if try(template.composite, false) == false && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
   template_id = catalystcenter_template.regular_template[each.key].id
-  comments    = try(md5(local.templates_content[each.key]), null)
+  comments = try(md5(join("|", [
+    local.templates_content[each.key],
+    jsonencode([for param in try(each.value.variables, []) : {
+      parameter_name   = try(param.name, null)
+      data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
+      default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
+      description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
+      display_name     = try(param.field_name, local.defaults.catalyst_center.templates.template_params.field_name, null)
+      instruction_text = try(param.hint_text, local.defaults.catalyst_center.templates.template_params.hint_text, null)
+      not_param        = try(param.not_param, local.defaults.catalyst_center.templates.template_params.not_param, null)
+      param_array      = try(param.param_array, local.defaults.catalyst_center.templates.template_params.param_array, null)
+      required         = try(param.required, local.defaults.catalyst_center.templates.template_params.required, null)
+      selection_type   = try(param.selection_type, local.defaults.catalyst_center.templates.template_params.selection_type, null)
+      selection_values = try(tolist(try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)), [try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)])
+    }])
+  ])), null)
 
 }
 
@@ -242,7 +257,23 @@ locals {
         value.description,
         value.language,
         value.software_type,
-        join(",", [for item in value.containing_templates : item.id])
+        join(",", [for item in value.containing_templates : item.id]),
+        join(",", [for tmpl in local.composite_templates_map[key] : md5(join("|", [
+          local.templates_content[tmpl],
+          jsonencode([for param in try(local.templates_map[tmpl].variables, []) : {
+            parameter_name   = try(param.name, null)
+            data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
+            default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
+            description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
+            display_name     = try(param.field_name, local.defaults.catalyst_center.templates.template_params.field_name, null)
+            instruction_text = try(param.hint_text, local.defaults.catalyst_center.templates.template_params.hint_text, null)
+            not_param        = try(param.not_param, local.defaults.catalyst_center.templates.template_params.not_param, null)
+            param_array      = try(param.param_array, local.defaults.catalyst_center.templates.template_params.param_array, null)
+            required         = try(param.required, local.defaults.catalyst_center.templates.template_params.required, null)
+            selection_type   = try(param.selection_type, local.defaults.catalyst_center.templates.template_params.selection_type, null)
+            selection_values = try(tolist(try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)), [try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)])
+          }])
+        ]))])
       ])
     )
   }
