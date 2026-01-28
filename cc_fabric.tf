@@ -147,10 +147,10 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
-  site_id                     = try(local.site_id_list[each.key], each.key, null)
+  site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
@@ -184,7 +184,7 @@ resource "catalystcenter_fabric_zone" "fabric_zone" {
   }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
-  site_id                     = try(local.site_id_list[each.key], local.data_source_site_list[each.key])
+  site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
 
   depends_on = [catalystcenter_fabric_site.fabric_site]
 }
@@ -564,7 +564,11 @@ locals {
     "${item.ip_pool_name}#_#${item.l3_virtual_network}#_#${item.fabric_site_name}" => (
       var.use_bulk_api ?
       try(
-        data.catalystcenter_anycast_gateway.created_gateways[item.ip_pool_name].vlan_id,
+        one([
+          for g in data.catalystcenter_anycast_gateways.created_gateways[item.fabric_site_name].anycast_gateways :
+          g.vlan_id
+          if g.ip_pool_name == item.ip_pool_name && g.virtual_network_name == item.l3_virtual_network
+        ]),
         one([
           for g in local.anycast_gateways_by_fabric_site[item.fabric_site_name] :
           g.vlan_id
@@ -585,16 +589,15 @@ locals {
   }
 }
 
-data "catalystcenter_anycast_gateway" "created_gateways" {
+data "catalystcenter_anycast_gateways" "created_gateways" {
   for_each = var.use_bulk_api ? {
-    for item in local.anycast_gateways :
-    item.ip_pool_name => item
-    if contains(local.sites, item.fabric_site_name)
+    for fabric_site, gateways in local.anycast_gateways_by_fabric_site :
+    fabric_site => catalystcenter_fabric_site.fabric_site[fabric_site].id
+    if length(gateways) > 0 && contains(local.sites, fabric_site)
   } : {}
 
-  fabric_id            = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
-  virtual_network_name = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network)
-  ip_pool_name         = each.value.ip_pool_name
+  id        = each.value
+  fabric_id = each.value
 
   depends_on = [catalystcenter_anycast_gateways.anycast_gateways]
 }
@@ -609,7 +612,7 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff" {
   internal_vlan_id  = try(local.l2_handoff_vlan_id_map["${each.value.ip_pool_name}#_#${each.value.name}#_#${local.all_devices[each.value.device_name].fabric_site}"], null)
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
-  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways, data.catalystcenter_anycast_gateway.created_gateways]
+  depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_site.fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways, data.catalystcenter_anycast_gateways.created_gateways]
 
 }
 
@@ -668,7 +671,8 @@ locals {
             network_device_id = coalesce(
               try(lookup(local.device_name_to_id, device.name, null), null),
               try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null),
+              "NOT_FOUND"
             )
             fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
@@ -684,7 +688,8 @@ locals {
             network_device_id = coalesce(
               try(lookup(local.device_name_to_id, device.name, null), null),
               try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null),
+              "NOT_FOUND"
             )
             fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
           }
