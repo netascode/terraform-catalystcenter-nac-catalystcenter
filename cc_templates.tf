@@ -169,7 +169,7 @@ resource "catalystcenter_template" "regular_template" {
     param_array      = try(param.param_array, local.defaults.catalyst_center.templates.template_params.param_array, null)
     required         = try(param.required, local.defaults.catalyst_center.templates.template_params.required, null)
     selection_type   = try(param.selection_type, local.defaults.catalyst_center.templates.template_params.selection_type, null)
-    selection_values = try(tolist(try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)), [try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)])
+    selection_values = try(param.data_values, local.defaults.catalyst_center.templates.template_params.data_values, null)
     }
   ]
 }
