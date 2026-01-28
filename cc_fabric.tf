@@ -71,6 +71,19 @@ locals {
     ]
   ])
 
+  # L3 VNs for fabric zones (used in multistate mode)
+  l3_virtual_networks_all_zones = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for fabric_zone in try(fabric_site.fabric_zones, []) : [
+        for vn in try(fabric_zone.l3_virtual_networks, []) : {
+          name                    = vn
+          fabric_zone_name        = fabric_zone.name
+          parent_fabric_site_name = fabric_site.name
+        }
+      ]
+    ]
+  ])
+
   l3_virtual_networks = {
     for key in keys(local.l3_virtual_networks_fabric_site_complete) : key => concat(
       try(local.l3_virtual_networks_fabric_site[key], []),
@@ -151,13 +164,24 @@ resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
 locals {
   fabric_zones = flatten([
     for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
-      for fabric_zone in try(fabric_site.fabric_zones, []) : fabric_zone
+      for fabric_zone in try(fabric_site.fabric_zones, []) : merge(
+        fabric_zone,
+        {
+          "parent_fabric_site_name" : fabric_site.name
+        }
+      )
     ]
   ])
 }
 
 resource "catalystcenter_fabric_zone" "fabric_zone" {
-  for_each = { for zone in try(local.fabric_zones, []) : zone.name => zone if contains(local.sites, zone.name) }
+  for_each = {
+    for zone in try(local.fabric_zones, []) : zone.name => zone
+    if contains(local.sites, zone.parent_fabric_site_name) && (
+      contains(keys(local.site_id_list), zone.name) ||
+      contains(keys(local.data_source_site_list), zone.name)
+    )
+  }
 
   authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
   site_id                     = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
@@ -202,6 +226,19 @@ resource "catalystcenter_virtual_network_to_fabric_site" "l3_vn_to_fabric_site" 
   fabric_site_id       = try(local.fabric_site_id_list[each.value.fabric_site_name], null)
 
   depends_on = [catalystcenter_fabric_site.fabric_site]
+}
+
+resource "catalystcenter_virtual_network_to_fabric_site" "l3_vn_to_fabric_zone" {
+  for_each = {
+    for l3_vn in try(local.l3_virtual_networks_all_zones, []) : "${l3_vn.name}#_#${l3_vn.fabric_zone_name}" => l3_vn
+    if contains(local.sites, l3_vn.parent_fabric_site_name) && length(var.managed_sites) != 0
+  }
+
+  virtual_network_name = each.value.name
+  virtual_network_id   = try(catalystcenter_fabric_l3_virtual_network.global_l3_vn[each.value.name].id, data.catalystcenter_fabric_l3_virtual_network.l3_vn[each.value.name].id)
+  fabric_site_id       = try(local.fabric_zone_id_list[each.value.fabric_zone_name], null)
+
+  depends_on = [catalystcenter_fabric_zone.fabric_zone, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {

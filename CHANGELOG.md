@@ -15,6 +15,8 @@
 - Fix issue with L2 virtual networks while using single state deployment
 - Fix credential assignment to Global site in multi-state deployments
 - Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
+- Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
+- Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
 
 ## 0.3.0
 
