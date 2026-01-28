@@ -178,8 +178,13 @@ resource "catalystcenter_fabric_zone" "fabric_zone" {
   for_each = {
     for zone in try(local.fabric_zones, []) : zone.name => zone
     if contains(local.sites, zone.parent_fabric_site_name) && (
-      contains(keys(local.site_id_list), zone.name) ||
-      contains(keys(local.data_source_site_list), zone.name)
+      var.use_bulk_api ? (
+        contains(keys(local.site_id_list_bulk), zone.name) ||
+        contains(keys(local.data_source_created_sites_list), zone.name)
+        ) : (
+        contains(keys(local.site_id_list), zone.name) ||
+        contains(keys(local.data_source_site_list), zone.name)
+      )
     )
   }
 
@@ -193,9 +198,20 @@ data "catalystcenter_fabric_sites" "fabric_sites" {
 }
 
 locals {
-  fabric_zone_id_list             = { for k, v in catalystcenter_fabric_zone.fabric_zone : k => v.id }
-  fabric_site_id_list             = { for k, v in catalystcenter_fabric_site.fabric_site : k => v.id }
+  fabric_zone_id_list = { for k, v in catalystcenter_fabric_zone.fabric_zone : k => v.id }
+
+  fabric_site_id_list = { for k, v in catalystcenter_fabric_site.fabric_site : k => v.id }
+
   data_source_fabric_site_id_list = try({ for site in data.catalystcenter_fabric_sites.fabric_sites.sites : site.site_id => site.id }, {})
+
+  combined_fabric_id_list = merge(
+    local.fabric_site_id_list,
+    local.fabric_zone_id_list,
+    { for site_name, site_id in local.data_source_site_list :
+      site_name => local.data_source_fabric_site_id_list[site_id]
+      if contains(keys(local.data_source_fabric_site_id_list), site_id)
+    }
+  )
 }
 
 resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
@@ -246,21 +262,11 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 
   virtual_network_name = each.key
   fabric_ids = try([
-    for site in each.value : (
-      contains(keys(catalystcenter_fabric_site.fabric_site), site)
-      ? catalystcenter_fabric_site.fabric_site[site].id
-      : contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
-      ? catalystcenter_fabric_zone.fabric_zone[site].id
-      : try(local.data_source_fabric_site_id_list[local.data_source_site_list[site]], " ")
-    )
-    if(
-      contains(keys(catalystcenter_fabric_site.fabric_site), site)
-      || contains(keys(catalystcenter_fabric_zone.fabric_zone), site)
-      || contains(keys(local.data_source_site_list), site)
-    )
+    for site in each.value : local.combined_fabric_id_list[site]
+    if contains(keys(local.combined_fabric_id_list), site)
   ], [])
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone]
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
