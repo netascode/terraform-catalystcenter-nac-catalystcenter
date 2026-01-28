@@ -77,7 +77,7 @@ resource "catalystcenter_floors" "bulk_floors" {
 
 ## 1st level area Global/area
 resource "catalystcenter_area" "area_0" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if try(area.parent_name, "") == "Global" && contains(local.sites, "Global/${area.name}") }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && try(area.parent_name, "") == "Global" && contains(local.sites, "Global/${area.name}") }
 
   name      = each.value.name
   parent_id = try(data.catalystcenter_site.global.id, null)
@@ -87,7 +87,7 @@ resource "catalystcenter_area" "area_0" {
 
 # 2nd level area Global/area/area
 resource "catalystcenter_area" "area_1" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 1 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 1 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_0[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -97,7 +97,7 @@ resource "catalystcenter_area" "area_1" {
 
 # 3rd level area Global/area/area/area
 resource "catalystcenter_area" "area_2" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 2 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 2 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_1[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -107,7 +107,7 @@ resource "catalystcenter_area" "area_2" {
 
 # 4th level area Global/area/area/area/area
 resource "catalystcenter_area" "area_3" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 3 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 3 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_2[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -116,7 +116,7 @@ resource "catalystcenter_area" "area_3" {
 }
 
 resource "catalystcenter_area" "area_4" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 4 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 4 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_3[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -125,7 +125,7 @@ resource "catalystcenter_area" "area_4" {
 }
 
 resource "catalystcenter_area" "area_5" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 5 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 5 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name       = each.value.name
   parent_id  = try(catalystcenter_area.area_4[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -133,7 +133,7 @@ resource "catalystcenter_area" "area_5" {
 }
 
 resource "catalystcenter_area" "area_6" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 6 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 6 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_5[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -143,14 +143,14 @@ resource "catalystcenter_area" "area_6" {
 
 
 resource "catalystcenter_area" "area_7" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 7 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 7 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name       = each.value.name
   parent_id  = try(catalystcenter_area.area_6[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
   depends_on = [catalystcenter_area.area_6, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
 resource "catalystcenter_area" "area_8" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 8 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 8 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_7[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -159,7 +159,7 @@ resource "catalystcenter_area" "area_8" {
 }
 
 resource "catalystcenter_area" "area_9" {
-  for_each = var.use_bulk_api ? {} : { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if length(regexall("\\/", try(area.parent_name, ""))) == 9 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
+  for_each = { for area in try(local.catalyst_center.sites.areas, []) : "${area.parent_name}/${area.name}" => area if !var.use_bulk_api && length(regexall("\\/", try(area.parent_name, ""))) == 9 && contains(local.sites, try("${area.parent_name}/${area.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_8[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -167,7 +167,7 @@ resource "catalystcenter_area" "area_9" {
   depends_on = [catalystcenter_area.area_8, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
 resource "catalystcenter_building" "building" {
-  for_each = var.use_bulk_api ? {} : { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => building if contains(local.sites, try("${building.parent_name}/${building.name}", "")) }
+  for_each = { for building in try(local.catalyst_center.sites.buildings, []) : "${building.parent_name}/${building.name}" => building if !var.use_bulk_api && contains(local.sites, try("${building.parent_name}/${building.name}", "")) }
 
   name      = each.value.name
   parent_id = try(catalystcenter_area.area_9[each.value.parent_name].id, catalystcenter_area.area_8[each.value.parent_name].id, catalystcenter_area.area_7[each.value.parent_name].id, catalystcenter_area.area_6[each.value.parent_name].id, catalystcenter_area.area_5[each.value.parent_name].id, catalystcenter_area.area_4[each.value.parent_name].id, catalystcenter_area.area_3[each.value.parent_name].id, catalystcenter_area.area_2[each.value.parent_name].id, catalystcenter_area.area_1[each.value.parent_name].id, catalystcenter_area.area_0[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
@@ -181,7 +181,7 @@ resource "catalystcenter_building" "building" {
 
 
 resource "catalystcenter_floor" "floor" {
-  for_each = var.use_bulk_api ? {} : { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => floor if contains(local.sites, try("${floor.parent_name}/${floor.name}", "")) }
+  for_each = { for floor in try(local.catalyst_center.sites.floors, []) : "${floor.parent_name}/${floor.name}" => floor if !var.use_bulk_api && contains(local.sites, try("${floor.parent_name}/${floor.name}", "")) }
 
   name             = each.value.name
   parent_id        = try(catalystcenter_building.building[each.value.parent_name].id, local.data_source_site_list[each.value.parent_name], data.catalystcenter_site.global.id, null)
