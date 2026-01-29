@@ -179,8 +179,7 @@ resource "catalystcenter_fabric_zone" "fabric_zone" {
     for zone in try(local.fabric_zones, []) : zone.name => zone
     if contains(local.sites, zone.parent_fabric_site_name) && (
       var.use_bulk_api ? (
-        contains(keys(local.site_id_list_bulk), zone.name) ||
-        contains(keys(local.data_source_created_sites_list), zone.name)
+        contains(keys(local.site_id_list_bulk), zone.name)
         ) : (
         contains(keys(local.site_id_list), zone.name) ||
         contains(keys(local.data_source_site_list), zone.name)
