@@ -16,11 +16,10 @@ locals {
 
 
 data "catalystcenter_wireless_profile" "wireless_profile" {
-  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile } : {}
+  for_each = { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile if var.manage_global_settings == false && length(var.managed_sites) != 0 }
 
   wireless_profile_name = each.key
 }
-
 resource "catalystcenter_wireless_ssid" "ssid" {
   for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
