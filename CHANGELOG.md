@@ -2,6 +2,8 @@
 
 **New Features:**
 - Add support for 6 additional site hierarchy area levels, extending total support to 10 area levels enabling deep organizational hierarchies up to `Global/area/area/area/area/area/area/area/area/area/area`
+- Add `lldp_level` attribute support for LLDP-based network discovery
+- Add `dot11be_profile_id` attribute support for wireless network profiles to enable Wi-Fi 7 (802.11be) profile assignment
 
 **Improvements:**
 - Add bulk site resource support via `use_bulk_api` flag for areas, buildings, and floors using new map-based provider resource (`catalystcenter_areas`, `catalystcenter_buildings`, `catalystcenter_floors`)
@@ -17,6 +19,7 @@
 - Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
 - Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
+- Fix SNMPv2 read/write credentials to use optional `description` field when provided, falling back to `name` if not specified
 
 ## 0.3.0
 
