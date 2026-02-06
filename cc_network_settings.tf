@@ -66,14 +66,14 @@ resource "catalystcenter_credentials_cli" "cli_credentials" {
 resource "catalystcenter_credentials_snmpv2_read" "snmpv2_read_credentials" {
   for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  description    = each.key
+  description    = try(each.value.description, each.key)
   read_community = try(each.value.read_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials.read_community, null)
 }
 
 resource "catalystcenter_credentials_snmpv2_write" "snmpv2_write_credentials" {
   for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  description     = each.key
+  description     = try(each.value.description, each.key)
   write_community = try(each.value.write_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials.write_community, null)
 }
 
