@@ -45,14 +45,38 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null
   ]
 
-  provisioned_devices_filtered = var.bulk_site_provisioning != null ? [
+  provisioned_devices_filtered = [
     for d in local.provisioned_devices : d
-    if d.site == var.bulk_site_provisioning || startswith(d.site, "${var.bulk_site_provisioning}/")
-  ] : local.provisioned_devices
+    if var.bulk_site_provisioning == null || d.site == var.bulk_site_provisioning || startswith(d.site, "${var.bulk_site_provisioning}/")
+  ]
+
+  grouping_mode = (
+    var.bulk_site_provisioning != null ? "bulk" :
+    length(var.managed_sites) > 0 ? "managed" :
+    "default"
+  )
 
   provisioned_devices_by_site = {
-    for site in distinct([for d in local.provisioned_devices_filtered : var.bulk_site_provisioning != null ? var.bulk_site_provisioning : d.site]) :
-    site => [for d in local.provisioned_devices_filtered : d if var.bulk_site_provisioning != null ? true : d.site == site]
+    for site in distinct([
+      for d in local.provisioned_devices_filtered :
+      local.grouping_mode == "bulk" ? var.bulk_site_provisioning :
+      local.grouping_mode == "managed" ? one([
+        for ms in var.managed_sites :
+        ms if startswith(d.site, ms)
+      ]) :
+      d.site
+    ]) :
+    site => [
+      for d in local.provisioned_devices_filtered :
+      d if
+      local.grouping_mode == "bulk" ? true :
+      local.grouping_mode == "managed" ?
+      anytrue([
+        for ms in var.managed_sites :
+        startswith(d.site, ms) && ms == site
+      ]) :
+      d.site == site
+    ]
   }
 
   provisioned_sda_transit_cp_devices = flatten([

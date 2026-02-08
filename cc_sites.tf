@@ -12,9 +12,6 @@ data "catalystcenter_sites" "all_sites" {
 resource "catalystcenter_areas" "bulk_areas" {
   count = var.use_bulk_api && length([for area in try(local.catalyst_center.sites.areas, []) : area if contains(local.sites, "${try(area.parent_name, local.defaults.catalyst_center.sites.areas.parent_name)}/${area.name}")]) > 0 ? 1 : 0
 
-  # Optional: set scope to limit which sites are managed
-  scope = length(var.managed_sites) > 0 ? var.managed_sites[0] : null
-
   areas = {
     for area in try(local.catalyst_center.sites.areas, []) :
     "${try(area.parent_name, "Global")}/${area.name}" => {
@@ -29,8 +26,6 @@ resource "catalystcenter_areas" "bulk_areas" {
 
 resource "catalystcenter_buildings" "bulk_buildings" {
   count = var.use_bulk_api && length([for building in try(local.catalyst_center.sites.buildings, []) : building if contains(local.sites, "${building.parent_name}/${building.name}")]) > 0 ? 1 : 0
-
-  scope = length(var.managed_sites) > 0 ? var.managed_sites[0] : null
 
   buildings = {
     for building in try(local.catalyst_center.sites.buildings, []) :
@@ -50,8 +45,6 @@ resource "catalystcenter_buildings" "bulk_buildings" {
 
 resource "catalystcenter_floors" "bulk_floors" {
   count = var.use_bulk_api && length([for floor in try(local.catalyst_center.sites.floors, []) : floor if contains(local.sites, "${floor.parent_name}/${floor.name}")]) > 0 ? 1 : 0
-
-  scope = length(var.managed_sites) > 0 ? var.managed_sites[0] : null
 
   floors = {
     for floor in try(local.catalyst_center.sites.floors, []) :
