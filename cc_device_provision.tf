@@ -47,7 +47,7 @@ locals {
 
   provisioned_devices_filtered = [
     for d in local.provisioned_devices : d
-    if var.bulk_site_provisioning == null || d.site == var.bulk_site_provisioning || startswith(d.site, "${var.bulk_site_provisioning}/")
+    if var.bulk_site_provisioning == null || d.site == var.bulk_site_provisioning || (var.bulk_site_provisioning != null ? startswith(d.site, format("%s/", var.bulk_site_provisioning)) : false)
   ]
 
   grouping_mode = (
