@@ -2,6 +2,7 @@
 
 **New Features:**
 - Add support for 6 additional site hierarchy area levels, extending total support to 10 area levels enabling deep organizational hierarchies up to `Global/area/area/area/area/area/area/area/area/area/area`
+- Add `lldp_level` attribute support for LLDP-based network discovery
 
 **Improvements:**
 - Enhance device provisioning grouping logic to support `bulk_site_provisioning` and `managed_sites` with proper hierarchical site matching
@@ -19,6 +20,7 @@
 - Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
 - Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
+- Fix SNMPv2 read/write credentials to use optional `description` field when provided, falling back to `name` if not specified
 
 ## 0.3.0
 

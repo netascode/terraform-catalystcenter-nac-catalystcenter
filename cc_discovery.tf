@@ -25,6 +25,7 @@ resource "catalystcenter_discovery" "discovery" {
   discovery_type            = try(each.value.type, local.defaults.catalyst_center.inventory.discovery.type, null)
   protocol_order            = try(each.value.protocol_order, local.defaults.catalyst_center.inventory.discovery.protocol_order, null)
   cdp_level                 = try(each.value.cdp_level, local.defaults.catalyst_center.inventory.discovery.cdp_level, null)
+  lldp_level                = try(each.value.lldp_level, local.defaults.catalyst_center.inventory.discovery.lldp_level, null)
   enable_password_list      = try(each.value.enable_password_list, local.defaults.catalyst_center.inventory.discovery.enable_password_list, null)
   global_credential_id_list = try([for cred in each.value.global_credential_list : local.all_credential_ids[cred]], null)
   http_read_credential      = try(each.value.http_read_credential, local.defaults.catalyst_center.inventory.discovery.http_read_credential, null)
