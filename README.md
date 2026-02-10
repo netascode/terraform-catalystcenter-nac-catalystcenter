@@ -111,6 +111,7 @@ module "catalystcenter" {
 | [catalystcenter_discovery.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/discovery) | resource |
 | [catalystcenter_dns_settings.dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
 | [catalystcenter_dns_settings.global_dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
+| [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dot11be_profile) | resource |
 | [catalystcenter_extranet_policy.extranet_policy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/extranet_policy) | resource |
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
@@ -178,6 +179,7 @@ module "catalystcenter" {
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_anycast_gateways.created_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
+| [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l3_virtual_network) | data source |
 | [catalystcenter_fabric_sites.fabric_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_sites) | data source |
 | [catalystcenter_ip_pools.all_ip_pools](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/ip_pools) | data source |
