@@ -12,6 +12,50 @@ locals {
   wireless_controllers = length({
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
+
+  # All dot11be profile names referenced in ssid_details
+  dot11be_profile_names_referenced = distinct(flatten([
+    for np in try(local.catalyst_center.network_profiles.wireless, []) : [
+      for ssid in try(np.ssid_details, []) : ssid.dot11be_profile_name
+      if try(ssid.dot11be_profile_name, null) != null
+    ]
+  ]))
+
+  # Profile names defined in YAML (will be managed by Terraform)
+  dot11be_profile_names_managed = [for profile in try(local.catalyst_center.wireless.dot11be_profiles, []) : profile.name]
+
+  # Profile names that are referenced but NOT defined in YAML (need to look up existing profiles)
+  dot11be_profile_names_existing = [
+    for name in local.dot11be_profile_names_referenced : name
+    if !contains(local.dot11be_profile_names_managed, name)
+  ]
+
+  # Build combined name → ID map from both managed resources and data sources
+  dot11be_profile_map = merge(
+    # From managed resources (created by Terraform)
+    { for name, profile in catalystcenter_dot11be_profile.dot11be_profile : name => profile.id },
+    # From data sources (existing profiles)
+    { for name, profile in data.catalystcenter_dot11be_profile.dot11be_profile : name => profile.id }
+  )
+}
+
+# Create 802.11be profiles from YAML configuration
+resource "catalystcenter_dot11be_profile" "dot11be_profile" {
+  for_each = { for profile in try(local.catalyst_center.wireless.dot11be_profiles, []) : profile.name => profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+
+  profile_name      = each.key
+  ofdma_down_link   = try(each.value.ofdma_down_link, local.defaults.catalyst_center.wireless.dot11be_profiles.ofdma_down_link, null)
+  ofdma_up_link     = try(each.value.ofdma_up_link, local.defaults.catalyst_center.wireless.dot11be_profiles.ofdma_up_link, null)
+  mu_mimo_down_link = try(each.value.mu_mimo_down_link, local.defaults.catalyst_center.wireless.dot11be_profiles.mu_mimo_down_link, null)
+  mu_mimo_up_link   = try(each.value.mu_mimo_up_link, local.defaults.catalyst_center.wireless.dot11be_profiles.mu_mimo_up_link, null)
+  ofdma_multi_ru    = try(each.value.ofdma_multi_ru, local.defaults.catalyst_center.wireless.dot11be_profiles.ofdma_multi_ru, null)
+}
+
+# Look up existing 802.11be profiles (created outside of Terraform)
+data "catalystcenter_dot11be_profile" "dot11be_profile" {
+  for_each = toset(local.dot11be_profile_names_existing)
+
+  profile_name = each.key
 }
 
 
@@ -228,6 +272,12 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     local_to_vlan       = try(ssid.enable_flex_connect, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.enable_flex_connect, false) == true ? try(ssid.local_to_vlan, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.local_to_vlan, null) : null
     interface_name      = try(ssid.enable_fabric, false) == false ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
     wlan_profile_name   = try(ssid.wlan_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.wlan_profile_name, null)
+    # Direct reference to ensure proper dependency tracking - try managed resource first, then data source
+    dot11be_profile_id  = try(ssid.dot11be_profile_name, null) != null ? try(
+      catalystcenter_dot11be_profile.dot11be_profile[ssid.dot11be_profile_name].id,
+      data.catalystcenter_dot11be_profile.dot11be_profile[ssid.dot11be_profile_name].id,
+      null
+    ) : null
   }], null)
   additional_interfaces = try(each.value.additional_interfaces, null)
   ap_zones = try([for ap_zone in each.value.ap_zones : {
@@ -236,7 +286,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
   }], null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {

@@ -3,6 +3,8 @@
 **New Features:**
 - Add support for 6 additional site hierarchy area levels, extending total support to 10 area levels enabling deep organizational hierarchies up to `Global/area/area/area/area/area/area/area/area/area/area`
 - Add `lldp_level` attribute support for LLDP-based network discovery
+- Add 802.11be (WiFi 7) profile support with `catalystcenter_dot11be_profile` resource for creating and managing dot11be profiles with OFDMA and MU-MIMO settings
+- Add `dot11be_profile_name` attribute to wireless network profile `ssid_details` for associating 802.11be profiles with SSIDs (requires IOS 17.15+)
 
 **Improvements:**
 - Enhance device provisioning grouping logic to support `bulk_site_provisioning` and `managed_sites` with proper hierarchical site matching
@@ -11,6 +13,7 @@
 - Add `device_discovery_validation` check block to validate device presence in Catalyst Center inventory during plan phase, and improve error handling for devices not found in inventory by filtering them out from resource operations instead of failing with coalesce errors
 - Add validation for `managed_sites` variable to ensure all sites specified exist in YAML configuration with precondition check
 - Add validation for `bulk_site_provisioning` variable to verify site hierarchy format and existence in YAML configuration
+- Add universal 802.11be profile resolution supporting both Terraform-managed profiles and pre-existing profiles created outside of Terraform
 
 **Bug Fixes:**
 - Fix device provisioning grouping under managed sites to prevent empty or incorrect site mappings caused by full path matching instead of parent site hierarchy
@@ -20,7 +23,6 @@
 - Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
 - Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
-- Fix SNMPv2 read/write credentials to use optional `description` field when provided, falling back to `name` if not specified
 
 ## 0.3.0
 
