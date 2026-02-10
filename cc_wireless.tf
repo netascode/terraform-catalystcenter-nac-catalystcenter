@@ -29,14 +29,6 @@ locals {
     for name in local.dot11be_profile_names_referenced : name
     if !contains(local.dot11be_profile_names_managed, name)
   ]
-
-  # Build combined name → ID map from both managed resources and data sources
-  dot11be_profile_map = merge(
-    # From managed resources (created by Terraform)
-    { for name, profile in catalystcenter_dot11be_profile.dot11be_profile : name => profile.id },
-    # From data sources (existing profiles)
-    { for name, profile in data.catalystcenter_dot11be_profile.dot11be_profile : name => profile.id }
-  )
 }
 
 # Create 802.11be profiles from YAML configuration
@@ -273,7 +265,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     interface_name      = try(ssid.enable_fabric, false) == false ? try(ssid.interface_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.interface_name, null) : null
     wlan_profile_name   = try(ssid.wlan_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.wlan_profile_name, null)
     # Direct reference to ensure proper dependency tracking - try managed resource first, then data source
-    dot11be_profile_id  = try(ssid.dot11be_profile_name, null) != null ? try(
+    dot11be_profile_id = try(ssid.dot11be_profile_name, null) != null ? try(
       catalystcenter_dot11be_profile.dot11be_profile[ssid.dot11be_profile_name].id,
       data.catalystcenter_dot11be_profile.dot11be_profile[ssid.dot11be_profile_name].id,
       null
