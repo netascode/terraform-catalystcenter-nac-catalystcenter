@@ -782,16 +782,12 @@ locals {
       subscriber_virtual_network_names = try(policy.subscriber_virtual_networks, [])
       fabric_sites                     = try(policy.fabric_sites, [])
       policy_key                       = policy.name
+
       fabric_ids = length(try(policy.fabric_sites, [])) > 0 ? [
         for site in try(policy.fabric_sites, []) :
-        try(catalystcenter_fabric_site.fabric_site[site].id, null)
-        if contains(local.sites, site)
-        ] : (
-        var.manage_global_settings ? null : flatten([
-          for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
-          contains(local.sites, fabric_site.name) ? try(catalystcenter_fabric_site.fabric_site[fabric_site.name].id, null) : null
-        ])
-      )
+        local.combined_fabric_id_list[site]
+        if contains(keys(local.combined_fabric_id_list), site)
+      ] : null
     }
   ])
 }
@@ -802,9 +798,8 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
     if try(policy.name, null) != null &&
     try(policy.provider_virtual_network_name, null) != null &&
     length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
-    !var.manage_global_settings &&
-    (length(try(policy.fabric_sites, [])) == 0 ||
-    length([for site in try(policy.fabric_sites, []) : site if contains(local.sites, site)]) > 0)
+    (var.manage_global_settings || (!var.manage_global_settings &&
+    length(var.managed_sites) == 0))
   }
 
   extranet_policy_name             = each.value.name
