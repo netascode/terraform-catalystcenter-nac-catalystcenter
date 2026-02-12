@@ -418,7 +418,8 @@ locals {
 resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   for_each = { for k, v in try(local.ip_pools_reservation_to_site_map, {}) : k => v if contains(local.sites, v) || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  site_id             = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[local.ip_pools_reservation_to_site_map[each.key]], local.data_source_created_sites_list[local.ip_pools_reservation_to_site_map[each.key]]) : local.site_id_list[local.ip_pools_reservation_to_site_map[each.key]], null)
+  site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[local.ip_pools_reservation_to_site_map[each.key]], local.data_source_created_sites_list[local.ip_pools_reservation_to_site_map[each.key]]) : coalesce(lookup(local.site_id_list, local.ip_pools_reservation_to_site_map[each.key], null), local.data_source_created_sites_list[local.ip_pools_reservation_to_site_map[each.key]]), null)
+
   name                = each.key
   pool_type           = try(join("", [(substr(local.ip_pools_reservations[each.key].type, 0, 1)), substr(local.ip_pools_reservations[each.key].type, 1, length(local.ip_pools_reservations[each.key].type))]), local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
   ipv4_global_pool_id = try(coalesce(lookup(local.ip_pool_ids_v4, lookup(local.reservation_parent_pool_v4, each.key, ""), null), lookup(local.data_source_ip_pool_ids, lookup(local.reservation_parent_pool_v4, each.key, ""), null)), null)

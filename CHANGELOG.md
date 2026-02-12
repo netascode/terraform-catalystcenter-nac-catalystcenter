@@ -23,6 +23,8 @@
 - Fix `bulk_site_provisioning_validation` to only run when bulk provisioning is enabled
 - Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
+- Fix issue with template_id for composite templates provisioning to device while using multi state
+- Fix issue with IP pool to site assignment for sites with additional site hierarchy area levels
 
 ## 0.3.0
 

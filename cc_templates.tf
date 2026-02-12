@@ -339,14 +339,14 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   }
 
   redeploy            = try(local.templates_map[each.key].redeploy_template, "NEVER")
-  template_id         = catalystcenter_template_version.composite_commit_version[each.key].id
-  main_template_id    = catalystcenter_template.composite_template[each.key].id
+  template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, data.catalystcenter_template.template[each.key].id)
+  main_template_id    = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[each.key].id)
   force_push_template = try(local.templates_map[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = true
 
   member_template_deployment_info = [for tmpl in local.composite_templates_map[each.key] : {
-    template_id         = catalystcenter_template_version.regular_commit_version[tmpl].id
-    main_template_id    = catalystcenter_template.regular_template[tmpl].id
+    template_id         = try(catalystcenter_template_version.regular_commit_version[tmpl].id, data.catalystcenter_template.template[tmpl].id)
+    main_template_id    = try(catalystcenter_template.regular_template[tmpl].id, data.catalystcenter_template.template[tmpl].id)
     force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
     is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
     copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
