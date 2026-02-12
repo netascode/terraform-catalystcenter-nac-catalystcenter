@@ -1,4 +1,4 @@
-## 0.3.1 (unreleased)
+## 0.4.0
 
 **New Features:**
 - Add support for 6 additional site hierarchy area levels, extending total support to 10 area levels enabling deep organizational hierarchies up to `Global/area/area/area/area/area/area/area/area/area/area`
@@ -27,7 +27,6 @@
 - Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
 - Fix issue with template_id for composite templates provisioning to device while using multi state
-
 
 ## 0.3.0
 
