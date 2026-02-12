@@ -16,6 +16,7 @@
 - Add universal 802.11be profile resolution supporting both Terraform-managed profiles and pre-existing profiles created outside of Terraform
 
 **Bug Fixes:**
+- Fix issue with extranet policies fabric site assignment while using multi state
 - Fix device provisioning grouping under managed sites to prevent empty or incorrect site mappings caused by full path matching instead of parent site hierarchy
 - Fix template parameter handling to correctly process both single string values and list values during deployment
 - Fix issue with L2 virtual networks while using single state deployment
