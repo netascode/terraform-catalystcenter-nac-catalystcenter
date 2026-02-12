@@ -5,6 +5,8 @@
 - Add `lldp_level` attribute support for LLDP-based network discovery
 - Add 802.11be (WiFi 7) profile support with `catalystcenter_dot11be_profile` resource for creating and managing dot11be profiles with OFDMA and MU-MIMO settings
 - Add `dot11be_profile_name` attribute to wireless network profile `ssid_details` for associating 802.11be profiles with SSIDs (requires IOS 17.15+)
+- Add support for IP pool to site assignment for sites with additional site hierarchy area levels
+- Add support for IP pool to site assignment for fabric sites and fabric zones with additional site hierarchy area levels
 
 **Improvements:**
 - Enhance device provisioning grouping logic to support `bulk_site_provisioning` and `managed_sites` with proper hierarchical site matching
@@ -25,7 +27,7 @@
 - Fix fabric zones not being created in multi-state deployments due to incorrect site filtering
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
 - Fix issue with template_id for composite templates provisioning to device while using multi state
-- Fix issue with IP pool to site assignment for sites with additional site hierarchy area levels
+
 
 ## 0.3.0
 
