@@ -202,7 +202,7 @@ locals {
 }
 
 data "catalystcenter_sites" "created_sites" {
-  depends_on = [catalystcenter_areas.bulk_areas, catalystcenter_buildings.bulk_buildings, catalystcenter_floors.bulk_floors]
+  depends_on = [catalystcenter_areas.bulk_areas, catalystcenter_buildings.bulk_buildings, catalystcenter_floors.bulk_floors, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_building.building, catalystcenter_floor.floor]
 }
 
 locals {
