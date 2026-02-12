@@ -26,6 +26,7 @@
 - Fix L3 virtual networks not being attached to fabric zones in multi-state deployments
 - Fix issue with template_id for composite templates provisioning to device while using multi state
 - Fix issue with IP pool to site assignment for sites with additional site hierarchy area levels
+- Fix issue with IP pool to site assignment for fabric sites and fabric zones with additional site hierarchy area levels
 
 ## 0.3.0
 
