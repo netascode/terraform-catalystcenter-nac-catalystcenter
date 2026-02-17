@@ -138,6 +138,12 @@ data "catalystcenter_template" "template" {
   project_id = try(catalystcenter_project.project[each.key].id, data.catalystcenter_project.project[each.value].id, null)
 }
 
+data "catalystcenter_template_versions" "template_versions" {
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? { for template in try(local.project_templates, []) : template.template_name => template.project_name } : {}
+
+  template_id = data.catalystcenter_template.template[each.key].id
+}
+
 resource "catalystcenter_project" "project" {
   for_each = { for project in try(local.catalyst_center.templates.projects, []) : project.name => project if project.name != "Onboarding Configuration" && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) }
 
@@ -309,7 +315,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
       )
       type                  = "MANAGED_DEVICE_UUID"
       redeploy              = try(device.redeploy_template, local.templates_map[each.key].redeploy_template, "NEVER")
-      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, data.catalystcenter_template.template[device.template].id)
+      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, data.catalystcenter_template_versions.template_versions[each.key].template_versions[length(data.catalystcenter_template_versions.template_versions[each.key].template_versions) - 1].id, data.catalystcenter_template.template[device.template].id)
       params = try({
         for item in local.all_devices[device.name].dayn_templates_map[device.template].variables : item.name => try(tolist(item.value), [item.value])
       }, {})
@@ -339,13 +345,13 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   }
 
   redeploy            = try(local.templates_map[each.key].redeploy_template, "NEVER")
-  template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, data.catalystcenter_template.template[each.key].id)
+  template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, data.catalystcenter_template_versions.template_versions[each.key].template_versions[length(data.catalystcenter_template_versions.template_versions[each.key].template_versions) - 1].id, data.catalystcenter_template.template[each.key].id)
   main_template_id    = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[each.key].id)
   force_push_template = try(local.templates_map[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = true
 
   member_template_deployment_info = [for tmpl in local.composite_templates_map[each.key] : {
-    template_id         = try(catalystcenter_template_version.regular_commit_version[tmpl].id, data.catalystcenter_template.template[tmpl].id)
+    template_id         = try(catalystcenter_template_version.regular_commit_version[tmpl].id, data.catalystcenter_template_versions.template_versions[tmpl].template_versions[length(data.catalystcenter_template_versions.template_versions[tmpl].template_versions) - 1].id, data.catalystcenter_template.template[tmpl].id)
     main_template_id    = try(catalystcenter_template.regular_template[tmpl].id, data.catalystcenter_template.template[tmpl].id)
     force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
     is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
