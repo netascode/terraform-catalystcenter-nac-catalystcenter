@@ -60,7 +60,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   for_each = { for ssid in try(local.catalyst_center.wireless.ssids, []) : ssid.name => ssid if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   ssid                                        = each.key
-  auth_type                                   = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ssids.auth_type, null)
+  auth_type                                   = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ssids.auth_type, null) == "OPEN_SECURED" ? "OPEN-SECURED" : try(each.value.auth_type, local.defaults.catalyst_center.wireless.ssids.auth_type, null)
   wlan_type                                   = try(each.value.wlan_type, local.defaults.catalyst_center.wireless.ssids.wlan_type, null)
   site_id                                     = try(data.catalystcenter_site.global.id, null)
   aaa_override                                = try(each.value.aaa_override, local.defaults.catalyst_center.wireless.ssids.aaa_override, null)

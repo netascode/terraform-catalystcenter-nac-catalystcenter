@@ -1,3 +1,8 @@
+## 0.4.1 (unreleased)
+
+**Bug Fixes:**
+- Fix wireless SSID `auth_type` value mapping to correctly transform `OPEN_SECURED` to `OPEN-SECURED` for API compatibility
+
 ## 0.4.0
 
 **New Features:**
