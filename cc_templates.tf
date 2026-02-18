@@ -315,7 +315,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
       )
       type                  = "MANAGED_DEVICE_UUID"
       redeploy              = try(device.redeploy_template, local.templates_map[each.key].redeploy_template, "NEVER")
-      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, data.catalystcenter_template_versions.template_versions[each.key].template_versions[length(data.catalystcenter_template_versions.template_versions[each.key].template_versions) - 1].id, data.catalystcenter_template.template[device.template].id)
+      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[device.template].id)
       params = try({
         for item in local.all_devices[device.name].dayn_templates_map[device.template].variables : item.name => try(tolist(item.value), [item.value])
       }, {})
@@ -333,7 +333,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE"))
   ]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions]
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
@@ -345,13 +345,13 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   }
 
   redeploy            = try(local.templates_map[each.key].redeploy_template, "NEVER")
-  template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, data.catalystcenter_template_versions.template_versions[each.key].template_versions[length(data.catalystcenter_template_versions.template_versions[each.key].template_versions) - 1].id, data.catalystcenter_template.template[each.key].id)
+  template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[each.key].id)
   main_template_id    = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[each.key].id)
   force_push_template = try(local.templates_map[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = true
 
   member_template_deployment_info = [for tmpl in local.composite_templates_map[each.key] : {
-    template_id         = try(catalystcenter_template_version.regular_commit_version[tmpl].id, data.catalystcenter_template_versions.template_versions[tmpl].template_versions[length(data.catalystcenter_template_versions.template_versions[tmpl].template_versions) - 1].id, data.catalystcenter_template.template[tmpl].id)
+    template_id         = try(catalystcenter_template_version.regular_commit_version[tmpl].id, [for v in data.catalystcenter_template_versions.template_versions[tmpl].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[tmpl].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[tmpl].id)
     main_template_id    = try(catalystcenter_template.regular_template[tmpl].id, data.catalystcenter_template.template[tmpl].id)
     force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
     is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
@@ -409,5 +409,5 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE"))
   ]
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]
 }
