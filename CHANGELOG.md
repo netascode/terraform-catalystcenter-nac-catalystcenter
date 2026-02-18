@@ -1,6 +1,7 @@
 ## 0.4.1 (unreleased)
 
 **Bug Fixes:**
+- Fix issue in fabric_ssid to vlan assignment in global/common instance while using multi state
 - Fix issue with deploying composite templates while using multi state
 - Fix wireless SSID `auth_type` value mapping to correctly transform `OPEN_SECURED` to `OPEN-SECURED` for API compatibility
 
