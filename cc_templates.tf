@@ -73,7 +73,7 @@ locals {
         "device_ip" : device.device_ip
         "fqdn_name" : device.fqdn_name
       }
-    ] if try(device.tags, null) != null
+    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
   ])
 
   devices_to_tag = [

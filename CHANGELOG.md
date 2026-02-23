@@ -6,6 +6,10 @@
 - Fix wireless SSID `auth_type` value mapping to correctly transform `OPEN_SECURED` to `OPEN-SECURED` for API compatibility
 - Add dependency on provision WLC to wait for managed AP locations in bulk site provision scenerios
 
+**Improvements:**
+- Ignore device tag check for devices in INIT state
+- Allow L2VN anycast gateway creation without specifying vlan id
+
 ## 0.4.0
 
 **New Features:**
