@@ -1,5 +1,8 @@
 ## 0.4.1 (unreleased)
 
+**New Features:**
+- Add anycast gateway support under fabric_zones
+
 **Bug Fixes:**
 - Fix issue in fabric_ssid to vlan assignment in global/common instance while using multi state
 - Fix issue with deploying composite templates while using multi state
