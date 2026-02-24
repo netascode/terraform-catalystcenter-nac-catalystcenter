@@ -4,10 +4,11 @@
 - Add anycast gateway support under fabric_zones
 
 **Bug Fixes:**
-- Fix issue in fabric_ssid to vlan assignment in global/common instance while using multi state
+- Fix issue with provisioning device under fabric zones
+- Fix issue in fabric SSID–to-VLAN assignment in global/common instance while using multi state
 - Fix issue with deploying composite templates while using multi state
 - Fix wireless SSID `auth_type` value mapping to correctly transform `OPEN_SECURED` to `OPEN-SECURED` for API compatibility
-- Add dependency on provision WLC to wait for managed AP locations in bulk site provision scenerios
+- Add dependency on provision WLC to wait for managed AP locations in bulk site provision scenarios
 
 ## 0.4.0
 
