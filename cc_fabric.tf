@@ -445,15 +445,15 @@ locals {
   fabric_devices = [for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.fabric_roles, null) != null && contains(local.sites, try(device.site, "NONE"))]
 
   fabric_devices_by_site = {
-    for fabric_site in distinct([for d in try(local.catalyst_center.inventory.devices, []) : try(d.fabric_site, "")]) :
-    fabric_site => [for d in local.fabric_devices : d if d.fabric_site == fabric_site] if fabric_site != ""
+    for fabric_location in distinct([for d in try(local.catalyst_center.inventory.devices, []) : try(d.fabric_zone, try(d.fabric_site, ""))]) :
+    fabric_location => [for d in local.fabric_devices : d if try(d.fabric_zone, try(d.fabric_site, "")) == fabric_location] if fabric_location != ""
   }
 }
 
 resource "catalystcenter_fabric_devices" "fabric_devices" {
   for_each = { for fabric_site, devices in try(local.fabric_devices_by_site, {}) : fabric_site => devices if length(devices) > 0 && var.use_bulk_api }
 
-  fabric_id = try(local.fabric_site_id_list[each.key], null)
+  fabric_id = try(local.fabric_zone_id_list[each.key], local.fabric_site_id_list[each.key], null)
   fabric_devices = [
     for device in each.value : {
       network_device_id = coalesce(
@@ -461,7 +461,7 @@ resource "catalystcenter_fabric_devices" "fabric_devices" {
         try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
         try(lookup(local.device_ip_to_id, device.device_ip, null), null)
       )
-      fabric_id = try(catalystcenter_fabric_site.fabric_site[device.fabric_site].id, null)
+      fabric_id = try(catalystcenter_fabric_zone.fabric_zone[device.fabric_zone].id, catalystcenter_fabric_site.fabric_site[device.fabric_site].id, null)
       device_roles = try([
         for fabric_role in try(device.fabric_roles, []) : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
       ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
