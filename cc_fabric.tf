@@ -640,7 +640,7 @@ locals {
 
 locals {
   l2_handoff_vlan_id_map_no_anycast = {
-    for item in local.l2_virtual_networks : "${item.vlan_name}#_#${item.fabric_site_name}" => item.vlan_id if try(item.vlan_name, null) != null
+    for item in local.l2_virtual_networks : "${item.vlan_name}#_#${item.fabric_site_name}" => try(item.vlan_id, null) if try(item.vlan_name, null) != null
   }
 }
 
