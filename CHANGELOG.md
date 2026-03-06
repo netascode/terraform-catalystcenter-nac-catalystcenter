@@ -1,4 +1,4 @@
-## 0.4.1 (unreleased)
+## 0.4.1
 
 **New Features:**
 - Add anycast gateway support under fabric_zones
