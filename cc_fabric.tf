@@ -285,6 +285,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
   for_each = !var.manage_global_settings && length(var.managed_sites) == 0 ? (length(local.l3_virtual_networks) > 0 ? local.l3_virtual_networks : {}) : {}
 
   virtual_network_name = each.key
+  additive_fabric_ids  = try(each.value.additive_fabric_sites, local.defaults.catalyst_center.fabric.l3_virtual_networks.additive_fabric_sites, false)
   fabric_ids = try([
     for site in each.value : local.combined_fabric_id_list[site]
     if contains(keys(local.combined_fabric_id_list), site)
