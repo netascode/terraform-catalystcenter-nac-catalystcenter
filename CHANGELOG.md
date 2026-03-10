@@ -1,3 +1,8 @@
+## 0.4.2 (unreleased)
+
+**New Features:**
+- Add option to control whether fabric site assignments are merged or replaced when managing L3 virtual networks across multiple fabric sites
+
 ## 0.4.1
 
 **New Features:**
