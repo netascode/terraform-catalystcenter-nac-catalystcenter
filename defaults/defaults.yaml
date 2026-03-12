@@ -62,6 +62,8 @@ defaults:
         catalyst_center_as_syslog_server: true
         catalyst_center_as_network_collector: true
     fabric:
+      l3_virtual_networks:
+        merge_fabric_sites: false
       transits:
         type: IP_BASED_TRANSIT
         routing_protocol_name: BGP

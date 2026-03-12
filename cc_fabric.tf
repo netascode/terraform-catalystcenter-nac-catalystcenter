@@ -242,12 +242,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
   for_each = var.manage_global_settings == true ? try(local.global_l3_virtual_networks, {}) : {}
 
   virtual_network_name = each.key
-
-  lifecycle {
-    ignore_changes = [
-      fabric_ids
-    ]
-  }
+  merge_fabric_sites   = try(local.defaults.catalyst_center.fabric.l3_virtual_networks.merge_fabric_sites, false)
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
 }
