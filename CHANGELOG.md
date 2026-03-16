@@ -2,6 +2,8 @@
 
 **New Features:**
 - Add option to control whether fabric site assignments are merged or replaced when managing L3 virtual networks across multiple fabric sites
+- Add AP Profile support with `catalystcenter_ap_profile` resource for managing Access Point profiles including management settings (802.1X, SSH, Telnet, CDP), AWIPS, rogue detection, mesh networking, power profiles, and client limits
+- Add Wireless Profile Site Tag support with `catalystcenter_wireless_profile_site_tag` resource for attaching AP profiles to wireless network profiles per site via site tags
 
 ## 0.4.1
 
