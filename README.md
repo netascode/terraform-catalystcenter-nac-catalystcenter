@@ -73,6 +73,7 @@ module "catalystcenter" {
 | [catalystcenter_anycast_gateway.anycast_gateway_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateway) | resource |
 | [catalystcenter_anycast_gateways.anycast_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateways) | resource |
 | [catalystcenter_anycast_gateways.anycast_gateways_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateways) | resource |
+| [catalystcenter_ap_profile.ap_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ap_profile) | resource |
 | [catalystcenter_apply_pending_fabric_events.fabric_pending_events](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_pending_fabric_events) | resource |
 | [catalystcenter_area.area_0](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_1](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
@@ -172,6 +173,7 @@ module "catalystcenter" {
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
 | [catalystcenter_wireless_interface.interface](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_interface) | resource |
 | [catalystcenter_wireless_profile.wireless_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile) | resource |
+| [catalystcenter_wireless_profile_site_tag.site_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile_site_tag) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
