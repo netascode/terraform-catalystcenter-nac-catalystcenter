@@ -12,6 +12,8 @@ defaults:
       wireless:
         ssid_details:
           interface_name: management
+        site_tags:
+          flex_profile_name: default-flex-profile
     templates:
       force_push_template: true
       description: ""
@@ -84,6 +86,24 @@ defaults:
     wireless:
       rf_profiles:
         default_rf_profile: false
+      ap_profiles:
+        remote_worker_enabled: false
+        auth_type: NO-AUTH
+        ssh_enabled: false
+        telnet_enabled: false
+        cdp_state: false
+        awips_enabled: false
+        awips_forensic_enabled: false
+        rogue_detection: false
+        rogue_detection_min_rssi: -90
+        rogue_detection_transient_interval: 0
+        rogue_detection_report_interval: 10
+        pmf_denial_enabled: false
+        mesh_enabled: false
+        time_zone: Not Configured
+        time_zone_offset_hour: 0
+        time_zone_offset_minutes: 0
+        client_limit: 0
       enterprise_ssids:
         basic_service_set_client_idle_timeout: 300
         client_exclusion_timeout: 180
