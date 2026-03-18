@@ -175,6 +175,26 @@ resource "terraform_data" "bulk_site_provisioning_validation" {
   }
 }
 
+resource "catalystcenter_update_device_management_address" "management_ip" {
+  for_each = {
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device
+    if try(device.device_ip, null) != null
+    && try(device.type, null) != "AccessPoint"
+    && contains(local.sites, try(device.site, "NONE"))
+    && (
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null
+    )
+    && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
+  }
+
+  device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null)
+  )
+  new_ip = each.value.device_ip
+}
+
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
   for_each = local.assigned_devices_map
 
