@@ -938,9 +938,7 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
     for policy in local.extranet_policies : policy.policy_key => policy
     if try(policy.name, null) != null &&
     try(policy.provider_virtual_network_name, null) != null &&
-    length(try(policy.subscriber_virtual_network_names, [])) > 0 &&
-    (var.manage_global_settings || (!var.manage_global_settings &&
-    length(var.managed_sites) == 0))
+    length(try(policy.subscriber_virtual_network_names, [])) > 0 && (!var.manage_global_settings && length(var.managed_sites) == 0)
   }
 
   extranet_policy_name             = each.value.name
