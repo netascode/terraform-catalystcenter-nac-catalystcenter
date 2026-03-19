@@ -244,6 +244,12 @@ resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
   virtual_network_name = each.key
   merge_fabric_sites   = try(local.defaults.catalyst_center.fabric.l3_virtual_networks.merge_fabric_sites, false)
 
+  lifecycle {
+    ignore_changes = [
+      fabric_ids
+    ]
+  }
+
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
 }
 
