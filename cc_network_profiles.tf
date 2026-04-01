@@ -3,17 +3,17 @@ locals {
     for profile in try(local.catalyst_center.network_profiles.switching, {}) : profile.name => {
       "templates" : [{
         "type" : "cli.templates"
-        "attributes" : [for template_name in try(profile.dayn_templates, []) :
+        "attributes" : [for template in try(profile.dayn_templates, []) :
           {
-            "template_id" : try(catalystcenter_template.regular_template[template_name].id, catalystcenter_template.composite_template[template_name].id, null)
+            "template_id" : try(catalystcenter_template.regular_template["${template.project_name}#${template.name}"].id, catalystcenter_template.composite_template["${template.project_name}#${template.name}"].id, catalystcenter_template.regular_template[local.template_name_to_key[try(template.name, template)]].id, catalystcenter_template.composite_template[local.template_name_to_key[try(template.name, template)]].id, null)
           }
         ]
         },
         {
           "type" : "day0.templates"
-          "attributes" : [for template_name in try(profile.onboarding_templates, []) :
+          "attributes" : [for template in try(profile.onboarding_templates, []) :
             {
-              "template_id" : try(catalystcenter_template.regular_template[template_name].id, catalystcenter_template.composite_template[template_name].id, null)
+              "template_id" : try(catalystcenter_template.regular_template["${template.project_name}#${template.name}"].id, catalystcenter_template.composite_template["${template.project_name}#${template.name}"].id, catalystcenter_template.regular_template[local.template_name_to_key[try(template.name, template)]].id, catalystcenter_template.composite_template[local.template_name_to_key[try(template.name, template)]].id, null)
             }
           ]
       }]
