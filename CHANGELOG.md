@@ -2,7 +2,8 @@
 
 **New Features:**
 - Add option to control whether fabric site assignments are merged or replaced when managing L3 virtual networks across multiple fabric sites
-- Add AP Profile support with `catalystcenter_ap_profile` resource for managing Access Point profiles including management settings (802.1X, SSH, Telnet, CDP), AWIPS, rogue detection, mesh networking, power profiles, and client limits
+- Add `catalystcenter_power_profile` resource for AP power profiles from `catalyst_center.wireless.power_profiles` (rules, description); `catalystcenter_ap_profile` and `catalystcenter_wireless_profile` depend on it when present
+- Add AP Profile support with `catalystcenter_ap_profile` resource for managing Access Point profiles including management settings (802.1X, SSH, Telnet, CDP), AWIPS, rogue detection, mesh networking, power profiles, and client limits; NaC data model uses `power_profile` for the always-on profile and `power_profile` on each `calendar_power_profiles` row for scheduled profiles
 - Add Wireless Profile Site Tag support with `catalystcenter_wireless_profile_site_tag` resource for attaching AP profiles to wireless network profiles per site via site tags
 - Add support for updating device management IP address via `catalystcenter_update_device_management_address` resource when `device_ip` in data model differs from current Catalyst Center management IP
 
