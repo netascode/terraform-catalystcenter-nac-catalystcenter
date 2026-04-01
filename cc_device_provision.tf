@@ -271,8 +271,8 @@ resource "catalystcenter_provision_devices" "provision_devices" {
         try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
         try(lookup(local.device_ip_to_id, device.device_ip, null), null)
       )
-      site_id     = coalesce(local.site_id_list_bulk[device.site], local.data_source_created_sites_list[device.site])
-      reprovision = try(device.state, null) == "REPROVISION" ? true : false
+      site_id         = coalesce(local.site_id_list_bulk[device.site], local.data_source_created_sites_list[device.site])
+      reprovision     = try(device.state, null) == "REPROVISION" ? true : false
       clean_up_config = try(device.clean_up_config, true)
     }
     if(
