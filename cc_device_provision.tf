@@ -17,7 +17,7 @@ locals {
       {
         dayn_templates_map = merge(
           {
-            for template in try(device.dayn_templates.regular, []) : template.name => {
+            for template in try(device.dayn_templates.regular, []) : try("${template.project_name}#${template.name}", template.name) => {
               name                = try(template.name, null)
               variables           = try(template.variables, [])
               copying_config      = try(template.copying_config, null)
@@ -25,7 +25,7 @@ locals {
             }
           },
           {
-            for template in try(device.dayn_templates.composite, []) : template.name => {
+            for template in try(device.dayn_templates.composite, []) : try("${template.project_name}#${template.name}", template.name) => {
               name                = try(template.name, null)
               variables           = try(template.variables, [])
               copying_config      = try(template.copying_config, null)
