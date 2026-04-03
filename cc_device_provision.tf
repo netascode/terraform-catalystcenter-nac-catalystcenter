@@ -273,7 +273,7 @@ resource "catalystcenter_provision_devices" "provision_devices" {
       )
       site_id         = coalesce(local.site_id_list_bulk[device.site], local.data_source_created_sites_list[device.site])
       reprovision     = try(device.state, null) == "REPROVISION" ? true : false
-      clean_up_config = try(each.value.clean_up_config, null)
+      clean_up_config = try(device.clean_up_config, null)
     }
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
