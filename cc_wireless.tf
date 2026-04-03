@@ -50,6 +50,19 @@ data "catalystcenter_dot11be_profile" "dot11be_profile" {
   profile_name = each.key
 }
 
+resource "catalystcenter_power_profile" "power_profile" {
+  for_each = { for profile in try(local.catalyst_center.wireless.power_profiles, []) : profile.name => profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+
+  profile_name = each.key
+  description  = try(each.value.description, local.defaults.catalyst_center.wireless.power_profiles.description, null)
+  rules = [for rule in try(each.value.rules, []) : {
+    interface_type  = rule.interface_type
+    interface_id    = rule.interface_id
+    parameter_type  = rule.parameter_type
+    parameter_value = rule.parameter_value
+  }]
+}
+
 # Create AP Profiles from YAML configuration
 resource "catalystcenter_ap_profile" "ap_profile" {
   for_each = { for profile in try(local.catalyst_center.wireless.ap_profiles, []) : profile.name => profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
@@ -92,16 +105,19 @@ resource "catalystcenter_ap_profile" "ap_profile" {
   ghz24_backhaul_data_rates = try(each.value.ghz24_backhaul_data_rates, local.defaults.catalyst_center.wireless.ap_profiles.ghz24_backhaul_data_rates, null)
   rap_downlink_backhaul     = try(each.value.rap_downlink_backhaul, local.defaults.catalyst_center.wireless.ap_profiles.rap_downlink_backhaul, null)
 
-  # Power profile settings
-  ap_power_profile_name = try(each.value.ap_power_profile_name, local.defaults.catalyst_center.wireless.ap_profiles.ap_power_profile_name, null)
-  calendar_power_profiles = try([for cpp in each.value.calendar_power_profiles : {
-    power_profile_name   = cpp.power_profile_name
+  # Power profile (NaC data model: power_profile only; maps to provider ap_power_profile_name / nested power_profile_name)
+  ap_power_profile_name = try(coalesce(
+    try(each.value.power_profile, null),
+    try(local.defaults.catalyst_center.wireless.ap_profiles.power_profile, null),
+  ), null)
+  calendar_power_profiles = length(try(each.value.calendar_power_profiles, [])) > 0 ? [for cpp in try(each.value.calendar_power_profiles, []) : {
+    power_profile_name   = try(cpp.power_profile, null)
     scheduler_type       = cpp.scheduler_type
     scheduler_start_time = cpp.scheduler_start_time
     scheduler_end_time   = cpp.scheduler_end_time
     scheduler_day        = try(cpp.scheduler_day, null)
     scheduler_date       = try(cpp.scheduler_date, null)
-  }], null)
+  }] : null
 
   # Country and timezone settings
   country_code             = try(each.value.country_code, local.defaults.catalyst_center.wireless.ap_profiles.country_code, null)
@@ -111,6 +127,8 @@ resource "catalystcenter_ap_profile" "ap_profile" {
 
   # Client limit
   client_limit = try(each.value.client_limit, local.defaults.catalyst_center.wireless.ap_profiles.client_limit, null)
+
+  depends_on = [catalystcenter_power_profile.power_profile]
 }
 
 data "catalystcenter_wireless_profile" "wireless_profile" {
@@ -340,7 +358,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
   }], null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
