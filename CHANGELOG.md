@@ -6,6 +6,9 @@
 - Add Wireless Profile Site Tag support with `catalystcenter_wireless_profile_site_tag` resource for attaching AP profiles to wireless network profiles per site via site tags
 - Add support for updating device management IP address via `catalystcenter_update_device_management_address` resource when `device_ip` in data model differs from current Catalyst Center management IP
 
+**Improvements:**
+- Add support for skipping configuration cleanup during delete to remove unreachable provisioned devices from inventory
+
 ## 0.4.1
 
 **New Features:**
