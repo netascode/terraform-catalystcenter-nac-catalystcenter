@@ -104,8 +104,6 @@ defaults:
         time_zone_offset_hour: 0
         time_zone_offset_minutes: 0
         client_limit: 0
-      power_profiles:
-        description: ""
       enterprise_ssids:
         basic_service_set_client_idle_timeout: 300
         client_exclusion_timeout: 180
