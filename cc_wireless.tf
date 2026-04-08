@@ -13,6 +13,11 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
 
+  short_hostname_to_fqdn = try({
+    for device in data.catalystcenter_network_devices.all_devices.devices : split(".", device.hostname)[0] => device.hostname
+    if device.hostname != null && strcontains(device.hostname, ".")
+  }, {})
+
   # All dot11be profile names referenced in ssid_details
   dot11be_profile_names_referenced = distinct(flatten([
     for np in try(local.catalyst_center.network_profiles.wireless, []) : [
@@ -60,6 +65,22 @@ resource "catalystcenter_power_profile" "power_profile" {
     interface_id    = rule.interface_id
     parameter_type  = rule.parameter_type
     parameter_value = rule.parameter_value
+  }]
+}
+
+resource "catalystcenter_anchor_group" "anchor_group" {
+  for_each = { for ag in try(local.catalyst_center.wireless.anchor_groups, []) : ag.name => ag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+
+  anchor_group_name = each.key
+  mobility_anchors = [for anchor in each.value.mobility_anchors : {
+    device_name         = try(local.short_hostname_to_fqdn[anchor.device_name], anchor.device_name)
+    ip_address          = anchor.ip_address
+    anchor_priority     = anchor.anchor_priority
+    managed_anchor_wlc  = anchor.managed_anchor_wlc
+    peer_device_type    = try(anchor.peer_device_type, null)
+    mac_address         = try(anchor.mac_address, null)
+    mobility_group_name = try(anchor.mobility_group_name, null)
+    private_ip          = try(anchor.private_ip, null)
   }]
 }
 
