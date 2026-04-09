@@ -69,7 +69,7 @@ resource "catalystcenter_power_profile" "power_profile" {
 }
 
 resource "catalystcenter_anchor_group" "anchor_group" {
-  for_each = { for ag in try(local.catalyst_center.wireless.anchor_groups, []) : ag.name => ag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for anchor_group in try(local.catalyst_center.wireless.anchor_groups, []) : anchor_group.name => anchor_group if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   anchor_group_name = each.key
   mobility_anchors = [for anchor in each.value.mobility_anchors : {
@@ -371,6 +371,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
       data.catalystcenter_dot11be_profile.dot11be_profile[ssid.dot11be_profile_name].id,
       null
     ) : null
+    anchor_group_name = try(ssid.anchor_group_name, local.defaults.catalyst_center.network_profiles.wireless.ssid_details.anchor_group_name, null)
   }], null)
   additional_interfaces = try(each.value.additional_interfaces, null)
   ap_zones = try([for ap_zone in each.value.ap_zones : {
@@ -379,7 +380,7 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
   }], null)
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile, catalystcenter_anchor_group.anchor_group]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
