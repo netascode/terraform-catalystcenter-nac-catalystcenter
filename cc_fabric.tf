@@ -894,8 +894,8 @@ resource "catalystcenter_fabric_multicast_virtual_networks" "multicast" {
       ipv4_ssm_ranges      = try(vn.ipv4_ssm_ranges, [])
       multicast_rps = [
         for rp in try(vn.multicast_rps, []) : {
-          ipv4_address       = try(rp.ipv4_address, null)
-          ipv6_address       = try(rp.ipv6_address, null)
+          ipv4_address       = try(rp.rp_location, "") != "FABRIC" ? try(rp.ipv4_address, null) : null
+          ipv6_address       = try(rp.rp_location, "") != "FABRIC" ? try(rp.ipv6_address, null) : null
           ipv4_asm_ranges    = try(rp.ipv4_asm_ranges, [])
           ipv6_asm_ranges    = try(rp.ipv6_asm_ranges, [])
           is_default_v4_rp   = try(rp.is_default_v4_rp, null)
