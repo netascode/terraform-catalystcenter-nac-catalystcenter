@@ -256,7 +256,7 @@ resource "catalystcenter_provision_device" "provision_device" {
   site_id           = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
   network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
   reprovision       = try(each.value.state, null) == "REPROVISION" ? true : false
-  clean_up_config   = try(each.value.clean_up_config, null)
+  clean_up_config   = try(each.value.clean_up_config, local.defaults.catalyst_center.inventory.devices.clean_up_config, null)
   depends_on        = [catalystcenter_device_role.role, catalystcenter_assign_device_to_site.devices_to_site]
 }
 
@@ -273,7 +273,7 @@ resource "catalystcenter_provision_devices" "provision_devices" {
       )
       site_id         = coalesce(local.site_id_list_bulk[device.site], local.data_source_created_sites_list[device.site])
       reprovision     = try(device.state, null) == "REPROVISION" ? true : false
-      clean_up_config = try(device.clean_up_config, null)
+      clean_up_config = try(device.clean_up_config, local.defaults.catalyst_center.inventory.devices.clean_up_config, null)
     }
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
