@@ -38,11 +38,11 @@ locals {
   }
 
   provisioned_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.site, "NONE"))
+    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(device.primary_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.site, "NONE"))
   ]
 
   all_provisioned_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.primary_managed_ap_locations, null) == null
+    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(device.primary_managed_ap_locations, null) == null
   ]
 
   provisioned_devices_filtered = [
@@ -110,7 +110,7 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
-    }... if(d.state == "ASSIGN" || (strcontains(d.state, "PROVISION"))) && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
+    }... if(strcontains(d.state, "PROVISION") || d.state == "ASSIGN" || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
@@ -124,7 +124,7 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = d.device_ip
-    }... if strcontains(d.state, "PROVISION") && try(d.primary_managed_ap_locations, null) != null && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
+    }... if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && try(d.primary_managed_ap_locations, null) != null && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
@@ -140,7 +140,7 @@ locals {
   missing_devices = [
     for device in try(local.catalyst_center.inventory.devices, []) :
     device
-    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
+    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT")
     && try(device.type, null) != "AccessPoint"
     && lookup(local.device_name_to_id, device.name, null) == null
     && lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) == null
@@ -229,7 +229,7 @@ resource "catalystcenter_device_role" "role" {
   for_each = {
     for device in try(local.catalyst_center.inventory.devices, []) :
     device.name => device
-    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
+    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT")
     && contains(local.sites, try(device.site, "NONE"))
     && try(device.type, null) != "AccessPoint"
     && (
@@ -251,7 +251,7 @@ resource "catalystcenter_device_role" "role" {
 }
 
 resource "catalystcenter_provision_device" "provision_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && ((try(device.primary_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) || (try(device.primary_managed_ap_locations, null) != null && contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))) && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false && try(device.type, null) != "AccessPoint" }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && ((try(device.primary_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) || (try(device.primary_managed_ap_locations, null) != null && contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))) && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false && try(device.type, null) != "AccessPoint" }
 
   site_id           = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
   network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
@@ -302,7 +302,7 @@ resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || (try(device.primary_managed_ap_locations, null) != null) && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || (try(device.primary_managed_ap_locations, null) != null) && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) && contains(local.sites, try(device.site, "NONE")) }
 
   network_device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
@@ -315,7 +315,7 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
 }
 
 resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null) && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null) && contains(local.sites, try(device.site, "NONE")) }
 
   primary_managed_ap_locations_site_ids   = [for site in try(each.value.primary_managed_ap_locations, []) : try(local.site_id_list[each.value.primary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
   secondary_managed_ap_locations_site_ids = [for site in try(each.value.secondary_managed_ap_locations, []) : try(local.site_id_list[each.value.secondary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
@@ -335,7 +335,7 @@ resource "time_sleep" "wait_for_managed_ap_locations" {
 }
 locals {
   provisioned_access_points = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if strcontains(device.state, "PROVISION") && try(device.type, null) == "AccessPoint" && contains(local.sites, try(device.site, "NONE"))
+    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(device.type, null) == "AccessPoint" && contains(local.sites, try(device.site, "NONE"))
   ]
 
   provisioned_access_points_by_site = {

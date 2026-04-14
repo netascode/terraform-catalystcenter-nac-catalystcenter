@@ -118,7 +118,7 @@ locals {
         "device_ip"   = device.device_ip
         "fqdn_name"   = device.fqdn_name
       }
-    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
+    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT")
   ])
 
   devices_to_tag = [
@@ -343,7 +343,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if try(local.template_lookup[tmpl].composite, false) == false &&
     local.template_lookup[tmpl].template_type == "dayn" &&
-    length([for d in devices : d if strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id)
@@ -376,7 +376,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
           )
         }
       ]
-    } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions]
@@ -387,7 +387,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if try(local.template_lookup[tmpl].composite, false) == true &&
     local.template_lookup[tmpl].template_type == "dayn" &&
-    length([for d in devices : d if strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   redeploy            = try(local.template_lookup[each.key].redeploy_template, "NEVER")
@@ -427,7 +427,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
             }
           ]
         }
-      ] if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE"))
+      ] if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
     ])
     }
   ]
@@ -452,7 +452,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
           )
         }
       ]
-    } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]

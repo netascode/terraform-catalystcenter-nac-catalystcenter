@@ -10,7 +10,7 @@ locals {
   }
 
   wireless_controllers = length({
-    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if strcontains(device.state, "PROVISION") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
 
   # All dot11be profile names referenced in ssid_details

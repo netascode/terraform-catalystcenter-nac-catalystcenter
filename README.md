@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.8.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.7 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.8 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -108,6 +108,8 @@ module "catalystcenter" {
 | [catalystcenter_credentials_snmpv3.snmpv3_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/credentials_snmpv3) | resource |
 | [catalystcenter_deploy_template.composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.regular_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_device_replacement.mark](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement) | resource |
+| [catalystcenter_device_replacement_workflow.rma](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement_workflow) | resource |
 | [catalystcenter_device_role.role](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_role) | resource |
 | [catalystcenter_dhcp_settings.dhcp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dhcp_settings) | resource |
 | [catalystcenter_dhcp_settings.global_dhcp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dhcp_settings) | resource |
@@ -187,6 +189,7 @@ module "catalystcenter" {
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_anycast_gateways.created_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
+| [catalystcenter_device_detail.rma_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/device_detail) | data source |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l3_virtual_network) | data source |
 | [catalystcenter_fabric_sites.fabric_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_sites) | data source |
