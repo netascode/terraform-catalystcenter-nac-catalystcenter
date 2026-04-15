@@ -8,7 +8,7 @@ locals {
     try({ for name, cred in catalystcenter_credentials_cli.cli_credentials : name => cred.id }, {}),
     # SNMP v2 Read credentials
     try({ for name, cred in catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials : name => cred.id }, {}),
-    # SNMP v2 Write credentials  
+    # SNMP v2 Write credentials
     try({ for name, cred in catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials : name => cred.id }, {}),
     # SNMP v3 credentials
     try({ for name, cred in catalystcenter_credentials_snmpv3.snmpv3_credentials : name => cred.id }, {}),
@@ -48,6 +48,8 @@ resource "catalystcenter_discovery" "discovery" {
   snmp_version              = try(each.value.snmp_version, local.defaults.catalyst_center.inventory.discovery.snmp_version, null)
   timeout_seconds           = try(each.value.time_out, local.defaults.catalyst_center.inventory.discovery.time_out, null)
   user_name_list            = try(each.value.user_name_list, local.defaults.catalyst_center.inventory.discovery.user_name_list, null)
+  password_list             = try(each.value.password_list, local.defaults.catalyst_center.inventory.discovery.password_list, null)
+
 
   lifecycle {
     ignore_changes = [discovery_type]
