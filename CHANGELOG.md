@@ -9,6 +9,7 @@
 - Add `catalystcenter_power_profile` resource for AP power profiles from `catalyst_center.wireless.power_profiles` (rules, description); `catalystcenter_ap_profile` and `catalystcenter_wireless_profile` depend on it when present
 - Add `catalystcenter_anchor_group` resource for wireless anchor groups from `catalyst_center.wireless.anchor_groups`; supports managed and external anchors with up to 3 mobility anchors per group
 - Add `anchor_group_name` support in wireless profile `ssid_details` to link SSIDs to anchor groups for guest traffic tunneling
+- Add `vlan_group_name` support in wireless profile `ssid_details` for client VLAN load-balancing via WLC VLAN Groups (mutually exclusive with `interface_name`)
 - Add AP Profile support with `catalystcenter_ap_profile` resource for managing Access Point profiles including management settings (802.1X, SSH, Telnet, CDP), AWIPS, rogue detection, mesh networking, power profiles, and client limits; NaC data model uses `power_profile` for the always-on profile and `power_profile` on each `calendar_power_profiles` row for scheduled profiles
 - Add Wireless Profile Site Tag support with `catalystcenter_wireless_profile_site_tag` resource for attaching AP profiles to wireless network profiles per site via site tags
 - Add support for updating device management IP address via `catalystcenter_update_device_management_address` resource when `device_ip` in data model differs from current Catalyst Center management IP
