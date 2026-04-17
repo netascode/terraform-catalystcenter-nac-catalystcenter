@@ -115,7 +115,7 @@ locals {
       for tag in try(device.tags, []) : {
         "tag_name"    = tag,
         "device_name" = device.name
-        "device_ip"   = device.device_ip
+        "device_ip"   = try(device.device_ip, null)
         "fqdn_name"   = device.fqdn_name
       }
     ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT")

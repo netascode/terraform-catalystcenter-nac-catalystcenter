@@ -95,12 +95,12 @@ locals {
     d.site => {
       name      = d.name
       fqdn_name = d.fqdn_name
-      device_ip = d.device_ip
+      device_ip = try(d.device_ip, null)
     }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) != "AccessPoint"
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, d.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(d.device_ip, ""), null) != null
     )
   }
 
@@ -109,12 +109,12 @@ locals {
     d.site => {
       name      = d.name
       fqdn_name = d.fqdn_name
-      device_ip = d.device_ip
+      device_ip = try(d.device_ip, null)
     }... if(strcontains(d.state, "PROVISION") || d.state == "ASSIGN" || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, d.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(d.device_ip, ""), null) != null
     )
   }
 
@@ -123,12 +123,12 @@ locals {
     d.site => {
       name      = d.name
       fqdn_name = d.fqdn_name
-      device_ip = d.device_ip
+      device_ip = try(d.device_ip, null)
     }... if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && try(d.primary_managed_ap_locations, null) != null && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, d.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(d.device_ip, ""), null) != null
     )
   }
 }
@@ -144,10 +144,10 @@ locals {
     && try(device.type, null) != "AccessPoint"
     && lookup(local.device_name_to_id, device.name, null) == null
     && lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) == null
-    && lookup(local.device_ip_to_id, device.device_ip, null) == null
+    && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
   ]
 
-  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${d.device_ip}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
 }
 
 check "device_discovery_validation" {
@@ -192,7 +192,7 @@ resource "catalystcenter_update_device_management_address" "management_ip" {
     try(lookup(local.device_name_to_id, each.value.name, null), null),
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null)
   )
-  new_ip = each.value.device_ip
+  new_ip = try(each.value.device_ip, null)
 }
 
 resource "catalystcenter_assign_device_to_site" "devices_to_site" {
@@ -204,7 +204,7 @@ resource "catalystcenter_assign_device_to_site" "devices_to_site" {
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
       lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, device.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
     )
   ]
   site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
@@ -219,7 +219,7 @@ resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
       lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, device.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
     )
   ]
   site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
@@ -235,7 +235,7 @@ resource "catalystcenter_device_role" "role" {
     && (
       lookup(local.device_name_to_id, device.name, null) != null ||
       lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, device.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
     )
   }
 
@@ -278,7 +278,7 @@ resource "catalystcenter_provision_devices" "provision_devices" {
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
       lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, device.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
     )
   ]
 
@@ -294,7 +294,7 @@ resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
       lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, device.device_ip, null) != null
+      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
     )
   ]
 
