@@ -883,7 +883,7 @@ locals {
               rp_device_location = try(rp.rp_location, null)
               network_device_ids = try(rp.rp_location, "") == "FABRIC" ? [
                 for device_name in try(rp.fabric_rps, []) :
-                try(local.device_name_to_id[device_name], null)
+                try(local.device_name_to_id[device_name], local.device_name_to_id[local.name_to_fqdn_mapping[device_name]], null)
               ] : null
             }
           ]
