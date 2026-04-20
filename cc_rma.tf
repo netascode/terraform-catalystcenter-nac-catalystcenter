@@ -50,7 +50,7 @@ resource "catalystcenter_device_replacement_workflow" "rma" {
     && try(device.serial_number, null) != null
     && contains(local.sites, try(device.site, "NONE"))
     && try(data.catalystcenter_device_detail.rma_device[device.name].serial_number, null) != null
-    && device.serial_number != data.catalystcenter_device_detail.rma_device[device.name].serial_number
+    && try(device.serial_number, "") != try(data.catalystcenter_device_detail.rma_device[device.name].serial_number, "")
   }
 
   faulty_device_serial_number      = data.catalystcenter_device_detail.rma_device[each.key].serial_number

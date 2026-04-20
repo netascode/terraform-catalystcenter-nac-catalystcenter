@@ -905,7 +905,7 @@ resource "catalystcenter_fabric_multicast_virtual_networks" "multicast" {
     if contains(local.sites, fabric_site) && length(config.virtual_networks) > 0
   }
 
-  fabric_id = try(local.combined_fabric_id_list[each.key].id, null)
+  fabric_id = try(local.combined_fabric_id_list[each.key], null)
 
   virtual_networks = each.value.virtual_networks
 
