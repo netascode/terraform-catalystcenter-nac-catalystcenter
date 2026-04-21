@@ -799,6 +799,10 @@ resource "catalystcenter_fabric_l2_handoff" "l2_handoff_no_anycast" {
   external_vlan_id  = try(each.value.external_vlan_id, null)
 
   depends_on = [catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l2_virtual_network.l2_vn]
+
+  lifecycle {
+    ignore_changes = [internal_vlan_id]
+  }
 }
 
 # Resolve port assignment interfaces range to interfaces list
