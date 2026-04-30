@@ -424,6 +424,34 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
 }
 
+locals {
+  wireless_profile_policy_tags = merge([
+    for np in try(local.catalyst_center.network_profiles.wireless, []) : {
+      for tag in try(np.policy_tags, []) : "${np.name}/${tag.name}" => merge(tag, {
+        wireless_profile_name = np.name
+      })
+    }
+  ]...)
+}
+
+resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
+  for_each = {
+    for key, tag in local.wireless_profile_policy_tags : key => tag
+    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)])
+  }
+
+  wireless_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id)
+  policy_tag_name     = each.value.name
+  ap_zones            = try(toset(each.value.ap_zones), null)
+  site_ids = toset([
+    for site in each.value.sites :
+    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
+    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+  ])
+
+  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
+}
+
 resource "catalystcenter_wireless_interface" "interface" {
   for_each = { for iface in try(local.catalyst_center.wireless.interfaces, []) : iface.name => iface if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
