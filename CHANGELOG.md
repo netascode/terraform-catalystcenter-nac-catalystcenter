@@ -1,6 +1,7 @@
 ## 0.4.3 (unreleased)
 
 **Bug Fixes:**
+- Fix RMA workflow by switching from `catalystcenter_device_detail` to `catalystcenter_device_replacement` data source to correctly retrieve `faulty_device_serial_number`
 - Fix L2 Handoff resources being unnecessarily destroyed and recreated when removing an unrelated Anycast Gateway; `internal_vlan_id` is now ignored in lifecycle changes as it is immutable after creation in Catalyst Center
 
 **New Features:**
