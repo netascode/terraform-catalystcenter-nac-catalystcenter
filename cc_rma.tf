@@ -23,7 +23,13 @@ resource "catalystcenter_device_replacement" "mark" {
   for_each = {
     for device in try(local.catalyst_center.inventory.devices, []) :
     device.name => device
-    if device.state == "MARK_FOR_REPLACEMENT"
+    if (
+      device.state == "MARK_FOR_REPLACEMENT"
+      || (
+        strcontains(device.state, "PROVISION")
+        && try(data.catalystcenter_device_replacement.rma_device[device.name].faulty_device_serial_number, null) != null
+      )
+    )
     && contains(local.sites, try(device.site, "NONE"))
     && (
       lookup(local.device_name_to_id, device.name, null) != null ||
