@@ -23,7 +23,7 @@ resource "catalystcenter_device_replacement" "mark" {
   for_each = {
     for device in try(local.catalyst_center.inventory.devices, []) :
     device.name => device
-    if (
+    if(
       device.state == "MARK_FOR_REPLACEMENT"
       || (
         strcontains(device.state, "PROVISION")
