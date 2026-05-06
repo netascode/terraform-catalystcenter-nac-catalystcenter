@@ -937,6 +937,21 @@ resource "catalystcenter_fabric_multicast_replication_mode" "replication_mode" {
   ]
 }
 
+resource "catalystcenter_wireless_fabric_multicast" "wireless_multicast" {
+  for_each = {
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) :
+    fabric_site.name => try(fabric_site.multicast.wireless_multicast_enabled, null)
+    if try(fabric_site.multicast.wireless_multicast_enabled, null) != null && contains(local.sites, fabric_site.name)
+  }
+
+  fabric_id         = try(catalystcenter_fabric_site.fabric_site[each.key].id, null)
+  multicast_enabled = each.value
+
+  depends_on = [
+    catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_multicast_replication_mode.replication_mode, catalystcenter_fabric_ewlc.ewlc_device, catalystcenter_fabric_device.wireless_controller
+  ]
+}
+
 locals {
   extranet_policies = flatten([
     for policy in try(local.catalyst_center.fabric.extranet_policies, []) : {
