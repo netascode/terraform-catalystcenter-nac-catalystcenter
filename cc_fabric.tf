@@ -120,6 +120,16 @@ locals {
     for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) : vn.name => []
   }
 
+  anchored_vns = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for vn in try(fabric_site.anchored_vns, []) : {
+        name             = vn.name
+        fabric_site_name = fabric_site.name
+        anchor_site      = vn.anchor_site
+      }
+    ]
+  ])
+
   l3_virtual_networks_fabric_site_complete = {
     for vn in local.all_vn_names :
     vn => concat(
@@ -293,6 +303,16 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
   ], [])
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone]
+}
+
+resource "catalystcenter_fabric_l3_virtual_network" "anchored_vn" {
+  for_each = { for vn in local.anchored_vns : "${vn.name}#_#${vn.fabric_site_name}" => vn }
+
+  virtual_network_name = each.value.name
+  fabric_ids           = [try(local.combined_fabric_id_list[each.value.fabric_site_name], null)]
+  anchored_site_id     = try(local.combined_fabric_id_list[each.value.anchor_site], null)
+
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_l3_virtual_network.global_l3_vn]
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
