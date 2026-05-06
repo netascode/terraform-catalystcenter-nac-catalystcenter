@@ -110,10 +110,12 @@ locals {
   ])
 
   l3_virtual_networks = {
-    for key in keys(local.l3_virtual_networks_fabric_site_complete) : key => concat(
-      try(local.l3_virtual_networks_fabric_site[key], []),
-      try(local.l3_virtual_networks_fabric_zone[key], [])
-    )
+    for key in keys(local.l3_virtual_networks_fabric_site_complete) : key => [
+      for site in concat(
+        try(local.l3_virtual_networks_fabric_site[key], []),
+        try(local.l3_virtual_networks_fabric_zone[key], [])
+      ) : site if !contains(local.anchored_vn_site_keys, "${key}#_#${site}")
+    ]
   }
 
   global_l3_virtual_networks = {
@@ -128,6 +130,10 @@ locals {
         anchor_site      = vn.anchor_site
       }
     ]
+  ])
+
+  anchored_vn_site_keys = toset([
+    for vn in local.anchored_vns : "${vn.name}#_#${vn.fabric_site_name}"
   ])
 
   l3_virtual_networks_fabric_site_complete = {
