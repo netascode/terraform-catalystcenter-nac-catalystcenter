@@ -130,7 +130,6 @@ module "catalystcenter" {
 | [catalystcenter_fabric_l2_virtual_network.l2_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l2_virtual_network) | resource |
 | [catalystcenter_fabric_l3_handoff_ip_transits.l3_handoff_ip_transits](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_handoff_ip_transits) | resource |
 | [catalystcenter_fabric_l3_handoff_sda_transit.sda_transit](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_handoff_sda_transit) | resource |
-| [catalystcenter_fabric_l3_virtual_network.anchored_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_virtual_network) | resource |
 | [catalystcenter_fabric_l3_virtual_network.global_l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_virtual_network) | resource |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_l3_virtual_network) | resource |
 | [catalystcenter_fabric_multicast_replication_mode.replication_mode](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_multicast_replication_mode) | resource |
