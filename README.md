@@ -139,6 +139,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_vlan_to_ssid) | resource |
 | [catalystcenter_fabric_zone.fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_zone) | resource |
 | [catalystcenter_floor.floor](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floor) | resource |
+| [catalystcenter_floor_image.floor_image](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floor_image) | resource |
 | [catalystcenter_floors.bulk_floors](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/floors) | resource |
 | [catalystcenter_integrate_ise.ise](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/integrate_ise) | resource |
 | [catalystcenter_ip_pool.ip_pool_v4](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ip_pool) | resource |
