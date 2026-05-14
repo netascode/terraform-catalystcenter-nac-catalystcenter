@@ -201,6 +201,37 @@ resource "catalystcenter_floor_image" "floor_image" {
   depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors]
 }
 
+resource "catalystcenter_planned_access_point_position" "planned_ap" {
+  for_each = {
+    for ap in flatten([
+      for floor in try(local.catalyst_center.sites.floors, []) : [
+        for planned_ap in try(floor.planned_access_points, []) : merge(planned_ap, {
+          floor_key = "${floor.parent_name}/${floor.name}"
+        })
+      ]
+      if contains(local.sites, try("${floor.parent_name}/${floor.name}", ""))
+    ]) : "${ap.floor_key}/${ap.name}" => ap
+  }
+
+  floor_id    = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.value.floor_key], null), local.data_source_created_sites_list[each.value.floor_key]) : catalystcenter_floor.floor[each.value.floor_key].id
+  name        = each.value.name
+  ap_type     = each.value.ap_type
+  position_x  = each.value.position_x
+  position_y  = each.value.position_y
+  position_z  = try(each.value.position_z, null)
+  mac_address = try(each.value.mac_address, null)
+  radios = [for radio in try(each.value.radios, []) : {
+    bands             = try([radio.band], null)
+    channel           = try(radio.channel, null)
+    tx_power          = try(radio.tx_power, null)
+    antenna_name      = try(radio.antenna_name, null)
+    antenna_azimuth   = try(radio.antenna_azimuth, null)
+    antenna_elevation = try(radio.antenna_elevation, null)
+  }]
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors, catalystcenter_floor_image.floor_image]
+}
+
 locals {
   site_id_list = merge(
     { for k, v in catalystcenter_area.area_0 : k => v.id },
