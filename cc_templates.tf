@@ -118,7 +118,7 @@ locals {
         "device_ip"   = try(device.device_ip, null)
         "fqdn_name"   = device.fqdn_name
       }
-    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT")
+    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
   ])
 
   devices_to_tag = [
@@ -165,6 +165,15 @@ resource "catalystcenter_tag" "tag" {
   description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
   system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.templates.tags.sytem_tag, null)
   dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.templates.tags.dynamic_rules, null)
+}
+
+data "catalystcenter_tag" "device_tag" {
+  for_each = {
+    for t in try(local.devices_to_tag, []) : t.tag_name => t
+    if !var.manage_global_settings && length(var.managed_sites) > 0
+  }
+
+  name = each.key
 }
 
 data "catalystcenter_project" "onboarding" {
@@ -265,9 +274,12 @@ resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
 }
 
 resource "catalystcenter_assign_devices_to_tag" "device_to_tag" {
-  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if !var.manage_global_settings }
 
-  tag_id = catalystcenter_tag.tag[each.key].id
+  tag_id = try(
+    catalystcenter_tag.tag[each.key].id,
+    data.catalystcenter_tag.device_tag[each.key].id,
+  )
   device_ids = [
     for i in range(length(each.value.device_names)) : coalesce(
       try(local.device_name_to_id[each.value.device_names[i]], null),
