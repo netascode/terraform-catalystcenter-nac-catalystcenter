@@ -5,7 +5,9 @@
 - Fix L2 Handoff resources being unnecessarily destroyed and recreated when removing an unrelated Anycast Gateway; `internal_vlan_id` is now ignored in lifecycle changes as it is immutable after creation in Catalyst Center
 
 **New Features:**
-- Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites  
+- Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites
+- Add `catalystcenter_wireless_fabric_multicast` resource to enable or disable wireless multicast per fabric site via `multicast.wireless_multicast_enabled`; requires a fabric WLC and fabric-enabled SSID on the site
+- Add `catalystcenter_floor_image` resource to upload floor plan images (PNG, JPEG, PDF) for map visualization and RF planning; use `image_path` on floor definitions to specify the local file path
 
 ## 0.4.2
 

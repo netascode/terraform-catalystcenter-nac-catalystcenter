@@ -188,6 +188,19 @@ resource "catalystcenter_floor" "floor" {
   depends_on = [catalystcenter_building.building, catalystcenter_credentials_cli.cli_credentials, catalystcenter_credentials_https_read.https_read_credentials, catalystcenter_credentials_https_write.https_write_credentials, catalystcenter_credentials_snmpv3.snmpv3_credentials, catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials, catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials]
 }
 
+resource "catalystcenter_floor_image" "floor_image" {
+  for_each = {
+    for floor in try(local.catalyst_center.sites.floors, []) :
+    "${floor.parent_name}/${floor.name}" => floor
+    if try(floor.image_path, null) != null && contains(local.sites, try("${floor.parent_name}/${floor.name}", ""))
+  }
+
+  floor_id    = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk["${each.value.parent_name}/${each.value.name}"], null), local.data_source_created_sites_list["${each.value.parent_name}/${each.value.name}"]) : catalystcenter_floor.floor[each.key].id
+  source_path = each.value.image_path
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors]
+}
+
 locals {
   site_id_list = merge(
     { for k, v in catalystcenter_area.area_0 : k => v.id },
