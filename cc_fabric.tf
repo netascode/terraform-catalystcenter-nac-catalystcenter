@@ -121,14 +121,9 @@ locals {
   }
 
   anchored_vn_lookup = {
-    for entry in flatten([
-      for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
-        for vn in try(fabric_site.anchored_vns, []) : {
-          vn_name     = vn.name
-          anchor_site = vn.anchor_site
-        }
-      ]
-    ]) : entry.vn_name => entry.anchor_site
+    for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) :
+    vn.name => vn.anchor_site
+    if try(vn.anchor_site, null) != null
   }
 
   l3_virtual_networks_fabric_site_complete = {
