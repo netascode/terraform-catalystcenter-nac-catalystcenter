@@ -170,7 +170,7 @@ resource "catalystcenter_tag" "tag" {
 data "catalystcenter_tag" "device_tag" {
   for_each = {
     for t in try(local.devices_to_tag, []) : t.tag_name => t
-    if !var.manage_global_settings && length(var.managed_sites) > 0
+    if length(var.managed_sites) > 0
   }
 
   name = each.key
@@ -274,7 +274,7 @@ resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
 }
 
 resource "catalystcenter_assign_devices_to_tag" "device_to_tag" {
-  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if !var.manage_global_settings }
+  for_each = { for tag in try(local.devices_to_tag, []) : tag.tag_name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) || (!var.manage_global_settings && length(var.managed_sites) > 0) }
 
   tag_id = try(
     catalystcenter_tag.tag[each.key].id,
