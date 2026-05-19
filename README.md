@@ -206,6 +206,7 @@ module "catalystcenter" {
 | [catalystcenter_site.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/site) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
 | [catalystcenter_sites.created_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
+| [catalystcenter_tag.device_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/tag) | data source |
 | [catalystcenter_template.template](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template) | data source |
 | [catalystcenter_template_versions.template_versions](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template_versions) | data source |
 | [catalystcenter_transit_network.transit](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/transit_network) | data source |
