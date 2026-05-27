@@ -6,6 +6,8 @@
 - Fix L2 Handoff resources being unnecessarily destroyed and recreated when removing an unrelated Anycast Gateway; `internal_vlan_id` is now ignored in lifecycle changes as it is immutable after creation in Catalyst Center
 - Fix SDA multicast over transit being incorrectly enabled for `IP_BASED_TRANSIT` type; `is_multicast_over_transit_enabled` is now only set when transit type is `SDA_LISP_PUB_SUB_TRANSIT`
 - Fix issue with assigning devices to tag while using multi state
+- Allow assigning tags to devices without requiring the tag to also be declared under `catalyst_center.templates.tags`; tag names referenced by `catalyst_center.inventory.devices[].tags` (and by template `tags` lists) are now auto-created by the module. Declaring a tag under `templates.tags` is still supported and required when richer attributes (`description`, `system_tag`, `dynamic_rules`) are needed. Note: a referenced tag that already exists in Catalyst Center but is not managed by Terraform will still cause a create conflict; declare such tags explicitly to keep them out of the module-managed set in a future release
+- Fix permanent `system_tag = false -> null` drift on `catalystcenter_tag.tag` resources whose YAML entry omits `system_tag`; the module now defaults to `false` (the Catalyst Center default for user-defined tags) so the plan converges. A one-time `+ system_tag = false` update is expected on first apply for existing managed tags
 
 **New Features:**
 - Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites

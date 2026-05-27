@@ -130,6 +130,28 @@ locals {
     }
   ]
 
+  # Tags explicitly declared under catalyst_center.templates.tags, keyed by name.
+  # Preserves user-provided attributes (description, system_tag, dynamic_rules) so
+  # the auto-creation step below does not strip metadata for declared tags.
+  declared_tag_map = { for t in try(local.catalyst_center.templates.tags, []) : t.name => t }
+
+  # Tag names referenced anywhere in the data model: from inventory.devices[].tags
+  # and from any template's tags list. Used to auto-create the matching tag
+  # resource so a user can simply reference a tag on a device without also
+  # having to declare it under catalyst_center.templates.tags.
+  referenced_tag_names = distinct(concat(
+    flatten([for d in try(local.catalyst_center.inventory.devices, []) : try(d.tags, [])]),
+    [for t in local.tag_templates : t.tag_name],
+  ))
+
+  # Effective tag set the module manages: every declared tag (with full
+  # attributes) plus any referenced-but-undeclared tag synthesised as a bare
+  # { name = <name> } entry.
+  effective_tags = [
+    for name in distinct(concat(keys(local.declared_tag_map), local.referenced_tag_names)) :
+    try(local.declared_tag_map[name], { name = name })
+  ]
+
   combined_templates = flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
@@ -159,21 +181,22 @@ locals {
 }
 
 resource "catalystcenter_tag" "tag" {
-  for_each = { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for tag in local.effective_tags : tag.name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  name          = each.key
-  description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
-  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.templates.tags.sytem_tag, null)
+  name        = each.key
+  description = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
+  # Default to false (not null) so the config matches what Catalyst Center returns
+  # for user-defined tags; null causes a permanent "false -> null" drift on every plan.
+  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.templates.tags.system_tag, false)
   dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.templates.tags.dynamic_rules, null)
 }
 
 data "catalystcenter_tag" "device_tag" {
-  for_each = {
-    for t in try(local.devices_to_tag, []) : t.tag_name => t
-    if length(var.managed_sites) > 0
-  }
+  for_each = { for t in try(local.devices_to_tag, []) : t.tag_name => t }
 
   name = each.key
+
+  depends_on = [catalystcenter_tag.tag]
 }
 
 data "catalystcenter_project" "onboarding" {
