@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.13 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.14 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -152,6 +152,7 @@ module "catalystcenter" {
 | [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile_for_sites_assignments) | resource |
 | [catalystcenter_ntp_settings.global_ntp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ntp_settings) | resource |
 | [catalystcenter_ntp_settings.ntp_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ntp_settings) | resource |
+| [catalystcenter_planned_access_point_position.planned_ap](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/planned_access_point_position) | resource |
 | [catalystcenter_pnp_config_preview.config_preview](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_config_preview) | resource |
 | [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device) | resource |
 | [catalystcenter_pnp_device_claim_site.claim_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device_claim_site) | resource |
@@ -206,6 +207,7 @@ module "catalystcenter" {
 | [catalystcenter_site.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/site) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
 | [catalystcenter_sites.created_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
+| [catalystcenter_tag.device_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/tag) | data source |
 | [catalystcenter_template.template](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template) | data source |
 | [catalystcenter_template_versions.template_versions](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template_versions) | data source |
 | [catalystcenter_transit_network.transit](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/transit_network) | data source |

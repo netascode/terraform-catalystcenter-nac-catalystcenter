@@ -1,13 +1,18 @@
 ## 0.4.3 (unreleased)
 
 **Bug Fixes:**
+- Fix issue with provisioning WLC devices configured with only `secondary_managed_ap_locations`
 - Fix RMA workflow by switching from `catalystcenter_device_detail` to `catalystcenter_device_replacement` data source to correctly retrieve `faulty_device_serial_number`
 - Fix L2 Handoff resources being unnecessarily destroyed and recreated when removing an unrelated Anycast Gateway; `internal_vlan_id` is now ignored in lifecycle changes as it is immutable after creation in Catalyst Center
+- Fix SDA multicast over transit being incorrectly enabled for `IP_BASED_TRANSIT` type; `is_multicast_over_transit_enabled` is now only set when transit type is `SDA_LISP_PUB_SUB_TRANSIT`
+- Fix issue with assigning devices to tag while using multi state
 
 **New Features:**
 - Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites
 - Add `catalystcenter_wireless_fabric_multicast` resource to enable or disable wireless multicast per fabric site via `multicast.wireless_multicast_enabled`; requires a fabric WLC and fabric-enabled SSID on the site
 - Add `catalystcenter_floor_image` resource to upload floor plan images (PNG, JPEG, PDF) for map visualization and RF planning; use `image_path` on floor definitions to specify the local file path
+- Add `catalystcenter_planned_access_point_position` resource for Day 0 RF planning with virtual AP markers on floor maps; supports AP type, position coordinates, radio bands, channels, transmit power, and antenna configuration via `planned_access_points` on floor definitions
+- Add support for stacked switch provisioning via PnP using `top_of_stack_serial_number` and `cabling_scheme` attributes
 
 ## 0.4.2
 
