@@ -120,6 +120,12 @@ locals {
     for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) : vn.name => []
   }
 
+  anchored_vn_lookup = {
+    for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) :
+    vn.name => vn.anchor_site
+    if try(vn.anchor_site, null) != null
+  }
+
   l3_virtual_networks_fabric_site_complete = {
     for vn in local.all_vn_names :
     vn => concat(
@@ -291,6 +297,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
     for site in each.value : local.combined_fabric_id_list[site]
     if contains(keys(local.combined_fabric_id_list), site)
   ], [])
+  anchored_site_id = try(local.combined_fabric_id_list[local.anchored_vn_lookup[each.key]], null)
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone]
 }

@@ -13,6 +13,7 @@
 - Add `catalystcenter_floor_image` resource to upload floor plan images (PNG, JPEG, PDF) for map visualization and RF planning; use `image_path` on floor definitions to specify the local file path
 - Add `catalystcenter_planned_access_point_position` resource for Day 0 RF planning with virtual AP markers on floor maps; supports AP type, position coordinates, radio bands, channels, transmit power, and antenna configuration via `planned_access_points` on floor definitions
 - Add support for stacked switch provisioning via PnP using `top_of_stack_serial_number` and `cabling_scheme` attributes
+- Add VN Anchoring support on L3 virtual networks via the `anchor_site` attribute under `fabric.l3_virtual_networks`
 
 ## 0.4.2
 
