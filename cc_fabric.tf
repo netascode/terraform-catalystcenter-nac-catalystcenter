@@ -992,3 +992,47 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
 
   depends_on = [catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_l3_virtual_network.global_l3_vn]
 }
+
+locals {
+  flat_port_channels = merge([
+    for device in try(local.catalyst_center.inventory.devices, []) : {
+      for pc in try(device.port_channels, []) :
+      "${device.name}/${pc.id}" => {
+        device                = device.name
+        connected_device_type = try(pc.connected_device_type, local.defaults.catalyst_center.inventory.devices.port_channels.connected_device_type, null)
+        protocol              = try(pc.protocol, local.defaults.catalyst_center.inventory.devices.port_channels.protocol, null)
+        description           = try(pc.description, null)
+        interface_names       = try(pc.interface_names, [])
+        native_vlan_id        = try(pc.native_vlan_id, null)
+        allowed_vlan_ranges   = try(pc.allowed_vlan_ranges, null)
+        network_device_id = coalesce(
+          try(lookup(local.device_name_to_id, device.name, null), null),
+          try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+          try(lookup(local.device_ip_to_id, device.device_ip, null), null),
+          "NOT_FOUND"
+        )
+        fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
+      }
+      if length(try(pc.interface_names, [])) > 0
+    }
+    if try(device.port_channels, null) != null
+    && strcontains(try(device.state, ""), "PROVISION")
+    && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null
+    && contains(local.sites, try(device.fabric_site, "NONE"))
+  ]...)
+}
+
+resource "catalystcenter_fabric_port_channel" "port_channels" {
+  for_each = local.flat_port_channels
+
+  network_device_id     = each.value.network_device_id
+  fabric_id             = each.value.fabric_id
+  interface_names       = each.value.interface_names
+  connected_device_type = each.value.connected_device_type
+  protocol              = each.value.protocol
+  description           = each.value.description
+  native_vlan_id        = each.value.native_vlan_id
+  allowed_vlan_ranges   = each.value.allowed_vlan_ranges
+
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
+}
