@@ -17,6 +17,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   device_id                  = catalystcenter_pnp_device.pnp_device[each.key].id
   site_id                    = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
   type                       = length(split(",", each.value.serial_number)) > 1 ? "StackSwitch" : try(each.value.type, local.defaults.catalyst_center.pnp.devices.type, null)
+  hostname                   = each.value.name
   rf_profile                 = try(each.value.rf_profile, local.defaults.catalyst_center.pnp.devices.rf_profile, null)
   image_id                   = try(each.value.image_id, local.defaults.catalyst_center.pnp.devices.image_id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
   image_skip                 = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, null)
