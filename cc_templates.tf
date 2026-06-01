@@ -130,6 +130,37 @@ locals {
     }
   ]
 
+  # Combined tag definitions: union of templates.tags and inventory.tags keyed by name.
+  # Inventory tags allow defining device-only tags without coupling them to template structure.
+  combined_tags = merge(
+    { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag },
+    { for tag in try(local.catalyst_center.inventory.tags, []) : tag.name => tag },
+  )
+
+  # Distinct list of all tag names referenced by devices in the inventory.
+  device_referenced_tag_names = distinct([for t in try(local.devices_to_tag, []) : t.tag_name])
+
+  # Distinct list of all tag names referenced by templates.
+  template_referenced_tag_names = distinct([for t in try(local.templates_to_tag, []) : t.tag_name])
+
+  # Distinct list of all tag names referenced by either devices or templates.
+  referenced_tag_names = distinct(concat(local.device_referenced_tag_names, local.template_referenced_tag_names))
+
+  # Tags that need to be looked up via a data source instead of being created/updated:
+  # - In site-only multi-state runs (manage_global_settings=false AND managed_sites!=[]),
+  #   the catalystcenter_tag.tag resource is empty, so every device-referenced tag must be
+  #   resolved via the data source. Template tag assignments are gated to global runs and
+  #   do not apply here.
+  # - In global runs, fall back to the data source for any tag referenced by a device or a
+  #   template that is not declared in either templates.tags or inventory.tags (e.g. built-in
+  #   or pre-existing tags created outside Terraform).
+  unmanaged_referenced_tag_names = (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) ? [
+    for t_name in local.referenced_tag_names : t_name
+    if !contains(keys(local.combined_tags), t_name)
+    ] : [
+    for t_name in local.device_referenced_tag_names : t_name
+  ]
+
   combined_templates = flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
@@ -159,7 +190,7 @@ locals {
 }
 
 resource "catalystcenter_tag" "tag" {
-  for_each = { for tag in try(local.catalyst_center.templates.tags, []) : tag.name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for name, tag in local.combined_tags : name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   name          = each.key
   description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
@@ -168,10 +199,7 @@ resource "catalystcenter_tag" "tag" {
 }
 
 data "catalystcenter_tag" "device_tag" {
-  for_each = {
-    for t in try(local.devices_to_tag, []) : t.tag_name => t
-    if length(var.managed_sites) > 0
-  }
+  for_each = toset(local.unmanaged_referenced_tag_names)
 
   name = each.key
 }
@@ -269,7 +297,10 @@ resource "catalystcenter_template" "composite_template" {
 resource "catalystcenter_assign_templates_to_tag" "template_to_tag" {
   for_each = { for tag in try(local.templates_to_tag, []) : tag.tag_name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  tag_id       = catalystcenter_tag.tag[each.key].id
+  tag_id = try(
+    catalystcenter_tag.tag[each.key].id,
+    data.catalystcenter_tag.device_tag[each.key].id,
+  )
   template_ids = [for resource_key in each.value.resource_keys : try(catalystcenter_template.regular_template[resource_key].id, catalystcenter_template.composite_template[resource_key].id, null)]
 }
 

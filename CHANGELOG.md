@@ -8,6 +8,7 @@
 - Fix issue with assigning devices to tag while using multi state
 
 **New Features:**
+- Add `catalyst_center.inventory.tags` data model section to define device tags decoupled from the templates structure; both `inventory.tags` and `templates.tags` are merged when creating tag resources, and any tag referenced by a device (`inventory.devices.tags`) or template (`templates.projects.dayn_templates.tags`) that is not declared under either section is now resolved automatically via the Catalyst Center API (e.g. built-in tags such as `C9KV`)
 - Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites
 - Add `catalystcenter_wireless_fabric_multicast` resource to enable or disable wireless multicast per fabric site via `multicast.wireless_multicast_enabled`; requires a fabric WLC and fabric-enabled SSID on the site
 - Add `catalystcenter_floor_image` resource to upload floor plan images (PNG, JPEG, PDF) for map visualization and RF planning; use `image_path` on floor definitions to specify the local file path
