@@ -1006,18 +1006,20 @@ locals {
         native_vlan_id        = try(pc.native_vlan_id, null)
         allowed_vlan_ranges   = try(pc.allowed_vlan_ranges, null)
         network_device_id = coalesce(
-          try(lookup(local.device_name_to_id, device.name, null), null),
-          try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-          try(lookup(local.device_ip_to_id, device.device_ip, null), null),
-          "NOT_FOUND"
+          lookup(local.device_name_to_id, device.name, null),
+          lookup(local.device_name_to_id, try(device.fqdn_name, ""), null),
+          lookup(local.device_ip_to_id, try(device.device_ip, ""), null)
         )
-        fabric_id = try(local.fabric_zone_id_list[device.fabric_zone], local.fabric_site_id_list[device.fabric_site], null)
+        fabric_id = coalesce(
+          try(local.fabric_zone_id_list[device.fabric_zone], null),
+          try(local.fabric_site_id_list[device.fabric_site], null)
+        )
       }
       if length(try(pc.interface_names, [])) > 0
     }
     if try(device.port_channels, null) != null
     && strcontains(try(device.state, ""), "PROVISION")
-    && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null
+    && try(contains(device.fabric_roles, "EDGE_NODE"), false)
     && contains(local.sites, try(device.fabric_site, "NONE"))
   ]...)
 }
@@ -1033,6 +1035,13 @@ resource "catalystcenter_fabric_port_channel" "port_channels" {
   description           = each.value.description
   native_vlan_id        = each.value.native_vlan_id
   allowed_vlan_ranges   = each.value.allowed_vlan_ranges
+
+  lifecycle {
+    precondition {
+      condition     = each.value.network_device_id != null && each.value.fabric_id != null
+      error_message = "Cannot create port-channel '${each.key}': could not resolve network_device_id or fabric_id. Check the device's name/fqdn_name/device_ip and fabric_site/fabric_zone."
+    }
+  }
 
   depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
 }
