@@ -2,9 +2,11 @@ data "catalystcenter_images" "all_images" {
 }
 
 locals {
-  image_name_to_id = try({
-    for image in data.catalystcenter_images.all_images.images : image.name => image.id
-  }, {})
+  image_name_to_id = {
+    for name, images in {
+      for image in try(data.catalystcenter_images.all_images.images, []) : image.name => image...
+    } : name => images[0].id
+  }
 }
 
 resource "catalystcenter_pnp_device" "pnp_device" {
