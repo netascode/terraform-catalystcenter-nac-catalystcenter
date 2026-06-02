@@ -1001,10 +1001,10 @@ locals {
         device                = device.name
         connected_device_type = try(pc.connected_device_type, local.defaults.catalyst_center.inventory.devices.port_channels.connected_device_type, null)
         protocol              = try(pc.protocol, local.defaults.catalyst_center.inventory.devices.port_channels.protocol, null)
-        description           = try(pc.description, null)
-        interface_names       = try(pc.interface_names, [])
-        native_vlan_id        = try(pc.native_vlan_id, null)
-        allowed_vlan_ranges   = try(pc.allowed_vlan_ranges, null)
+        description           = try(pc.description, local.defaults.catalyst_center.inventory.devices.port_channels.description, null)
+        interface_names       = pc.interface_names
+        native_vlan_id        = try(pc.native_vlan_id, local.defaults.catalyst_center.inventory.devices.port_channels.native_vlan_id, null)
+        allowed_vlan_ranges   = try(pc.allowed_vlan_ranges, local.defaults.catalyst_center.inventory.devices.port_channels.allowed_vlan_ranges, null)
         network_device_id = coalesce(
           lookup(local.device_name_to_id, device.name, null),
           lookup(local.device_name_to_id, try(device.fqdn_name, ""), null),
