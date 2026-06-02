@@ -1024,7 +1024,7 @@ locals {
   ]...)
 }
 
-resource "catalystcenter_fabric_port_channel" "port_channels" {
+resource "catalystcenter_fabric_port_channel" "port_channel" {
   for_each = local.flat_port_channels
 
   network_device_id     = each.value.network_device_id

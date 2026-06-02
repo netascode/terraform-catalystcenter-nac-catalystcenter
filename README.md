@@ -135,7 +135,7 @@ module "catalystcenter" {
 | [catalystcenter_fabric_multicast_replication_mode.replication_mode](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_multicast_replication_mode) | resource |
 | [catalystcenter_fabric_multicast_virtual_networks.multicast](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_multicast_virtual_networks) | resource |
 | [catalystcenter_fabric_port_assignments.port_assignments](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_assignments) | resource |
-| [catalystcenter_fabric_port_channel.port_channels](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_channel) | resource |
+| [catalystcenter_fabric_port_channel.port_channel](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_port_channel) | resource |
 | [catalystcenter_fabric_site.fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_site) | resource |
 | [catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_vlan_to_ssid) | resource |
 | [catalystcenter_fabric_zone.fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_zone) | resource |
