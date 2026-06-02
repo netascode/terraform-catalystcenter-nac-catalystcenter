@@ -1,5 +1,8 @@
 ## 0.4.3 (unreleased)
 
+**New Features:**
+- Add PnP image upgrade support via `image_name` attribute; allows specifying the SWIM image by name instead of UUID, with automatic resolution to `image_id` using the `catalystcenter_images` data source (requires provider >= 0.5.15)
+
 **Bug Fixes:**
 - Fix issue with provisioning WLC devices configured with only `secondary_managed_ap_locations`
 - Fix RMA workflow by switching from `catalystcenter_device_detail` to `catalystcenter_device_replacement` data source to correctly retrieve `faulty_device_serial_number`
