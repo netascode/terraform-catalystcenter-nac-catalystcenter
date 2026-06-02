@@ -861,7 +861,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_port_assignments" "port_assignments" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(contains(device.fabric_roles, "EDGE_NODE"), false) && try(device.port_assignments, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
 
   fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   network_device_id = coalesce(
@@ -991,4 +991,57 @@ resource "catalystcenter_extranet_policy" "extranet_policy" {
   fabric_ids                       = try(each.value.fabric_ids, null) != null ? toset(compact(each.value.fabric_ids)) : null
 
   depends_on = [catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_fabric_l3_virtual_network.global_l3_vn]
+}
+
+locals {
+  flat_port_channels = merge([
+    for device in try(local.catalyst_center.inventory.devices, []) : {
+      for pc in try(device.port_channels, []) :
+      "${device.name}/${pc.id}" => {
+        device                = device.name
+        connected_device_type = try(pc.connected_device_type, local.defaults.catalyst_center.inventory.devices.port_channels.connected_device_type, null)
+        protocol              = try(pc.protocol, local.defaults.catalyst_center.inventory.devices.port_channels.protocol, null)
+        description           = try(pc.description, local.defaults.catalyst_center.inventory.devices.port_channels.description, null)
+        interface_names       = pc.interface_names
+        native_vlan_id        = try(pc.native_vlan_id, local.defaults.catalyst_center.inventory.devices.port_channels.native_vlan_id, null)
+        allowed_vlan_ranges   = try(pc.allowed_vlan_ranges, local.defaults.catalyst_center.inventory.devices.port_channels.allowed_vlan_ranges, null)
+        network_device_id = coalesce(
+          lookup(local.device_name_to_id, device.name, null),
+          lookup(local.device_name_to_id, try(device.fqdn_name, ""), null),
+          lookup(local.device_ip_to_id, try(device.device_ip, ""), null)
+        )
+        fabric_id = coalesce(
+          try(local.fabric_zone_id_list[device.fabric_zone], null),
+          try(local.fabric_site_id_list[device.fabric_site], null)
+        )
+      }
+      if length(try(pc.interface_names, [])) > 0
+    }
+    if try(device.port_channels, null) != null
+    && strcontains(try(device.state, ""), "PROVISION")
+    && try(contains(device.fabric_roles, "EDGE_NODE"), false)
+    && contains(local.sites, try(device.fabric_site, "NONE"))
+  ]...)
+}
+
+resource "catalystcenter_fabric_port_channel" "port_channel" {
+  for_each = local.flat_port_channels
+
+  network_device_id     = each.value.network_device_id
+  fabric_id             = each.value.fabric_id
+  interface_names       = each.value.interface_names
+  connected_device_type = each.value.connected_device_type
+  protocol              = each.value.protocol
+  description           = each.value.description
+  native_vlan_id        = each.value.native_vlan_id
+  allowed_vlan_ranges   = each.value.allowed_vlan_ranges
+
+  lifecycle {
+    precondition {
+      condition     = each.value.network_device_id != null && each.value.fabric_id != null
+      error_message = "Cannot create port-channel '${each.key}': could not resolve network_device_id or fabric_id. Check the device's name/fqdn_name/device_ip and fabric_site/fabric_zone."
+    }
+  }
+
+  depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
 }
