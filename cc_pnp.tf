@@ -4,7 +4,7 @@ data "catalystcenter_images" "all_images" {
 locals {
   image_name_to_id = {
     for name, images in {
-      for image in try(data.catalystcenter_images.all_images.images, []) : image.name => image...
+      for image in coalesce(data.catalystcenter_images.all_images.images, []) : image.name => image...
     } : name => images[0].id
   }
 }
