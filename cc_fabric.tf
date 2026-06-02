@@ -861,7 +861,7 @@ locals {
 }
 
 resource "catalystcenter_fabric_port_assignments" "port_assignments" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(contains(device.fabric_roles, "EDGE_NODE"), null) != null && try(device.port_assignments, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && try(contains(device.fabric_roles, "EDGE_NODE"), false) && try(device.port_assignments, null) != null && contains(local.sites, try(device.fabric_site, "NONE")) }
 
   fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   network_device_id = coalesce(
