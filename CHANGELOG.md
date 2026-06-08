@@ -10,7 +10,6 @@
 - Fix intermittent apply failures for `catalystcenter_fabric_port_assignments` on edge nodes inside a fabric zone when `use_bulk_api = true`; the resource now correctly waits for `fabric_devices_zone` and `anycast_gateways_zone` to be created first
 
 **New Features:**
-- Add PnP image upgrade support via `image_name` attribute; allows specifying the SWIM image by name instead of UUID, with automatic resolution to `image_id` using the `catalystcenter_images` data source (requires provider >= 0.5.16)
 - Add `catalyst_center.inventory.tags` data model section to define device tags decoupled from the templates structure; both `inventory.tags` and `templates.tags` are merged when creating tag resources, and any tag referenced by a device (`inventory.devices.tags`) or template (`templates.projects.dayn_templates.tags`) that is not declared under either section is now resolved automatically via the Catalyst Center API (e.g. built-in tags such as `C9KV`)
 - Add `catalystcenter_fabric_port_channel` resource to bundle physical interfaces on fabric edge nodes into a logical link, configured per device via `inventory.devices.port_channels`
 - Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites
@@ -19,7 +18,10 @@
 - Add `catalystcenter_planned_access_point_position` resource for Day 0 RF planning with virtual AP markers on floor maps; supports AP type, position coordinates, radio bands, channels, transmit power, and antenna configuration via `planned_access_points` on floor definitions
 - Add support for stacked switch provisioning via PnP using `top_of_stack_serial_number` and `cabling_scheme` attributes
 - Add VN Anchoring support on L3 virtual networks via the `anchor_site` attribute under `fabric.l3_virtual_networks`
-- Add `hostname` to PnP device claim (`catalystcenter_pnp_device_claim_site`), defaulting to the device's `name`. For Access Points, this value becomes the AP name shown in the Catalyst Center inventory
+
+**Improvements:**
+- Allow specifying the SWIM image by name (`image_name`) on PnP device claim instead of UUID; the module resolves the name to `image_id` automatically via the `catalystcenter_images` data source (requires provider >= 0.5.16)
+- Allow per-device `hostname` override on PnP device claim (`catalystcenter_pnp_device_claim_site`), defaulting to the device's `name`; for Access Points this value becomes the AP name shown in the Catalyst Center inventory
 
 ## 0.4.2
 
