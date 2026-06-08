@@ -27,6 +27,30 @@ content: |-
   {{ include "./examples/site/main.tf" }}
   ```
 
+  ## Applying Device Credentials to Devices
+
+  Credentials defined under `network_settings.device_credentials` are *assigned* to the site hierarchy by default. To additionally *apply* (sync) the assigned CLI, SNMPv2c and SNMPv3 credentials onto the network devices of the managed sites - the equivalent of the **Apply** action under `Design -> Network Settings -> Device Credentials -> Manage Credentials` - set `apply_to_devices: true`:
+
+  ```yaml
+  catalyst_center:
+    network_settings:
+      device_credentials:
+        apply_to_devices: true   # sync assigned credentials to devices (default: false)
+        configure_device: true   # configure credential on locally-authenticated devices (default: true)
+        cli_credentials:
+          - name: CLI_USER
+            username: cisco
+            password: Cisco123!
+  ```
+
+  Notes:
+
+  - Applying a credential at a site cascades to the devices of all child sites that inherit it; applying at `Global` therefore affects every device in the hierarchy.
+  - HTTPS read/write credentials cannot be applied to devices and are ignored by `apply_to_devices`.
+  - `configure_device` controls whether the CLI credential is pushed to and authenticated on locally-authenticated devices before they are managed in inventory; AAA-authenticated devices are only updated in inventory and are never reconfigured. It defaults to `true`.
+  - `apply_to_devices` requires provider `>= 0.5.17`. `configure_device` is honored by recent Catalyst Center releases (verified on 2.3.7.11); older releases ignore the parameter.
+  - A site must have at least one managed device for the apply to succeed; applying to a site with no devices returns an error from Catalyst Center.
+
   {{ .Requirements }}
   {{ .Inputs }}
   {{ .Outputs }}

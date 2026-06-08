@@ -21,6 +21,7 @@
 - Add support for stacked switch provisioning via PnP using `top_of_stack_serial_number` and `cabling_scheme` attributes
 - Add VN Anchoring support on L3 virtual networks via the `anchor_site` attribute under `fabric.l3_virtual_networks`
 - Add `hostname` to PnP device claim (`catalystcenter_pnp_device_claim_site`), defaulting to the device's `name`. For Access Points, this value becomes the AP name shown in the Catalyst Center inventory
+- Add device credential apply support via `network_settings.device_credentials.apply_to_devices` and `configure_device`; when `apply_to_devices` is `true` the module syncs the assigned CLI, SNMPv2c and SNMPv3 credentials onto the network devices of each managed site using the new `catalystcenter_apply_credentials` resource
 
 ## 0.4.2
 

@@ -120,6 +120,70 @@ data "catalystcenter_assign_credentials" "global_assign_credentials" {
   site_id = try(data.catalystcenter_site.global.id, null)
 }
 
+# Apply (sync) assigned credentials to the network devices of a site. Controlled by the
+# catalog-level network_settings.device_credentials.apply_to_devices toggle. The apply API
+# accepts a single credential ID per call and only supports CLI, SNMPv2c read/write and SNMPv3
+# credentials (HTTPS credentials cannot be applied/synced). Applying at a site cascades to the
+# devices of its child sites that inherit the credential.
+locals {
+  apply_credentials_to_devices       = try(local.catalyst_center.network_settings.device_credentials.apply_to_devices, local.defaults.catalyst_center.network_settings.device_credentials.apply_to_devices, false)
+  apply_credentials_configure_device = try(local.catalyst_center.network_settings.device_credentials.configure_device, local.defaults.catalyst_center.network_settings.device_credentials.configure_device, true)
+
+  # Credential types that can be applied to devices (HTTPS read/write are not supported by the apply API).
+  applicable_apply_credential_types = ["cli", "snmpv2_read", "snmpv2_write", "snmpv3"]
+
+  # One entry per (site, credential type) for the non-Global site assignments. The site condition
+  # mirrors the assign_credentials for_each so every apply entry has a matching assignment to read
+  # the credential ID from.
+  apply_credentials_map = local.apply_credentials_to_devices ? merge([
+    for site_key, creds in try(local.sites_to_creds_map, {}) : {
+      for cred_type in local.applicable_apply_credential_types :
+      "${site_key}/${cred_type}" => {
+        site_key  = site_key
+        cred_type = cred_type
+      }
+      if creds[cred_type] != null && (creds.cli != null || creds.snmpv3 != null || creds.https_read != null || creds.https_write != null) && contains(local.sites, site_key) && site_key != "Global"
+    }
+  ]...) : {}
+
+  # One entry per credential type for the Global assignment (same activation conditions as global_assign_credentials).
+  global_apply_credentials_map = local.apply_credentials_to_devices ? {
+    for cred_type in local.applicable_apply_credential_types :
+    cred_type => cred_type
+    if try(local.sites_to_creds_map["Global"][cred_type], null) != null && (try(local.sites_to_creds_map["Global"].cli, null) != null || try(local.sites_to_creds_map["Global"].snmpv3, null) != null || try(local.sites_to_creds_map["Global"].https_read, null) != null || try(local.sites_to_creds_map["Global"].https_write, null) != null) && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0))
+  } : {}
+}
+
+resource "catalystcenter_apply_credentials" "apply_credentials" {
+  for_each = local.apply_credentials_map
+
+  site_id = catalystcenter_assign_credentials.assign_credentials[each.value.site_key].site_id
+  device_credential_id = (
+    each.value.cred_type == "cli" ? catalystcenter_assign_credentials.assign_credentials[each.value.site_key].cli_id :
+    each.value.cred_type == "snmpv2_read" ? catalystcenter_assign_credentials.assign_credentials[each.value.site_key].snmp_v2_read_id :
+    each.value.cred_type == "snmpv2_write" ? catalystcenter_assign_credentials.assign_credentials[each.value.site_key].snmp_v2_write_id :
+    catalystcenter_assign_credentials.assign_credentials[each.value.site_key].snmp_v3_id
+  )
+  configure_device = local.apply_credentials_configure_device
+
+  depends_on = [catalystcenter_assign_credentials.assign_credentials]
+}
+
+resource "catalystcenter_apply_credentials" "global_apply_credentials" {
+  for_each = local.global_apply_credentials_map
+
+  site_id = catalystcenter_assign_credentials.global_assign_credentials["Global"].site_id
+  device_credential_id = (
+    each.value == "cli" ? catalystcenter_assign_credentials.global_assign_credentials["Global"].cli_id :
+    each.value == "snmpv2_read" ? catalystcenter_assign_credentials.global_assign_credentials["Global"].snmp_v2_read_id :
+    each.value == "snmpv2_write" ? catalystcenter_assign_credentials.global_assign_credentials["Global"].snmp_v2_write_id :
+    catalystcenter_assign_credentials.global_assign_credentials["Global"].snmp_v3_id
+  )
+  configure_device = local.apply_credentials_configure_device
+
+  depends_on = [catalystcenter_assign_credentials.global_assign_credentials]
+}
+
 # Network Settings
 
 locals {

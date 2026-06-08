@@ -33,12 +33,36 @@ module "catalystcenter" {
 }
 ```
 
+## Applying Device Credentials to Devices
+
+Credentials defined under `network_settings.device_credentials` are *assigned* to the site hierarchy by default. To additionally *apply* (sync) the assigned CLI, SNMPv2c and SNMPv3 credentials onto the network devices of the managed sites - the equivalent of the **Apply** action under `Design -> Network Settings -> Device Credentials -> Manage Credentials` - set `apply_to_devices: true`:
+
+```yaml
+catalyst_center:
+  network_settings:
+    device_credentials:
+      apply_to_devices: true   # sync assigned credentials to devices (default: false)
+      configure_device: true   # configure credential on locally-authenticated devices (default: true)
+      cli_credentials:
+        - name: CLI_USER
+          username: cisco
+          password: Cisco123!
+```
+
+Notes:
+
+- Applying a credential at a site cascades to the devices of all child sites that inherit it; applying at `Global` therefore affects every device in the hierarchy.
+- HTTPS read/write credentials cannot be applied to devices and are ignored by `apply_to_devices`.
+- `configure_device` controls whether the CLI credential is pushed to and authenticated on locally-authenticated devices before they are managed in inventory; AAA-authenticated devices are only updated in inventory and are never reconfigured. It defaults to `true`.
+- `apply_to_devices` requires provider `>= 0.5.17`. `configure_device` is honored by recent Catalyst Center releases (verified on 2.3.7.11); older releases ignore the parameter.
+- A site must have at least one managed device for the apply to succeed; applying to a site with no devices returns an error from Catalyst Center.
+
 ## Requirements
 
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.16 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.17 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -75,6 +99,8 @@ module "catalystcenter" {
 | [catalystcenter_anycast_gateways.anycast_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateways) | resource |
 | [catalystcenter_anycast_gateways.anycast_gateways_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateways) | resource |
 | [catalystcenter_ap_profile.ap_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ap_profile) | resource |
+| [catalystcenter_apply_credentials.apply_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_credentials) | resource |
+| [catalystcenter_apply_credentials.global_apply_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_credentials) | resource |
 | [catalystcenter_apply_pending_fabric_events.fabric_pending_events](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_pending_fabric_events) | resource |
 | [catalystcenter_area.area_0](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_1](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
