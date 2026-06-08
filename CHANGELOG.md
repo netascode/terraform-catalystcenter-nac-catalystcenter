@@ -1,8 +1,5 @@
 ## 0.4.3 (unreleased)
 
-**New Features:**
-- Add PnP image upgrade support via `image_name` attribute; allows specifying the SWIM image by name instead of UUID, with automatic resolution to `image_id` using the `catalystcenter_images` data source (requires provider >= 0.5.16)
-
 **Bug Fixes:**
 - Fix issue with provisioning WLC devices configured with only `secondary_managed_ap_locations`
 - Fix RMA workflow by switching from `catalystcenter_device_detail` to `catalystcenter_device_replacement` data source to correctly retrieve `faulty_device_serial_number`
@@ -10,8 +7,10 @@
 - Fix SDA multicast over transit being incorrectly enabled for `IP_BASED_TRANSIT` type; `is_multicast_over_transit_enabled` is now only set when transit type is `SDA_LISP_PUB_SUB_TRANSIT`
 - Fix issue with assigning devices to tag while using multi state
 - Fix `catalystcenter_fabric_port_assignments` incorrectly attempting to apply port assignments on border and control-plane nodes; only edge nodes are now processed
+- Fix intermittent apply failures for `catalystcenter_fabric_port_assignments` on edge nodes inside a fabric zone when `use_bulk_api = true`; the resource now correctly waits for `fabric_devices_zone` and `anycast_gateways_zone` to be created first
 
 **New Features:**
+- Add PnP image upgrade support via `image_name` attribute; allows specifying the SWIM image by name instead of UUID, with automatic resolution to `image_id` using the `catalystcenter_images` data source (requires provider >= 0.5.16)
 - Add `catalyst_center.inventory.tags` data model section to define device tags decoupled from the templates structure; both `inventory.tags` and `templates.tags` are merged when creating tag resources, and any tag referenced by a device (`inventory.devices.tags`) or template (`templates.projects.dayn_templates.tags`) that is not declared under either section is now resolved automatically via the Catalyst Center API (e.g. built-in tags such as `C9KV`)
 - Add `catalystcenter_fabric_port_channel` resource to bundle physical interfaces on fabric edge nodes into a logical link, configured per device via `inventory.devices.port_channels`
 - Add Wireless Profile Policy Tag support with `catalystcenter_wireless_profile_policy_tag` resource for controlling which AP Zones are active at specific sites
