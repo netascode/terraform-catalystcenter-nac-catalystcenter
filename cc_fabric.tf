@@ -58,6 +58,27 @@ locals {
     ]) : entry.zone_name => entry
   }
 
+  # Zone l2_virtual_networks is a list of L2 VN name strings referencing the parent
+  # site's l2_virtual_networks. Full config (vlan_id, vlan_name, traffic_type, ...)
+  # is looked up from the parent site so it stays aligned with the site-level VN
+  # (vlan_id must match per Catalyst Center API).
+  l2_virtual_networks_by_fabric_zone = flatten([
+    for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
+      for fabric_zone in try(fabric_site.fabric_zones, []) : [
+        for vn_name in try(fabric_zone.l2_virtual_networks, []) : merge(
+          one([
+            for vn in try(fabric_site.l2_virtual_networks, []) :
+            vn if vn.name == vn_name
+          ]),
+          {
+            "zone_name" : fabric_zone.name
+            "parent_site_name" : fabric_site.name
+          }
+        )
+      ]
+    ]
+  ])
+
   all_vn_names = [
     for vn in try(local.catalyst_center.fabric.l3_virtual_networks, []) :
     try(vn.name, vn)
@@ -313,6 +334,49 @@ resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
   associated_l3_virtual_network_name = try(each.value.associated_l3_virtual_network_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.associated_l3_virtual_network_name, null)
 
   depends_on = [catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
+}
+
+# Reads the parent site L2 VN to obtain its vlan_id when the data model does not set
+# one explicitly. Catalyst Center auto-assigns the vlan_id on the fabric site, and the
+# fabric-zone L2 VN create requires the matching vlan_id (otherwise it returns
+# NCHS20538 "Bad Request"). Only created for zone VNs whose parent definition omits
+# vlan_id; the resource attribute is not computed, hence the data source read.
+data "catalystcenter_fabric_l2_virtual_network" "l2_vn_zone_parent" {
+  for_each = {
+    for vn in try(local.l2_virtual_networks_by_fabric_zone, []) :
+    "${vn.name}#_#${vn.zone_name}" => vn
+    if contains(local.sites, vn.parent_site_name) && try(vn.vlan_id, null) == null
+  }
+
+  fabric_id = catalystcenter_fabric_site.fabric_site[each.value.parent_site_name].id
+  vlan_name = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)
+
+  depends_on = [catalystcenter_fabric_l2_virtual_network.l2_vn]
+}
+
+resource "catalystcenter_fabric_l2_virtual_network" "l2_vn_zone" {
+  for_each = {
+    for vn in try(local.l2_virtual_networks_by_fabric_zone, []) :
+    "${vn.name}#_#${vn.zone_name}" => vn
+    if contains(local.sites, vn.parent_site_name)
+  }
+
+  fabric_id = catalystcenter_fabric_zone.fabric_zone[each.value.zone_name].id
+  vlan_name = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_name, null)
+  # A zone L2 VN must carry the same vlan_id as its parent site L2 VN (NCHS20538).
+  # Prefer an explicit vlan_id from the data model, otherwise read the auto-assigned
+  # vlan_id from the parent site L2 VN so the fabric-zone create is not rejected.
+  vlan_id                            = try(each.value.vlan_id, data.catalystcenter_fabric_l2_virtual_network.l2_vn_zone_parent["${each.value.name}#_#${each.value.zone_name}"].vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.vlan_id, null)
+  traffic_type                       = try(each.value.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.traffic_type, null)
+  fabric_enabled_wireless            = try(each.value.fabric_enabled_wireless, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.fabric_enabled_wireless, null)
+  associated_l3_virtual_network_name = try(each.value.associated_l3_virtual_network_name, local.defaults.catalyst_center.fabric.fabric_sites.l2_virtual_networks.associated_l3_virtual_network_name, null)
+
+  depends_on = [
+    catalystcenter_fabric_zone.fabric_zone,
+    catalystcenter_fabric_l2_virtual_network.l2_vn,
+    catalystcenter_fabric_l3_virtual_network.l3_vn,
+    catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_zone,
+  ]
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway" {
