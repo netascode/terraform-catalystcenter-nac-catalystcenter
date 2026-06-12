@@ -109,6 +109,7 @@ module "catalystcenter" {
 | [catalystcenter_credentials_snmpv3.snmpv3_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/credentials_snmpv3) | resource |
 | [catalystcenter_deploy_template.composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.regular_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.unmanaged_composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_device_replacement.mark](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement) | resource |
 | [catalystcenter_device_replacement_workflow.rma](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement_workflow) | resource |
 | [catalystcenter_device_role.role](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_role) | resource |
@@ -208,12 +209,16 @@ module "catalystcenter" {
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_profile) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_project.project](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
+| [catalystcenter_project.unmanaged](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_site.global](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/site) | data source |
 | [catalystcenter_sites.all_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
 | [catalystcenter_sites.created_sites](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/sites) | data source |
 | [catalystcenter_tag.device_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/tag) | data source |
 | [catalystcenter_template.template](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template) | data source |
+| [catalystcenter_template.unmanaged](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template) | data source |
 | [catalystcenter_template_versions.template_versions](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template_versions) | data source |
+| [catalystcenter_template_versions.unmanaged](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template_versions) | data source |
+| [catalystcenter_template_versions.unmanaged_member](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/template_versions) | data source |
 | [catalystcenter_transit_network.transit](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/transit_network) | data source |
 | [catalystcenter_wireless_profile.wireless_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/wireless_profile) | data source |
 ## Modules
