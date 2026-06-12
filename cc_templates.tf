@@ -172,7 +172,7 @@ locals {
           "site"                = try(device.site, null),
           "device_ip"           = try(device.device_ip, null)
           "device_name"         = try(device.name, null)
-          "redeploy_template"   = try(template.redeploy_template, device.dayn_templates.redeploy_template, local.template_lookup[try("${template.project_name}#${template.name}", template.name)].redeploy_template, null)
+          "redeploy_template"   = try(template.redeploy_template, device.dayn_templates.redeploy_template, local.template_lookup_extended[try("${template.project_name}#${template.name}", template.name)].redeploy_template, null)
           "fqdn_name"           = try(device.fqdn_name, null)
           "copying_config"      = try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
           "force_push_template" = try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -187,6 +187,116 @@ locals {
       for d in local.combined_templates : d if d.template == tmpl
     ]
   }
+
+  # ---------------------------------------------------------------------------
+  # Built-in / pre-existing templates referenced from devices but NOT declared
+  # in the data model (templates.projects[].dayn_templates[] / onboarding_templates[]).
+  # The user opts in by writing the device-side template `name` as
+  # `<project>#<template>`. The module then looks up the existing template in
+  # Catalyst Center via data sources rather than expecting a managed
+  # `catalystcenter_template.regular_template` resource. Mirrors the
+  # unmanaged-tag pattern above. Covers both Day-N regular templates (deployed
+  # to PROVISION devices) and onboarding templates (consumed by PnP device claim).
+  # ---------------------------------------------------------------------------
+
+  # Distinct list of regular Day-N template keys referenced by any device.
+  # Built with the same key formula used everywhere else in the module so that
+  # `combined_templates.template` and `dayn_templates_map[<key>]` match.
+  device_referenced_dayn_template_keys = distinct(flatten([
+    for device in try(local.catalyst_center.inventory.devices, []) : [
+      for t in try(device.dayn_templates.regular, []) :
+      try("${t.project_name}#${t.name}", t.name)
+    ]
+  ]))
+
+  # Distinct list of composite Day-N template keys referenced by any device
+  # under `dayn_templates.composite[]`. The section a reference is written in is
+  # the user's declaration of composite-ness (same convention as managed
+  # templates), which keeps the deploy resources' for_each routing static.
+  device_referenced_composite_template_keys = distinct(flatten([
+    for device in try(local.catalyst_center.inventory.devices, []) : [
+      for t in try(device.dayn_templates.composite, []) :
+      try("${t.project_name}#${t.name}", t.name)
+    ]
+  ]))
+
+  # Distinct list of onboarding template keys referenced by any device via the
+  # singular `onboarding_template.name` (consumed by PnP device claim config_id).
+  device_referenced_onboarding_template_keys = distinct([
+    for device in try(local.catalyst_center.inventory.devices, []) :
+    try(device.onboarding_template.name, null)
+    if try(device.onboarding_template.name, null) != null
+  ])
+
+  # Union of all device-referenced template keys (Day-N regular + composite +
+  # onboarding). The project/template/version data sources used for resolution
+  # are kind-agnostic, so a single combined set drives them.
+  device_referenced_template_keys = distinct(concat(
+    local.device_referenced_dayn_template_keys,
+    local.device_referenced_composite_template_keys,
+    local.device_referenced_onboarding_template_keys,
+  ))
+
+  # Keys that the data model declares (both bare-name and project#name forms).
+  declared_template_keys = distinct(concat(
+    [for t in local.templates : t.resource_key],
+    [for t in local.templates : t.template_key],
+  ))
+
+  # Device-referenced keys that aren't declared. Require explicit `<proj>#<tpl>`
+  # form to keep the intent unambiguous and avoid silent fallthrough for
+  # typos / forgotten declarations.
+  unmanaged_referenced_template_keys = [
+    for k in local.device_referenced_template_keys : k
+    if !contains(local.declared_template_keys, k) && length(split("#", k)) == 2
+  ]
+
+  # Distinct project names referenced by unmanaged templates (left of `#`).
+  unmanaged_referenced_project_names = distinct([
+    for k in local.unmanaged_referenced_template_keys : split("#", k)[0]
+  ])
+
+  # Of the unmanaged keys, the subset referenced under `dayn_templates.composite[]`.
+  # These deploy through the dedicated `unmanaged_composite_template_deploy`
+  # resource (members + per-member params), the rest through
+  # `regular_template_deploy`. Routing is derived from the device section, not a
+  # data-source read, so all deploy for_each filters stay known at plan time.
+  unmanaged_composite_keys = [
+    for k in local.unmanaged_referenced_template_keys : k
+    if contains(local.device_referenced_composite_template_keys, k)
+  ]
+
+  # Member (containing) template UUIDs for each unmanaged composite, discovered
+  # from the composite's GET-by-id response (`containing_templates`). Used as the
+  # for_each of the member version data source so each member's latest committed
+  # version can be selected for `member_template_deployment_info`.
+  unmanaged_composite_member_ids = distinct(flatten([
+    for k in local.unmanaged_composite_keys : [
+      for m in try(data.catalystcenter_template.unmanaged[k].containing_templates, []) : m.id
+    ]
+  ]))
+
+  # Stub entries injected into `template_lookup` so existing for_each filters
+  # and field references (`composite`, `template_type`, `redeploy_template`,
+  # `force_push_template`) work uniformly for unmanaged templates without
+  # spreading `try()` wrappers throughout the file. `composite` is taken from the
+  # device section the key was referenced in (see `unmanaged_composite_keys`).
+  unmanaged_template_stubs = {
+    for k in local.unmanaged_referenced_template_keys : k => {
+      project_name        = split("#", k)[0]
+      template_name       = split("#", k)[1]
+      template_key        = k
+      resource_key        = k
+      composite           = contains(local.unmanaged_composite_keys, k)
+      template_type       = "dayn"
+      redeploy_template   = try(local.defaults.catalyst_center.templates.redeploy_template, "NEVER")
+      force_push_template = try(local.defaults.catalyst_center.templates.force_push_template, null)
+    }
+  }
+
+  # Extended lookup used by `combined_templates` and the deploy resources so
+  # both managed and unmanaged keys resolve through a single map.
+  template_lookup_extended = merge(local.template_lookup, local.unmanaged_template_stubs)
 }
 
 resource "catalystcenter_tag" "tag" {
@@ -225,6 +335,38 @@ data "catalystcenter_template_versions" "template_versions" {
   for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? { for template in try(local.project_templates, []) : template.template_key => template } : {}
 
   template_id = data.catalystcenter_template.template[each.key].id
+}
+
+# Resolve project IDs for built-in / pre-existing templates referenced from
+# devices via the `<project>#<template>` form but not declared in the data
+# model. Active in both global and site-only runs because devices in either
+# scope can reference unmanaged templates.
+data "catalystcenter_project" "unmanaged" {
+  for_each = toset(local.unmanaged_referenced_project_names)
+
+  name = each.key
+}
+
+data "catalystcenter_template" "unmanaged" {
+  for_each = toset(local.unmanaged_referenced_template_keys)
+
+  name       = split("#", each.key)[1]
+  project_id = data.catalystcenter_project.unmanaged[split("#", each.key)[0]].id
+}
+
+data "catalystcenter_template_versions" "unmanaged" {
+  for_each = toset(local.unmanaged_referenced_template_keys)
+
+  template_id = data.catalystcenter_template.unmanaged[each.key].id
+}
+
+# Versions of each member (containing) template of an unmanaged composite,
+# keyed by the member's base UUID. Drives member_template_deployment_info so
+# each member is deployed at its latest committed version.
+data "catalystcenter_template_versions" "unmanaged_member" {
+  for_each = toset(local.unmanaged_composite_member_ids)
+
+  template_id = each.key
 }
 
 resource "catalystcenter_project" "project" {
@@ -384,13 +526,13 @@ resource "catalystcenter_template_version" "composite_commit_version" {
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
   for_each = {
     for tmpl, devices in local.templates_by_device : tmpl => devices
-    if try(local.template_lookup[tmpl].composite, false) == false &&
-    local.template_lookup[tmpl].template_type == "dayn" &&
+    if try(local.template_lookup_extended[tmpl].composite, false) == false &&
+    try(local.template_lookup_extended[tmpl].template_type, null) == "dayn" &&
     length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
-  template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id)
-  redeploy            = try(local.template_lookup[each.key].redeploy_template, "NEVER")
+  template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
+  redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
   copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
@@ -403,8 +545,8 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
         try(lookup(local.device_ip_to_id, device.device_ip, null), null)
       )
       type                  = "MANAGED_DEVICE_UUID"
-      redeploy              = try(device.redeploy_template, local.template_lookup[each.key].redeploy_template, "NEVER")
-      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[device.template], device.template)].id)
+      redeploy              = try(device.redeploy_template, local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[device.template], device.template)].id, [for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
       params = try({
         for item in local.all_devices[device.name].dayn_templates_map[device.template].variables : item.name => try(tolist(item.value), [item.value])
       }, {})
@@ -499,4 +641,87 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]
+}
+
+# Deploy a built-in / pre-existing COMPOSITE template that is referenced from a
+# device under `dayn_templates.composite[]` via `<project>#<template>` but is not
+# declared in the data model. The composite definition and its members already
+# exist in Catalyst Center, so members + their latest committed versions are
+# discovered through data sources (no managed `composite_template` /
+# `regular_commit_version` resources). Per-member variables come from the
+# device's composite `variables[]`, matched on `template_name` == member name
+# (same convention as managed composites).
+resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" {
+  for_each = {
+    for tmpl, devices in local.templates_by_device : tmpl => devices
+    if contains(local.unmanaged_composite_keys, tmpl) &&
+    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+  }
+
+  redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  template_id         = try([for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
+  main_template_id    = data.catalystcenter_template.unmanaged[each.key].id
+  force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite        = true
+
+  member_template_deployment_info = [for m in try(data.catalystcenter_template.unmanaged[each.key].containing_templates, []) : {
+    template_id         = try([for v in data.catalystcenter_template_versions.unmanaged_member[m.id].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged_member[m.id].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], m.id)
+    main_template_id    = m.id
+    force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+    is_composite        = false
+    copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+    target_info = flatten([
+      for device in each.value : [
+        {
+          id = coalesce(
+            try(lookup(local.device_name_to_id, device.device_name, null), null),
+            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+          )
+          type = "MANAGED_DEVICE_UUID"
+
+          redeploy = try(device.redeploy_template, local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+
+          params = { for item in local.all_devices[device.name].dayn_templates_map[device.template].variables : item.name => try(tolist(item.value), [item.value]) if item.template_name == m.name }
+          resource_params = [
+            {
+              type  = "MANAGED_DEVICE_UUID"
+              scope = "RUNTIME"
+              value = coalesce(
+                try(lookup(local.device_name_to_id, device.device_name, null), null),
+                try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+              )
+            }
+          ]
+        }
+      ] if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    ])
+    }
+  ]
+
+  target_info = [
+    for device in each.value : {
+      id = coalesce(
+        try(lookup(local.device_name_to_id, device.device_name, null), null),
+        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+      )
+      type   = "MANAGED_DEVICE_UUID"
+      params = {}
+      resource_params = [
+        {
+          type  = "MANAGED_DEVICE_UUID"
+          scope = "RUNTIME"
+          value = coalesce(
+            try(lookup(local.device_name_to_id, device.device_name, null), null),
+            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+          )
+        }
+      ]
+    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+  ]
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member]
 }
