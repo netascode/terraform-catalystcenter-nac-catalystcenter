@@ -6,7 +6,7 @@ resource "catalystcenter_update_authentication_profile" "global_authentication_t
   dot1x_to_mab_fallback_timeout = try(each.value.dot1x_to_mab_fallback_timeout, local.defaults.catalyst_center.authentication_templates.dot1x_to_mab_fallback_timeout, null)
   wake_on_lan                   = try(each.value.wake_on_lan, local.defaults.catalyst_center.authentication_templates.wake_on_lan, null)
   number_of_hosts               = try(each.value.number_of_hosts, local.defaults.catalyst_center.authentication_templates.number_of_hosts, null)
-  is_bpdu_guard_enabled         = each.value.name == "Closed Authentication" ? try(each.value.bpdu_guard, local.defaults.catalyst_center.authentication_templates.bpdu_guard, null) : null
+  is_bpdu_guard_enabled         = null
   pre_auth_acl_enabled          = each.value.name == "Low Impact" ? try(each.value.pre_auth_acl.enabled, local.defaults.catalyst_center.authentication_templates.pre_auth_acl.enabled, null) : null
   pre_auth_acl_description      = each.value.name == "Low Impact" ? try(each.value.pre_auth_acl.description, local.defaults.catalyst_center.authentication_templates.pre_auth_acl.description, null) : null
   pre_auth_acl_implicit_action  = each.value.name == "Low Impact" ? try(each.value.pre_auth_acl.implicit_action, local.defaults.catalyst_center.authentication_templates.pre_auth_acl.implicit_action, null) : null
