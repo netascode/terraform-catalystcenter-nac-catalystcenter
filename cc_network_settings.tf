@@ -89,16 +89,80 @@ resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
   snmp_mode        = try(each.value.snmp_mode, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.snmp_mode, null)
 }
 
+
+locals {
+  _credentials_managed_externally = !var.manage_global_settings && length(var.managed_sites) > 0
+  external_cli_creds = local._credentials_managed_externally ? toset([
+    for k, v in try(local.sites_to_creds_map, {}) : v.cli
+    if v.cli != null
+  ]) : toset([])
+
+  external_https_read_creds = local._credentials_managed_externally ? toset([
+    for k, v in try(local.sites_to_creds_map, {}) : v.https_read
+    if v.https_read != null
+  ]) : toset([])
+
+  external_https_write_creds = local._credentials_managed_externally ? toset([
+    for k, v in try(local.sites_to_creds_map, {}) : v.https_write
+    if v.https_write != null
+  ]) : toset([])
+
+  external_snmpv2_read_creds = local._credentials_managed_externally ? toset([
+    for k, v in try(local.sites_to_creds_map, {}) : v.snmpv2_read
+    if v.snmpv2_read != null
+  ]) : toset([])
+
+  external_snmpv2_write_creds = local._credentials_managed_externally ? toset([
+    for k, v in try(local.sites_to_creds_map, {}) : v.snmpv2_write
+    if v.snmpv2_write != null
+  ]) : toset([])
+
+  external_snmpv3_creds = local._credentials_managed_externally ? toset([
+    for k, v in try(local.sites_to_creds_map, {}) : v.snmpv3
+    if v.snmpv3 != null
+  ]) : toset([])
+}
+
+data "catalystcenter_credentials_cli" "external" {
+  for_each    = local.external_cli_creds
+  description = each.value
+}
+
+data "catalystcenter_credentials_https_read" "external" {
+  for_each    = local.external_https_read_creds
+  description = each.value
+}
+
+data "catalystcenter_credentials_https_write" "external" {
+  for_each    = local.external_https_write_creds
+  description = each.value
+}
+
+data "catalystcenter_credentials_snmpv2_read" "external" {
+  for_each    = local.external_snmpv2_read_creds
+  description = each.value
+}
+
+data "catalystcenter_credentials_snmpv2_write" "external" {
+  for_each    = local.external_snmpv2_write_creds
+  description = each.value
+}
+
+data "catalystcenter_credentials_snmpv3" "external" {
+  for_each    = local.external_snmpv3_creds
+  description = each.value
+}
+
 resource "catalystcenter_assign_credentials" "assign_credentials" {
   for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null) && contains(local.sites, k) && k != "Global" }
 
   site_id          = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], local.data_source_site_list[each.key], null)
-  cli_id           = each.value.cli != null ? try(catalystcenter_credentials_cli.cli_credentials[each.value.cli].id, data.catalystcenter_assign_credentials.global_assign_credentials.cli_id) : null
-  https_read_id    = each.value.https_read != null ? try(catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_read_id) : null
-  https_write_id   = each.value.https_write != null ? try(catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_write_id) : null
-  snmp_v2_read_id  = each.value.snmpv2_read != null ? try(catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials[each.value.snmpv2_read].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v2_read_id) : null
-  snmp_v2_write_id = each.value.snmpv2_write != null ? try(catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v2_write_id) : null
-  snmp_v3_id       = each.value.snmpv3 != null ? try(catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v3_id) : null
+  cli_id           = each.value.cli != null ? try(catalystcenter_credentials_cli.cli_credentials[each.value.cli].id, data.catalystcenter_credentials_cli.external[each.value.cli].id, data.catalystcenter_assign_credentials.global_assign_credentials.cli_id) : null
+  https_read_id    = each.value.https_read != null ? try(catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id, data.catalystcenter_credentials_https_read.external[each.value.https_read].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_read_id) : null
+  https_write_id   = each.value.https_write != null ? try(catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id, data.catalystcenter_credentials_https_write.external[each.value.https_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.https_write_id) : null
+  snmp_v2_read_id  = each.value.snmpv2_read != null ? try(catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials[each.value.snmpv2_read].id, data.catalystcenter_credentials_snmpv2_read.external[each.value.snmpv2_read].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v2_read_id) : null
+  snmp_v2_write_id = each.value.snmpv2_write != null ? try(catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id, data.catalystcenter_credentials_snmpv2_write.external[each.value.snmpv2_write].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v2_write_id) : null
+  snmp_v3_id       = each.value.snmpv3 != null ? try(catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id, data.catalystcenter_credentials_snmpv3.external[each.value.snmpv3].id, data.catalystcenter_assign_credentials.global_assign_credentials.snmp_v3_id) : null
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, data.catalystcenter_sites.created_sites]
 }

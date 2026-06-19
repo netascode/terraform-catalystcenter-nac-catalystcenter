@@ -198,6 +198,12 @@ module "catalystcenter" {
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_anycast_gateways.created_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
+| [catalystcenter_credentials_cli.external](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
+| [catalystcenter_credentials_https_read.external](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_https_read) | data source |
+| [catalystcenter_credentials_https_write.external](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_https_write) | data source |
+| [catalystcenter_credentials_snmpv2_read.external](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_read) | data source |
+| [catalystcenter_credentials_snmpv2_write.external](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_write) | data source |
+| [catalystcenter_credentials_snmpv3.external](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv3) | data source |
 | [catalystcenter_device_replacement.rma_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/device_replacement) | data source |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l2_virtual_network.l2_vn_zone_parent](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l2_virtual_network) | data source |
