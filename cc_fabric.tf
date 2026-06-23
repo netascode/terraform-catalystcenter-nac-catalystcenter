@@ -314,10 +314,13 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
 
   virtual_network_name = each.key
   merge_fabric_sites   = try(local.defaults.catalyst_center.fabric.l3_virtual_networks.merge_fabric_sites, false)
-  fabric_ids = try([
+  fabric_ids = length([
     for site in each.value : local.combined_fabric_id_list[site]
     if contains(keys(local.combined_fabric_id_list), site)
-  ], [])
+    ]) > 0 ? [
+    for site in each.value : local.combined_fabric_id_list[site]
+    if contains(keys(local.combined_fabric_id_list), site)
+  ] : null
   anchored_site_id = try(local.combined_fabric_id_list[local.anchored_vn_lookup[each.key]], null)
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone]
