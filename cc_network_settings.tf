@@ -41,7 +41,7 @@ resource "catalystcenter_credentials_https_read" "https_read_credentials" {
 
   description = each.key
   username    = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.https_read_credentials.username, null)
-  password    = try(each.value.password, local.defaults.catalyst_center.network_settings.device_credentials.https_read_credentials.password, null)
+  password    = sensitive(try(each.value.password, local.defaults.catalyst_center.network_settings.device_credentials.https_read_credentials.password, null))
   port        = try(each.value.port, local.defaults.catalyst_center.network_settings.device_credentials.https_read_credentials.port, null)
 }
 
@@ -50,7 +50,7 @@ resource "catalystcenter_credentials_https_write" "https_write_credentials" {
 
   description = each.key
   username    = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.https_write_credentials.username, null)
-  password    = try(each.value.password, local.defaults.catalyst_center.network_settings.device_credentials.https_write_credentials.password, null)
+  password    = sensitive(try(each.value.password, local.defaults.catalyst_center.network_settings.device_credentials.https_write_credentials.password, null))
   port        = try(each.value.port, local.defaults.catalyst_center.network_settings.device_credentials.https_write_credentials.port, null)
 }
 
@@ -59,22 +59,22 @@ resource "catalystcenter_credentials_cli" "cli_credentials" {
 
   description     = each.key
   username        = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.username, null)
-  password        = try(each.value.password, local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.password, null)
-  enable_password = try(each.value.enable, local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.enable, null)
+  password        = sensitive(try(each.value.password, local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.password, null))
+  enable_password = sensitive(try(each.value.enable, local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.enable, null))
 }
 
 resource "catalystcenter_credentials_snmpv2_read" "snmpv2_read_credentials" {
   for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description    = each.key
-  read_community = try(each.value.read_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials.read_community, null)
+  read_community = sensitive(try(each.value.read_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials.read_community, null))
 }
 
 resource "catalystcenter_credentials_snmpv2_write" "snmpv2_write_credentials" {
   for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description     = each.key
-  write_community = try(each.value.write_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials.write_community, null)
+  write_community = sensitive(try(each.value.write_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials.write_community, null))
 }
 
 resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
@@ -83,9 +83,9 @@ resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
   description      = each.key
   username         = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.username, null)
   privacy_type     = try(each.value.privacy_type, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.privacy_type, null)
-  privacy_password = try(each.value.privacy_password, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.privacy_password, null)
+  privacy_password = sensitive(try(each.value.privacy_password, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.privacy_password, null))
   auth_type        = try(each.value.auth_type, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.auth_type, null)
-  auth_password    = try(each.value.auth_password, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.auth_password, null)
+  auth_password    = sensitive(try(each.value.auth_password, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.auth_password, null))
   snmp_mode        = try(each.value.snmp_mode, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.snmp_mode, null)
 }
 
@@ -330,13 +330,13 @@ resource "catalystcenter_aaa_settings" "aaa_servers" {
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
   network_aaa_secondary_server_ip = try(local.aaa_settings[each.value.aaa_servers].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.secondary_ip, null)
-  network_aaa_shared_secret       = try(local.aaa_settings[each.value.aaa_servers].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.shared_secret, null)
+  network_aaa_shared_secret       = sensitive(try(local.aaa_settings[each.value.aaa_servers].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.shared_secret, null))
   network_aaa_pan                 = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].network_aaa.pan, local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.pan, null) : null
   client_aaa_server_type          = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.server_type, null)
   client_aaa_protocol             = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.protocol, null)
   client_aaa_primary_server_ip    = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.primary_ip, null)
   client_aaa_secondary_server_ip  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.secondary_ip, null)
-  client_aaa_shared_secret        = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret, null)
+  client_aaa_shared_secret        = sensitive(try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret, null))
   client_aaa_pan                  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.pan, local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.pan, null) : null
 
   depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, data.catalystcenter_sites.created_sites]
@@ -350,13 +350,13 @@ resource "catalystcenter_aaa_settings" "global_aaa_servers" {
   network_aaa_protocol            = try(local.aaa_settings[each.value.aaa_servers].network_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.protocol, null)
   network_aaa_primary_server_ip   = try(local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.primary_ip, null)
   network_aaa_secondary_server_ip = try(local.aaa_settings[each.value.aaa_servers].network_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.secondary_ip, null)
-  network_aaa_shared_secret       = try(local.aaa_settings[each.value.aaa_servers].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.shared_secret, null)
+  network_aaa_shared_secret       = sensitive(try(local.aaa_settings[each.value.aaa_servers].network_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.shared_secret, null))
   network_aaa_pan                 = try(local.aaa_settings[each.value.aaa_servers].network_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].network_aaa.pan, local.aaa_settings[each.value.aaa_servers].network_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.network_aaa.pan, null) : null
   client_aaa_server_type          = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.server_type, null)
   client_aaa_protocol             = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.protocol, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.protocol, null)
   client_aaa_primary_server_ip    = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.primary_ip, null)
   client_aaa_secondary_server_ip  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.secondary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.secondary_ip, null)
-  client_aaa_shared_secret        = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret, null)
+  client_aaa_shared_secret        = sensitive(try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.shared_secret, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret, null))
   client_aaa_pan                  = try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.server_type, "") == "ISE" ? try(local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.pan, local.aaa_settings[each.value.aaa_servers].client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.pan, null) : null
 
   depends_on = [catalystcenter_telemetry_settings.global_telemetry_settings]

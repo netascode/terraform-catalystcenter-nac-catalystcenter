@@ -11,7 +11,7 @@ resource "catalystcenter_lan_automation" "lanauto_link" {
   }]
   multicast_enabled        = try(each.value.multicast_enabled, local.defaults.catalyst_center.lan_automation.multicast_enabled, null)
   redistribute_isis_to_bgp = try(each.value.advertise_lan_automation_routes_into_bgp, local.defaults.catalyst_center.lan_automation.advertise_lan_automation_routes_into_bgp, null)
-  isis_domain_password     = try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.isis_domain_password, null)
+  isis_domain_password     = sensitive(try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.isis_domain_password, null))
 }
 
 resource "catalystcenter_lan_automation" "lanauto_edge" {
@@ -27,7 +27,7 @@ resource "catalystcenter_lan_automation" "lanauto_edge" {
   }]
   multicast_enabled        = try(each.value.multicast_enabled, local.defaults.catalyst_center.lan_automation.multicast_enabled, null)
   redistribute_isis_to_bgp = try(each.value.advertise_lan_automation_routes_into_bgp, local.defaults.catalyst_center.lan_automation.advertise_lan_automation_routes_into_bgp, null)
-  isis_domain_password     = try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.isis_domain_password, null)
+  isis_domain_password     = sensitive(try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.isis_domain_password, null))
   host_name_prefix         = try(each.value.host_name_prefix, local.defaults.catalyst_center.lan_automation.host_name_prefix, null)
   discovery_level          = try(each.value.discovery_level, local.defaults.catalyst_center.lan_automation.discovery_level, null)
   discovery_devices        = try(each.value.discovery_devices, local.defaults.catalyst_center.lan_automation.discovery_devices, null)
