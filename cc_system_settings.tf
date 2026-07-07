@@ -18,15 +18,15 @@ resource "catalystcenter_authentication_policy_server" "ise" {
   retries                  = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.retries, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.retries, null)
   timeout_seconds          = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.timeout, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.timeout, null)
   role                     = "primary"
-  shared_secret            = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.shared_secret, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.shared_secret, null)
+  shared_secret            = sensitive(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.shared_secret, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.shared_secret, null))
   encryption_scheme        = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap, null) != null ? "KEYWRAP" : null
-  encryption_key           = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap, null) != null ? try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.encryption_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.encryption_key, null) : null
-  message_key              = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap, null) != null ? try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.message_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.message_key, null) : null
+  encryption_key           = sensitive(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap, null) != null ? try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.encryption_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.encryption_key, null) : null)
+  message_key              = sensitive(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap, null) != null ? try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.message_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.enable_key_wrap.message_key, null) : null)
 
   cisco_ise_dtos = [
     {
       user_name       = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.username, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.username, null)
-      password        = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.password, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.password, null)
+      password        = sensitive(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.password, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.password, null))
       fqdn            = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.fqdn, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.fqdn, null)
       ip_address      = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.ip_address, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.ip_address, null)
       subscriber_name = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.ip_address, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.ip_address, null)
@@ -53,8 +53,8 @@ resource "catalystcenter_authentication_policy_server" "aaa" {
   retries             = try(each.value.retries, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.retries, null)
   timeout_seconds     = try(each.value.timeout, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.timeout, null)
   role                = "primary"
-  shared_secret       = try(each.value.shared_secret, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.shared_secret, null)
+  shared_secret       = sensitive(try(each.value.shared_secret, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.shared_secret, null))
   encryption_scheme   = try(each.value.protocols.radius.enable_key_wrap, null) != null ? "KEYWRAP" : null
-  encryption_key      = can(each.value.protocols.radius.enable_key_wrap) ? try(each.value.protocols.radius.enable_key_wrap.encryption_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.enable_key_wrap.encryption_key, null) : null
-  message_key         = can(each.value.protocols.radius.enable_key_wrap) ? try(each.value.protocols.radius.enable_key_wrap.message_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.enable_key_wrap.message_key, null) : null
+  encryption_key      = sensitive(can(each.value.protocols.radius.enable_key_wrap) ? try(each.value.protocols.radius.enable_key_wrap.encryption_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.enable_key_wrap.encryption_key, null) : null)
+  message_key         = sensitive(can(each.value.protocols.radius.enable_key_wrap) ? try(each.value.protocols.radius.enable_key_wrap.message_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.enable_key_wrap.message_key, null) : null)
 }
