@@ -8,6 +8,12 @@ defaults:
       number_of_hosts: Unlimited
       authentication_order: dot1x
       bpdu_guard: true
+    feature_templates:
+      wireless:
+        cleanair:
+          enable: false
+          device_reporting: false
+          persistent_device_propagation: false
     network_profiles:
       wireless:
         ssid_details:

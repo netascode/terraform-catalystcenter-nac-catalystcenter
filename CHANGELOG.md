@@ -11,6 +11,7 @@
 
 **New Features:**
 - Add support for deploying built-in or pre-existing CLI templates that are not declared under `templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
+- Add CleanAir feature template support under `feature_templates.wireless.cleanair[]` (creating `catalystcenter_wireless_cleanair_configuration` resources) and associate them with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates`.
 
 ## 0.4.3
 
@@ -40,7 +41,7 @@
 ## 0.4.2
 
 **Bug Fixes:**
-- Fix AP provisioning for devices without IP address 
+- Fix AP provisioning for devices without IP address
 - Fix issue with provisioning the embedded wireless controller and enabling the edge role in a single Terraform run
 - Fix multicast rendezvous point IP addresses being sent for Fabric-internal RPs; `ipv4_address` and `ipv6_address` are now only populated when `rp_location` is not `FABRIC`
 - Fix extranet policy to only be managed when not using `manage_global_settings` with `managed_sites`, resolving incorrect state evaluation in single-state deployments
