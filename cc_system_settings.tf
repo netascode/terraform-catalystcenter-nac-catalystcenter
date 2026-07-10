@@ -58,3 +58,25 @@ resource "catalystcenter_authentication_policy_server" "aaa" {
   encryption_key      = can(each.value.protocols.radius.enable_key_wrap) ? try(each.value.protocols.radius.enable_key_wrap.encryption_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.enable_key_wrap.encryption_key, null) : null
   message_key         = can(each.value.protocols.radius.enable_key_wrap) ? try(each.value.protocols.radius.enable_key_wrap.message_key, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.enable_key_wrap.message_key, null) : null
 }
+
+resource "catalystcenter_external_authentication" "external_authentication" {
+
+  count = try(local.catalyst_center.system_settings.external_authentication, null) != null && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) ? 1 : 0
+
+  name    = "external_authentication"
+  enabled = try(local.catalyst_center.system_settings.external_authentication.enabled, local.defaults.catalyst_center.system_settings.external_authentication.enabled, false)
+
+  depends_on = [
+    catalystcenter_authentication_policy_server.ise,
+    catalystcenter_authentication_policy_server.aaa,
+  ]
+}
+
+resource "catalystcenter_external_authentication_aaa_attribute" "external_authentication" {
+
+  count = try(local.catalyst_center.system_settings.external_authentication.aaa_attribute, null) != null && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) ? 1 : 0
+
+  name = try(local.catalyst_center.system_settings.external_authentication.aaa_attribute, local.defaults.catalyst_center.system_settings.external_authentication.aaa_attribute, null)
+
+  depends_on = [catalystcenter_external_authentication.external_authentication]
+}
