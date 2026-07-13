@@ -12,6 +12,7 @@
 **New Features:**
 - Add support for deploying built-in or pre-existing CLI templates that are not declared under `templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
 - Add CleanAir feature template support under `feature_templates.wireless.cleanair[]` (creating `catalystcenter_wireless_cleanair_configuration` resources) and associate them with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates`.
+- Add `system_settings.external_authentication` data model support via `catalystcenter_external_authentication` and `catalystcenter_external_authentication_aaa_attribute` resources to enable external user login and configure the custom AAA attribute for role mapping
 
 ## 0.4.3
 
