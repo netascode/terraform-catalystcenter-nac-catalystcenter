@@ -148,12 +148,50 @@ locals {
   ]
 
   missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+
+  wireless_role_invariant_violations = [
+    for device in try(local.catalyst_center.inventory.devices, []) :
+    device
+    if(try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null)
+    && !(
+      contains(coalesce(try(device.fabric_roles, []), []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") !=
+      contains(coalesce(try(device.fabric_roles, []), []), "WIRELESS_CONTROLLER_NODE")
+    )
+  ]
+
+  wireless_role_invariant_error = length(local.wireless_role_invariant_violations) > 0 ? "❌ The following devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_role_invariant_violations : "  • ${d.name} (roles: ${join(", ", coalesce(try(d.fabric_roles, []), []))})"])}\n\nA device with primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role, or remove the managed AP locations, so each wireless device is exactly one kind of controller." : ""
+
+  wireless_controller_missing_ap_locations = [
+    for device in try(local.catalyst_center.inventory.devices, []) :
+    device
+    if(
+      contains(coalesce(try(device.fabric_roles, []), []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") ||
+      contains(coalesce(try(device.fabric_roles, []), []), "WIRELESS_CONTROLLER_NODE")
+    )
+    && try(device.primary_managed_ap_locations, null) == null
+    && try(device.secondary_managed_ap_locations, null) == null
+  ]
+
+  wireless_controller_missing_ap_locations_error = length(local.wireless_controller_missing_ap_locations) > 0 ? "❌ The following devices carry a wireless-controller role but have no managed AP locations:\n\n${join("\n", [for d in local.wireless_controller_missing_ap_locations : "  • ${d.name} (roles: ${join(", ", coalesce(try(d.fabric_roles, []), []))})"])}\n\nA device with EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE MUST have at least one of primary_managed_ap_locations or secondary_managed_ap_locations.\n\nAction required: Add primary_managed_ap_locations (and/or secondary_managed_ap_locations), or remove the wireless-controller role if the device is not a controller." : ""
 }
 
 check "device_discovery_validation" {
   assert {
     condition     = length(local.missing_devices) == 0
     error_message = local.missing_devices_error
+  }
+}
+
+resource "terraform_data" "wireless_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.wireless_role_invariant_violations) == 0
+      error_message = local.wireless_role_invariant_error
+    }
+    precondition {
+      condition     = length(local.wireless_controller_missing_ap_locations) == 0
+      error_message = local.wireless_controller_missing_ap_locations_error
+    }
   }
 }
 
