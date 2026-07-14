@@ -8,12 +8,6 @@ defaults:
       number_of_hosts: Unlimited
       authentication_order: dot1x
       bpdu_guard: true
-    feature_templates:
-      wireless:
-        cleanair:
-          enable: false
-          device_reporting: false
-          persistent_device_propagation: false
     network_profiles:
       wireless:
         ssid_details:
@@ -69,6 +63,9 @@ defaults:
         catalyst_center_as_snmp_server: true
         catalyst_center_as_syslog_server: true
         catalyst_center_as_network_collector: true
+    system_settings:
+      external_authentication:
+        enabled: false
     fabric:
       l3_virtual_networks:
         merge_fabric_sites: false
