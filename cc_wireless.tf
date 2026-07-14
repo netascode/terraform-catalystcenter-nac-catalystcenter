@@ -9,6 +9,12 @@ locals {
     "5GHz and 6GHz"   = "5 and 6 GHz"
   }
 
+  cleanair_radio_band_mapping = {
+    "2.4GHz" = "2_4GHZ"
+    "5GHz"   = "5GHZ"
+    "6GHz"   = "6GHZ"
+  }
+
   wireless_controllers = length({
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
@@ -53,6 +59,37 @@ data "catalystcenter_dot11be_profile" "dot11be_profile" {
   for_each = toset(local.dot11be_profile_names_existing)
 
   profile_name = each.key
+}
+
+resource "catalystcenter_wireless_cleanair_configuration" "cleanair" {
+  for_each = { for template in try(local.catalyst_center.feature_templates.wireless.cleanair, []) : template.name => template if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+
+  design_name                   = each.key
+  description                   = try(each.value.description, local.defaults.catalyst_center.feature_templates.wireless.cleanair.description, null)
+  radio_band                    = try(local.cleanair_radio_band_mapping[each.value.radio_band], each.value.radio_band, null)
+  clean_air                     = try(each.value.enable, local.defaults.catalyst_center.feature_templates.wireless.cleanair.enable, null)
+  clean_air_device_reporting    = try(each.value.device_reporting, local.defaults.catalyst_center.feature_templates.wireless.cleanair.device_reporting, null)
+  persistent_device_propagation = try(each.value.persistent_device_propagation, local.defaults.catalyst_center.feature_templates.wireless.cleanair.persistent_device_propagation, null)
+
+  ble_beacon                          = try(each.value.enable_interferers_features.ble_beacon, null)
+  bluetooth_paging_inquiry            = try(each.value.enable_interferers_features.bluetooth_paging_inquiry, null)
+  bluetooth_sco_acl                   = try(each.value.enable_interferers_features.bluetooth_sco_acl, null)
+  continuous_transmitter              = try(each.value.enable_interferers_features.continuous_transmitter, null)
+  generic_dect                        = try(each.value.enable_interferers_features.generic_dect, null)
+  generic_tdd                         = try(each.value.enable_interferers_features.generic_tdd, null)
+  jammer                              = try(each.value.enable_interferers_features.jammer, null)
+  microwave_oven                      = try(each.value.enable_interferers_features.microwave_oven, null)
+  motorola_canopy                     = try(each.value.enable_interferers_features.motorola_canopy, null)
+  si_fhss                             = try(each.value.enable_interferers_features.si_fhss, null)
+  spectrum_80211_fh                   = try(each.value.enable_interferers_features.spectrum_80211_fh, null)
+  spectrum_80211_non_standard_channel = try(each.value.enable_interferers_features.spectrum_80211_non_standard_channel, null)
+  spectrum_802154                     = try(each.value.enable_interferers_features.spectrum_802154, null)
+  spectrum_inverted                   = try(each.value.enable_interferers_features.spectrum_inverted, null)
+  super_ag                            = try(each.value.enable_interferers_features.super_ag, null)
+  video_camera                        = try(each.value.enable_interferers_features.video_camera, null)
+  wimax_fixed                         = try(each.value.enable_interferers_features.wimax_fixed, null)
+  wimax_mobile                        = try(each.value.enable_interferers_features.wimax_mobile, null)
+  xbox                                = try(each.value.enable_interferers_features.xbox, null)
 }
 
 resource "catalystcenter_power_profile" "power_profile" {
@@ -380,8 +417,14 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
     rf_profile_name = try(ap_zone.rf_profile_name, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.rf_profile_name, null)
     ssids           = try(ap_zone.ssids, local.defaults.catalyst_center.network_profiles.wireless.ap_zones.ssids, [])
   }], null)
+  feature_templates = try(length(each.value.feature_templates), 0) > 0 ? [
+    for name in each.value.feature_templates : {
+      id    = catalystcenter_wireless_cleanair_configuration.cleanair[name].id
+      ssids = []
+    } if contains(keys(catalystcenter_wireless_cleanair_configuration.cleanair), name)
+  ] : null
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile, catalystcenter_anchor_group.anchor_group]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile, catalystcenter_anchor_group.anchor_group, catalystcenter_wireless_cleanair_configuration.cleanair]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
