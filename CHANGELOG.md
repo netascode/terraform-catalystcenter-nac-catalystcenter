@@ -1,7 +1,7 @@
 ## 0.4.4 (unreleased)
 
 **Bug Fixes:**
-- Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. Requires provider `~> 0.5.18`, where the `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
+- Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. The `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
 - Fix `fabric_zones[].l2_virtual_networks` being silently ignored; L2 virtual networks listed by name under a fabric zone are now deployed to the zone (parallel to the existing `l3_virtual_networks` and `anycast_gateways` inheritance) using a new `catalystcenter_fabric_l2_virtual_network.l2_vn_zone` resource keyed `${name}#_#${zone_name}`. The vlan_name/traffic_type/wireless flag and L3 VN association are inherited from the matching site-level L2 VN definition.
 - Fix fabric-zone L2 virtual network creation failing with `NCHS20538` ("include the vlanId for this create on fabric zone request") when the parent site L2 VN has no explicit `vlan_id`. Catalyst Center auto-assigns the VLAN id on the fabric site, and the zone create requires the same id; the module now reads the parent site L2 VN's assigned `vlan_id` (via a `catalystcenter_fabric_l2_virtual_network` data source) and applies it to the zone when `vlan_id` is not set in the data model.
 - Fix `is_bpdu_guard_enabled` being set on the global authentication profile; the field is not settable at the global level in Catalyst Center (not exposed in the API or UI) and is now always `null` there, while remaining configurable per fabric-site `Closed Authentication` profile
