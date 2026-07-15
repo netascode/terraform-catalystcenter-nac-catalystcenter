@@ -14,6 +14,13 @@ defaults:
           enable: false
           device_reporting: false
           persistent_device_propagation: false
+        rrm_fra:
+          radio_band: "2.4GHz_5GHz"
+          fra_status: false
+          fra_freeze: false
+          fra_interval: 3
+          # fra_sensitivity applies only when radio_band is 2.4GHz_5GHz
+          fra_sensitivity: MEDIUM
     network_profiles:
       wireless:
         ssid_details:
