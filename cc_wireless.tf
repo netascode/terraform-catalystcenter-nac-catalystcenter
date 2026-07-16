@@ -15,6 +15,21 @@ locals {
     "6GHz"   = "6GHZ"
   }
 
+  # Maps data-model radio band labels to provider API enum values.
+  rrm_fra_radio_band_mapping = {
+    "2.4GHz_5GHz" = "2_4GHZ_5GHZ"
+    "5GHz_6GHz"   = "5GHZ_6GHZ"
+  }
+
+  rrm_fra_sensitivity_mapping = {
+    LOW         = "Low"
+    MEDIUM      = "Medium"
+    HIGH        = "High"
+    HIGHER      = "Higher"
+    EVEN_HIGHER = "Even Higher"
+    SUPER_HIGH  = "Super High"
+  }
+
   wireless_controllers = length({
     for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
   }) > 0
@@ -90,6 +105,24 @@ resource "catalystcenter_wireless_cleanair_configuration" "cleanair" {
   wimax_fixed                         = try(each.value.interferers.wimax_fixed, null)
   wimax_mobile                        = try(each.value.interferers.wimax_mobile, null)
   xbox                                = try(each.value.interferers.xbox, null)
+}
+
+resource "catalystcenter_wireless_rrm_fra_configuration" "rrm_fra" {
+  for_each = { for template in try(local.catalyst_center.feature_templates.wireless.rrm_fra, []) : template.name => template if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+
+  design_name = each.key
+  radio_band = try(
+    local.rrm_fra_radio_band_mapping[coalesce(try(each.value.radio_band, null), local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.radio_band)],
+    coalesce(try(each.value.radio_band, null), local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.radio_band),
+    null
+  )
+  fra_freeze   = try(each.value.fra_freeze, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_freeze, null)
+  fra_status   = try(each.value.fra_status, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_status, null)
+  fra_interval = try(each.value.fra_interval, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_interval, null)
+  fra_sensitivity = coalesce(try(each.value.radio_band, null), local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.radio_band) == "2.4GHz_5GHz" ? try(
+    local.rrm_fra_sensitivity_mapping[try(each.value.fra_sensitivity, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity, null)],
+    try(each.value.fra_sensitivity, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity, null)
+  ) : null
 }
 
 resource "catalystcenter_power_profile" "power_profile" {
@@ -391,6 +424,13 @@ resource "catalystcenter_wireless_rf_profile" "rf_profile" {
   depends_on = [catalystcenter_wireless_ssid.ssid]
 }
 
+locals {
+  wireless_feature_template_ids = merge(
+    { for name, template in catalystcenter_wireless_cleanair_configuration.cleanair : name => template.id },
+    { for name, template in catalystcenter_wireless_rrm_fra_configuration.rrm_fra : name => template.id }
+  )
+}
+
 resource "catalystcenter_wireless_profile" "wireless_profile" {
   for_each = { for wireless_profile in try(local.catalyst_center.network_profiles.wireless, []) : wireless_profile.name => wireless_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
@@ -419,12 +459,12 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
   }], null)
   feature_templates = try(length(each.value.feature_templates), 0) > 0 ? [
     for name in each.value.feature_templates : {
-      id    = catalystcenter_wireless_cleanair_configuration.cleanair[name].id
+      id    = local.wireless_feature_template_ids[name]
       ssids = []
-    } if contains(keys(catalystcenter_wireless_cleanair_configuration.cleanair), name)
+    } if contains(keys(local.wireless_feature_template_ids), name)
   ] : null
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile, catalystcenter_anchor_group.anchor_group, catalystcenter_wireless_cleanair_configuration.cleanair]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile, catalystcenter_anchor_group.anchor_group, catalystcenter_wireless_cleanair_configuration.cleanair, catalystcenter_wireless_rrm_fra_configuration.rrm_fra]
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
