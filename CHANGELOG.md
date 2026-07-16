@@ -1,4 +1,4 @@
-## 0.4.4 (unreleased)
+## 0.4.4
 
 **Bug Fixes:**
 - Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. The `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
@@ -16,6 +16,9 @@
 - Add support for deploying built-in or pre-existing CLI templates that are not declared under `templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
 - Add CleanAir feature template support under `feature_templates.wireless.cleanair[]` (creating `catalystcenter_wireless_cleanair_configuration` resources) and associate them with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates`.
 - Add `system_settings.external_authentication` data model support via `catalystcenter_external_authentication` and `catalystcenter_external_authentication_aaa_attribute` resources to enable external user login and configure the custom AAA attribute for role mapping
+
+**Improvements:**
+- Add plan-time pre-condition validation for wireless controllers via a new `terraform_data.wireless_validation` resource: a device with `primary_/secondary_managed_ap_locations` must carry exactly one wireless-controller role (`WIRELESS_CONTROLLER_NODE` or `EMBEDDED_WIRELESS_CONTROLLER_NODE`, never both or neither), and a device with a wireless-controller role must define at least one managed AP location; misconfigurations now fail early with an actionable error instead of a mid-apply failure
 
 ## 0.4.3
 
