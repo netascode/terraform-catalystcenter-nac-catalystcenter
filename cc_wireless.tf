@@ -110,16 +110,12 @@ resource "catalystcenter_wireless_cleanair_configuration" "cleanair" {
 resource "catalystcenter_wireless_rrm_fra_configuration" "rrm_fra" {
   for_each = { for template in try(local.catalyst_center.feature_templates.wireless.rrm_fra, []) : template.name => template if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  design_name = each.key
-  radio_band = try(
-    local.rrm_fra_radio_band_mapping[coalesce(try(each.value.radio_band, null), local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.radio_band)],
-    coalesce(try(each.value.radio_band, null), local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.radio_band),
-    null
-  )
+  design_name  = each.key
+  radio_band   = try(local.rrm_fra_radio_band_mapping[each.value.radio_band], each.value.radio_band, null)
   fra_freeze   = try(each.value.fra_freeze, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_freeze, null)
   fra_status   = try(each.value.fra_status, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_status, null)
   fra_interval = try(each.value.fra_interval, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_interval, null)
-  fra_sensitivity = coalesce(try(each.value.radio_band, null), local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.radio_band) == "2.4GHz_5GHz" ? try(
+  fra_sensitivity = try(each.value.radio_band, null) == "2.4GHz_5GHz" ? try(
     local.rrm_fra_sensitivity_mapping[try(each.value.fra_sensitivity, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity, null)],
     try(each.value.fra_sensitivity, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity, null)
   ) : null
