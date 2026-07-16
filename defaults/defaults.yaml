@@ -15,7 +15,6 @@ defaults:
           device_reporting: false
           persistent_device_propagation: false
         rrm_fra:
-          radio_band: "2.4GHz_5GHz"
           fra_status: false
           fra_freeze: false
           fra_interval: 3
