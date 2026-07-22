@@ -1,4 +1,4 @@
-## 0.4.5 (unreleased)
+## 0.4.5
 
 **Bug Fixes:**
 -  Improve the managed-AP-location controller-role validation, so it covers both Fabric and non-Fabric use cases 
