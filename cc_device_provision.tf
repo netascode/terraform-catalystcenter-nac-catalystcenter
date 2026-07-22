@@ -166,17 +166,24 @@ locals {
       has_embedded = contains(coalesce(try(device.fabric_roles, []), []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")
       has_wlc      = contains(coalesce(try(device.fabric_roles, []), []), "WIRELESS_CONTROLLER_NODE")
       has_ap_locs  = try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null
+      is_fabric    = length(coalesce(try(device.fabric_roles, []), [])) > 0
     }
   ]
 
-  # Rule: a device WITH managed AP locations must carry exactly one controller
-  # role. `has_embedded == has_wlc` means both roles or neither → invalid.
+  # Rule: a FABRIC device (has any fabric_roles) WITH managed AP locations must
+  # carry EXACTLY ONE wireless-controller role — EMBEDDED_WIRELESS_CONTROLLER_NODE
+  # or WIRELESS_CONTROLLER_NODE, never both and never neither.
+  # `has_embedded == has_wlc` is true when the device carries both roles or
+  # neither, both of which are invalid for a fabric device managing APs.
+  # Non-fabric devices (no fabric_roles, e.g. a standalone C9800 in ACCESS role)
+  # legitimately manage AP locations without any fabric controller role and are
+  # therefore exempt from this rule.
   wireless_devices_with_invalid_controller_role = [
     for d in local.wireless_device_facts : d
-    if d.has_ap_locs && (d.has_embedded == d.has_wlc)
+    if d.has_ap_locs && d.is_fabric && (d.has_embedded == d.has_wlc)
   ]
 
-  wireless_invalid_controller_role_error = length(local.wireless_devices_with_invalid_controller_role) > 0 ? "❌ The following devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_devices_with_invalid_controller_role : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA device with primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role, or remove the managed AP locations, so each wireless device is exactly one kind of controller." : ""
+  wireless_invalid_controller_role_error = length(local.wireless_devices_with_invalid_controller_role) > 0 ? "❌ The following fabric devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_devices_with_invalid_controller_role : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA fabric device (one with fabric_roles) that has primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role (or remove the managed AP locations), so each fabric wireless device is exactly one kind of controller. Non-fabric wireless controllers must have no fabric_roles at all." : ""
 
   # Rule: a device WITH a controller role must have at least one managed AP
   # location.

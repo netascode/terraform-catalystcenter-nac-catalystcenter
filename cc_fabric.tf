@@ -645,10 +645,8 @@ resource "catalystcenter_fabric_device" "edge_device" {
   )
   fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles = try([
-    for fabric_role in try(each.value.fabric_roles, []) :
-    fabric_role == "EMBEDDED_WIRELESS_CONTROLLER_NODE" ?
-    "WIRELESS_CONTROLLER_NODE" :
-    fabric_role
+    for fabric_role in try(each.value.fabric_roles, []) : fabric_role
+    if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
   ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
   lifecycle {
