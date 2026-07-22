@@ -1,3 +1,14 @@
+## 0.4.5 (unreleased)
+
+**Bug Fixes:**
+-  Improve the managed-AP-location controller-role validation, so it covers both Fabric and non-Fabric use cases 
+
+**New Features:**
+- Restructure LAN Automation data model into `lan_automation.devices[]` (device discovery sessions) and `lan_automation.links[]` (DAY-N link add/delete operations with `ADD_LINK` / `DELETE_LINK` actions) via new `catalystcenter_lan_automation_link` provider resource
+
+**Breaking Changes:**
+- `catalyst_center.lan_automation` is no longer a flat list; migrate device entries under `lan_automation.devices` (remove `type: devices`) and link entries under `lan_automation.links` with `action: ADD_LINK` or `DELETE_LINK` (remove `type: link` and `status: START`)
+
 ## 0.4.4
 
 **Bug Fixes:**

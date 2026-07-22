@@ -27,7 +27,7 @@ catalyst_center:
 ```hcl
 module "catalystcenter" {
   source  = "netascode/nac-catalystcenter/catalystcenter"
-  version = "0.4.4"
+  version = "0.4.5"
 
   yaml_files = ["area.yaml"]
 }
@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.22 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.23 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
@@ -151,7 +151,7 @@ module "catalystcenter" {
 | [catalystcenter_ip_pool.ip_pool_v6](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ip_pool) | resource |
 | [catalystcenter_ip_pool_reservation.pool_reservation](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ip_pool_reservation) | resource |
 | [catalystcenter_lan_automation.lanauto_edge](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/lan_automation) | resource |
-| [catalystcenter_lan_automation.lanauto_link](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/lan_automation) | resource |
+| [catalystcenter_lan_automation_link.link](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/lan_automation_link) | resource |
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile) | resource |
 | [catalystcenter_network_profile_for_sites_assignments.site_to_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile_for_sites_assignments) | resource |
 | [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/network_profile_for_sites_assignments) | resource |
