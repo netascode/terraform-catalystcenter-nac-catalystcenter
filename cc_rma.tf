@@ -21,7 +21,6 @@ locals {
   }
 }
 
-
 resource "catalystcenter_device_replacement" "mark" {
   for_each = local.rma_devices
 
@@ -30,7 +29,6 @@ resource "catalystcenter_device_replacement" "mark" {
 
   depends_on = [data.catalystcenter_network_devices.all_devices]
 }
-
 
 resource "catalystcenter_device_replacement_workflow" "rma" {
   for_each = local.rma_devices
