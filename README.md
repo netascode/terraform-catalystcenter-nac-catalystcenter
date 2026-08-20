@@ -213,7 +213,6 @@ module "catalystcenter" {
 | [catalystcenter_credentials_snmpv2_read.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_read) | data source |
 | [catalystcenter_credentials_snmpv2_write.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_write) | data source |
 | [catalystcenter_credentials_snmpv3.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv3) | data source |
-| [catalystcenter_device_replacement.rma_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/device_replacement) | data source |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l2_virtual_network.l2_vn_zone_parent](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l2_virtual_network) | data source |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l3_virtual_network) | data source |
