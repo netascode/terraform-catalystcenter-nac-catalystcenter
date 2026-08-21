@@ -1,6 +1,11 @@
 terraform {
   required_version = ">= 1.9.0"
 
+  # Must be bumped together with the module release tag.
+  provider_meta "catalystcenter" {
+    module_name = "NAC/0.4.7"
+  }
+
   required_providers {
     catalystcenter = {
       source  = "CiscoDevNet/catalystcenter"
