@@ -41,6 +41,9 @@ defaults:
     inventory:
       devices:
         role_source: MANUAL
+    lan_automation:
+      devices:
+        isis_domain_password_version: 1
     sites:
       areas:
         parent_name: Global
@@ -61,13 +64,29 @@ defaults:
           ipv6:
             address_space: false
       device_credentials:
+        cli_credentials:
+          password_version: 1
+          enable_version: 1
         https_write_credentials:
           port: 443
+          password_version: 1
         https_read_credentials:
           port: 443
+          password_version: 1
+        snmpv2_read_credentials:
+          read_community_version: 1
+        snmpv2_write_credentials:
+          write_community_version: 1
         snmpv3_credentials:
           auth_type: SHA
           privacy_type: AES128
+          auth_password_version: 1
+          privacy_password_version: 1
+      aaa_servers:
+        network_aaa:
+          shared_secret_version: 1
+        client_and_endpoint_aaa:
+          shared_secret_version: 1
       telemetry:
         wired_data_collection: true
         enable_netflow_collector_on_devices: false
@@ -76,6 +95,12 @@ defaults:
         catalyst_center_as_syslog_server: true
         catalyst_center_as_network_collector: true
     system_settings:
+      authentication_and_policy_servers:
+        ise:
+          shared_secret_version: 1
+          password_version: 1
+        aaa:
+          shared_secret_version: 1
       external_authentication:
         enabled: false
     fabric:
@@ -99,6 +124,8 @@ defaults:
           intra_subnet_routing_enabled: false
           critical_pool: false
     wireless:
+      ssids:
+        passphrase_version: 1
       rf_profiles:
         default_rf_profile: false
       security_settings:
