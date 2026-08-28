@@ -10,13 +10,22 @@ locals {
     for file in local.yaml_templates_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => replace(file(file), "\r\n", "\n")
   }
 
+  project_all_templates = {
+    for project in try(local.catalyst_center.templates.projects, []) :
+    project.name => concat(
+      try(project.onboarding_templates, []),
+      try(project.dayn_templates, []),
+      [for t in try(project.composite_templates, []) : merge(t, { composite = try(t.composite, true) })],
+    )
+  }
+
   # Count how many times each template name appears across all projects.
   # Used to determine if a bare name can serve as a unique resource key.
   template_name_counts = {
     for name, occurrences in {
       for t in flatten([
         for project in try(local.catalyst_center.templates.projects, []) : [
-          for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : {
+          for template in local.project_all_templates[project.name] : {
             name = template.name
           }
         ]
@@ -26,7 +35,7 @@ locals {
 
   templates = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
-      for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : merge(template,
+      for template in local.project_all_templates[project.name] : merge(template,
         {
           project_name  = project.name
           template_name = template.name
@@ -44,7 +53,7 @@ locals {
 
   project_templates = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
-      for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : {
+      for template in local.project_all_templates[project.name] : {
         project_name  = project.name
         template_name = template.name
         template_key  = "${project.name}#${template.name}"
@@ -54,7 +63,7 @@ locals {
 
   composite_templates_list = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
-      for tmpl in try(project.dayn_templates, []) : [
+      for tmpl in local.project_all_templates[project.name] : [
         {
           "containing_templates" : [for ct in tmpl.containing_templates : local.template_name_counts[ct] == 1 ? ct : "${project.name}#${ct}"]
           "template_name" : tmpl.name
@@ -161,7 +170,7 @@ locals {
     for t_name in local.device_referenced_tag_names : t_name
   ]
 
-  combined_templates = flatten([
+  combined_templates = concat(flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
         {
@@ -179,7 +188,7 @@ locals {
         }
       ]
     ]
-  ])
+  ]), local.provisioning_combined_templates)
 
   # Group devices by template for deployment
   templates_by_device = {
@@ -202,23 +211,23 @@ locals {
   # Distinct list of regular Day-N template keys referenced by any device.
   # Built with the same key formula used everywhere else in the module so that
   # `combined_templates.template` and `dayn_templates_map[<key>]` match.
-  device_referenced_dayn_template_keys = distinct(flatten([
+  device_referenced_dayn_template_keys = distinct(concat(flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for t in try(device.dayn_templates.regular, []) :
       try("${t.project_name}#${t.name}", t.name)
     ]
-  ]))
+  ]), local.provisioning_dayn_template_keys))
 
   # Distinct list of composite Day-N template keys referenced by any device
   # under `dayn_templates.composite[]`. The section a reference is written in is
   # the user's declaration of composite-ness (same convention as managed
   # templates), which keeps the deploy resources' for_each routing static.
-  device_referenced_composite_template_keys = distinct(flatten([
+  device_referenced_composite_template_keys = distinct(concat(flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for t in try(device.dayn_templates.composite, []) :
       try("${t.project_name}#${t.name}", t.name)
     ]
-  ]))
+  ]), local.provisioning_composite_template_keys))
 
   # Distinct list of onboarding template keys referenced by any device via the
   # singular `onboarding_template.name` (consumed by PnP device claim config_id).

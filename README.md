@@ -121,8 +121,6 @@ module "catalystcenter" {
 | [catalystcenter_dns_settings.dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
 | [catalystcenter_dns_settings.global_dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dot11be_profile) | resource |
-| [catalystcenter_external_authentication.external_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/external_authentication) | resource |
-| [catalystcenter_external_authentication_aaa_attribute.external_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/external_authentication_aaa_attribute) | resource |
 | [catalystcenter_extranet_policy.extranet_policy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/extranet_policy) | resource |
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
@@ -186,7 +184,6 @@ module "catalystcenter" {
 | [catalystcenter_update_device_management_address.management_ip](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_device_management_address) | resource |
 | [catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
 | [catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
-| [catalystcenter_wireless_cleanair_configuration.cleanair](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_cleanair_configuration) | resource |
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
 | [catalystcenter_wireless_fabric_multicast.wireless_multicast](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_fabric_multicast) | resource |
 | [catalystcenter_wireless_interface.interface](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_interface) | resource |
@@ -195,13 +192,11 @@ module "catalystcenter" {
 | [catalystcenter_wireless_profile_policy_tag.policy_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile_policy_tag) | resource |
 | [catalystcenter_wireless_profile_site_tag.site_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile_site_tag) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
-| [catalystcenter_wireless_rrm_fra_configuration.rrm_fra](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rrm_fra_configuration) | resource |
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
 | [terraform_data.bulk_site_provisioning_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.managed_sites_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.wireless_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [time_sleep.provision_device_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
