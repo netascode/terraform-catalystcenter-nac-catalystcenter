@@ -30,8 +30,9 @@ locals {
     SUPER_HIGH  = "Super High"
   }
 
+  # Dedicated fabric WLC or embedded WLC (eWLC / FIAB).
   wireless_controllers = length({
-    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))
   }) > 0
 
   short_hostname_to_fqdn = try({

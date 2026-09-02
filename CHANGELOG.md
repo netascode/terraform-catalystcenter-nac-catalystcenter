@@ -1,6 +1,7 @@
 ## (unreleased)
 
 **Bug Fixes:**
+- Fix fabric SSID-to-VLAN mapping (`catalystcenter_fabric_vlan_to_ssid`) being skipped on embedded Wireless Controller (eWLC) / Fabric-in-a-Box sites; `local.wireless_controllers` and the `vlan_to_ssid` `for_each` now treat `EMBEDDED_WIRELESS_CONTROLLER_NODE` the same as a dedicated `WIRELESS_CONTROLLER_NODE`, and the mapping waits for `catalystcenter_fabric_ewlc` so WLANs become operational after eWLC turn-up
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
 
