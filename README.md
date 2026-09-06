@@ -89,6 +89,7 @@ module "catalystcenter" {
 | [catalystcenter_area.area_8](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_9](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_areas.bulk_areas](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/areas) | resource |
+| [catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_anchor_managed_ap_locations) | resource |
 | [catalystcenter_assign_credentials.assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_device_to_site.access_points_to_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_device_to_site) | resource |
