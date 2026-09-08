@@ -1,6 +1,7 @@
 ## (unreleased)
 
 **Bug Fixes:**
+- Fix `catalystcenter_network_profile_for_sites_assignments`, `catalystcenter_wireless_profile_site_tag` and `catalystcenter_wireless_profile_policy_tag` sending an empty site list in non-bulk mode when the only referenced site is `Global`
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
 
