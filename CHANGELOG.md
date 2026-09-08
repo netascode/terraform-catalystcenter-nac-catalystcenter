@@ -1,5 +1,8 @@
 ## (unreleased)
 
+**New Features:**
+- Add `fabric.fabric_sites.anycast_gateways[].additional_ip_pools` support; anycast gateway resources now accept up to 4 additional (secondary) IP pool names (requires Catalyst Center 3.2.x)
+
 **Bug Fixes:**
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 
