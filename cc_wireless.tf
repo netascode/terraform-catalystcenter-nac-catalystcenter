@@ -296,7 +296,9 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   nas_options                                 = try(each.value.nas_options, local.defaults.catalyst_center.wireless.ssids.nas_options, null)
   neighbor_list                               = try(each.value.neighbor_list, local.defaults.catalyst_center.wireless.ssids.neighbor_list, null)
   open_ssid                                   = try(each.value.open_ssid, local.defaults.catalyst_center.wireless.ssids.open_ssid, null)
-  passphrase                                  = sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
+  passphrase                                  = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null)) : null
+  passphrase_wo                               = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? null : sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
+  passphrase_wo_version                       = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null)
   policy_profile_name                         = try(each.value.policy_profile_name, local.defaults.catalyst_center.wireless.ssids.policy_profile_name, null)
   posturing                                   = try(each.value.posturing, local.defaults.catalyst_center.wireless.ssids.posturing, null)
   profile_name                                = try(each.value.profile_name, local.defaults.catalyst_center.wireless.ssids.profile_name, null)
