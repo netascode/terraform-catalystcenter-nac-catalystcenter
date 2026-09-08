@@ -1,6 +1,6 @@
 ## (unreleased)
 
-**New Features**
+**New Features:**
 - Add write-only secret support; declaring a `<secret>_version` key in the data model routes that secret through the provider's write-only `<secret>_wo`/`<secret>_wo_version` pair instead of the state-storing attribute, so the plaintext value is never persisted to Terraform state; a secret without a version keeps the existing behavior unchanged.
 - Add `inventory.discovery[].create_per_site` opt-in flag so a discovery job defined in site data is created via `catalystcenter_discovery` even in per-site mode (`manage_global_settings = false` with a non-empty `managed_sites`). Jobs without the flag keep the existing behavior (created only in a global or single-state apply).
 - Add `fabric.fabric_sites.anycast_gateways[].additional_ip_pools` support; anycast gateway resources now accept up to 4 additional (secondary) IP pool names (requires Catalyst Center 3.2.x)
