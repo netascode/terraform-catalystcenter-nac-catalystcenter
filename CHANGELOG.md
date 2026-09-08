@@ -1,5 +1,9 @@
 ## (unreleased)
 
+**New Features:**
+- Add `inventory.discovery[].create_per_site` opt-in flag so a discovery job defined in site data is created via `catalystcenter_discovery` even in per-site mode (`manage_global_settings = false` with a non-empty `managed_sites`). Jobs without the flag keep the existing behavior (created only in a global or single-state apply).
+- Add `fabric.fabric_sites.anycast_gateways[].additional_ip_pools` support; anycast gateway resources now accept up to 4 additional (secondary) IP pool names (requires Catalyst Center 3.2.x)
+
 **Bug Fixes:**
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
