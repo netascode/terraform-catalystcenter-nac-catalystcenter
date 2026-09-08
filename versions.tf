@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.11.0"
+  required_version = ">= 1.15.0"
 
   required_providers {
     catalystcenter = {
@@ -8,7 +8,7 @@ terraform {
     }
     utils = {
       source  = "netascode/utils"
-      version = ">= 1.0.0"
+      version = ">= 2.0.0"
     }
     local = {
       source  = "hashicorp/local"
