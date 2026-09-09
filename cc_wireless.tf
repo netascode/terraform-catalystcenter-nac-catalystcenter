@@ -170,6 +170,21 @@ resource "catalystcenter_wireless_pre_auth_acl" "pre_auth_acl" {
   }]
 }
 
+# AP Profile secrets are sent as write-only arguments (never persisted to state); the
+# corresponding _wo_version is a hash of the plaintext so a YAML value change is what
+# drives Terraform to resend it, keeping the model fully derived from the data model.
+locals {
+  ap_profile_dot1x_password = { for profile in try(local.catalyst_center.wireless.ap_profiles, []) :
+    profile.name => try(profile.dot1x_password, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password, null)
+  }
+  ap_profile_management_password = { for profile in try(local.catalyst_center.wireless.ap_profiles, []) :
+    profile.name => try(profile.management_password, local.defaults.catalyst_center.wireless.ap_profiles.management_password, null)
+  }
+  ap_profile_management_enable_password = { for profile in try(local.catalyst_center.wireless.ap_profiles, []) :
+    profile.name => try(profile.management_enable_password, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password, null)
+  }
+}
+
 # Create AP Profiles from YAML configuration
 resource "catalystcenter_ap_profile" "ap_profile" {
   for_each = { for profile in try(local.catalyst_center.wireless.ap_profiles, []) : profile.name => profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
@@ -180,15 +195,18 @@ resource "catalystcenter_ap_profile" "ap_profile" {
   remote_worker_enabled = try(each.value.remote_worker_enabled, local.defaults.catalyst_center.wireless.ap_profiles.remote_worker_enabled, null)
 
   # Management settings
-  auth_type                  = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ap_profiles.auth_type, null)
-  dot1x_username             = try(each.value.dot1x_username, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_username, null)
-  dot1x_password             = sensitive(try(each.value.dot1x_password, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password, null))
-  ssh_enabled                = try(each.value.ssh_enabled, local.defaults.catalyst_center.wireless.ap_profiles.ssh_enabled, null)
-  telnet_enabled             = try(each.value.telnet_enabled, local.defaults.catalyst_center.wireless.ap_profiles.telnet_enabled, null)
-  management_user_name       = try(each.value.management_user_name, local.defaults.catalyst_center.wireless.ap_profiles.management_user_name, null)
-  management_password        = sensitive(try(each.value.management_password, local.defaults.catalyst_center.wireless.ap_profiles.management_password, null))
-  management_enable_password = sensitive(try(each.value.management_enable_password, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password, null))
-  cdp_state                  = try(each.value.cdp_state, local.defaults.catalyst_center.wireless.ap_profiles.cdp_state, null)
+  auth_type                             = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ap_profiles.auth_type, null)
+  dot1x_username                        = try(each.value.dot1x_username, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_username, null)
+  dot1x_password_wo                     = sensitive(local.ap_profile_dot1x_password[each.key])
+  dot1x_password_wo_version             = local.ap_profile_dot1x_password[each.key] != null ? sha256(local.ap_profile_dot1x_password[each.key]) : null
+  ssh_enabled                           = try(each.value.ssh_enabled, local.defaults.catalyst_center.wireless.ap_profiles.ssh_enabled, null)
+  telnet_enabled                        = try(each.value.telnet_enabled, local.defaults.catalyst_center.wireless.ap_profiles.telnet_enabled, null)
+  management_user_name                  = try(each.value.management_user_name, local.defaults.catalyst_center.wireless.ap_profiles.management_user_name, null)
+  management_password_wo                = sensitive(local.ap_profile_management_password[each.key])
+  management_password_wo_version        = local.ap_profile_management_password[each.key] != null ? sha256(local.ap_profile_management_password[each.key]) : null
+  management_enable_password_wo         = sensitive(local.ap_profile_management_enable_password[each.key])
+  management_enable_password_wo_version = local.ap_profile_management_enable_password[each.key] != null ? sha256(local.ap_profile_management_enable_password[each.key]) : null
+  cdp_state                             = try(each.value.cdp_state, local.defaults.catalyst_center.wireless.ap_profiles.cdp_state, null)
 
   # AWIPS settings
   awips_enabled          = try(each.value.awips_enabled, local.defaults.catalyst_center.wireless.ap_profiles.awips_enabled, null)
