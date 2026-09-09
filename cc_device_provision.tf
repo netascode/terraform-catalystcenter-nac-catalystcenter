@@ -8,6 +8,16 @@ locals {
     && !startswith(device.platform_id, "CW91")
   }
 
+  # Access points get their hostname from Catalyst Center at claim time and use
+  # an ephemeral management IP — which is why AP platforms are excluded from
+  # device_ip_to_id above. Serial number is their only stable, pre-known identifier.
+  device_serial_to_id = {
+    for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
+    device.serial_number => device.id
+    if try(device.serial_number, null) != null
+    && try(device.serial_number, "") != ""
+  }
+
   name_to_fqdn_mapping = try({
     for device in local.catalyst_center.inventory.devices : device.name => try(device.fqdn_name, device.name, null)
   }, {})
@@ -107,11 +117,13 @@ locals {
   assigned_access_points_map = {
     for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => {
-      name      = d.name
-      fqdn_name = d.fqdn_name
-      device_ip = try(d.device_ip, null)
+      name          = d.name
+      fqdn_name     = try(d.fqdn_name, null)
+      device_ip     = try(d.device_ip, null)
+      serial_number = try(d.serial_number, null)
     }... if(strcontains(d.state, "PROVISION") || d.state == "ASSIGN") && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
     && (
+      lookup(local.device_serial_to_id, try(d.serial_number, ""), null) != null ||
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
       lookup(local.device_ip_to_id, try(d.device_ip, ""), null) != null
@@ -148,6 +160,20 @@ locals {
   ]
 
   missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+
+  missing_access_points = [
+    for device in try(local.catalyst_center.inventory.devices, []) :
+    device
+    if(strcontains(device.state, "PROVISION") || device.state == "ASSIGN")
+    && try(device.type, null) == "AccessPoint"
+    && contains(local.sites, try(device.site, "NONE"))
+    && lookup(local.device_serial_to_id, try(device.serial_number, ""), null) == null
+    && lookup(local.device_name_to_id, device.name, null) == null
+    && lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) == null
+    && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
+  ]
+
+  missing_access_points_error = length(local.missing_access_points) > 0 ? "❌ The following access points are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_access_points : "  • ${d.name} (Serial: ${try(d.serial_number, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAn access point is resolved by `serial_number` first, then `name` / `fqdn_name`. Resolution by `device_ip` does not apply to Catalyst 9100-series (C91xx) or Cisco Wireless (CW91xx) access points, whose management IPs are ephemeral and deliberately excluded from IP-based lookup. Because Catalyst Center also assigns AP hostnames at claim time, `serial_number` is the recommended identifier.\n\nAction required: Add `serial_number` to these access points in the data model, or ensure they are claimed and present in Catalyst Center inventory before running Terraform." : ""
 
   # Devices Terraform will actually provision — same scope as the AP-location /
   # controller resources, so the guard fires only when the destructive delete is
@@ -198,6 +224,13 @@ check "device_discovery_validation" {
   assert {
     condition     = length(local.missing_devices) == 0
     error_message = local.missing_devices_error
+  }
+}
+
+check "access_point_discovery_validation" {
+  assert {
+    condition     = length(local.missing_access_points) == 0
+    error_message = local.missing_access_points_error
   }
 }
 
@@ -272,8 +305,9 @@ resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
 
   device_ids = [
     for device in each.value :
-    try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])
+    try(local.device_serial_to_id[device.serial_number], local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])
     if(
+      lookup(local.device_serial_to_id, try(device.serial_number, ""), null) != null ||
       lookup(local.device_name_to_id, device.name, null) != null ||
       lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
       lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
@@ -393,7 +427,16 @@ resource "time_sleep" "wait_for_managed_ap_locations" {
 
 locals {
   provisioned_access_points = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION")) && try(device.type, null) == "AccessPoint" && contains(local.sites, try(device.site, "NONE"))
+    for device in try(local.catalyst_center.inventory.devices, []) : device
+    if(strcontains(device.state, "PROVISION"))
+    && try(device.type, null) == "AccessPoint"
+    && contains(local.sites, try(device.site, "NONE"))
+    && (
+      lookup(local.device_serial_to_id, try(device.serial_number, ""), null) != null ||
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
+    )
   ]
 
   provisioned_access_points_by_site = {
@@ -408,6 +451,7 @@ resource "catalystcenter_provision_access_points" "access_points" {
 
   network_devices = [for device in each.value : {
     device_id = coalesce(
+      try(lookup(local.device_serial_to_id, device.serial_number, null), null),
       try(lookup(local.device_name_to_id, device.name, null), null),
       try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
       try(lookup(local.device_ip_to_id, device.device_ip, null), null)

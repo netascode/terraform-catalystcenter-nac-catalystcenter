@@ -484,6 +484,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
   ip_pool_name                              = try(each.value.ip_pool_name, null)
+  additional_ip_pools                       = lookup(each.value, "pool_type", "") == "FABRIC_AP" || lookup(each.value, "pool_type", "") == "EXTENDED_NODE" ? null : try([for idx, pool in each.value.additional_ip_pools : { name = pool, order = idx + 2 }], null)
   vlan_name                                 = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
   vlan_id                                   = try(each.value.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
   traffic_type                              = try(each.value.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -513,6 +514,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway_anchoring" {
   fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id
   virtual_network_name                      = try(each.value.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
   ip_pool_name                              = try(each.value.ip_pool_name, null)
+  additional_ip_pools                       = lookup(each.value, "pool_type", "") == "FABRIC_AP" || lookup(each.value, "pool_type", "") == "EXTENDED_NODE" ? null : try([for idx, pool in each.value.additional_ip_pools : { name = pool, order = idx + 2 }], null)
   vlan_name                                 = try(each.value.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
   vlan_id                                   = try(each.value.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
   traffic_type                              = try(each.value.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -550,6 +552,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway_zone" {
   fabric_id                                 = catalystcenter_fabric_zone.fabric_zone[each.value.zone_name].id
   virtual_network_name                      = try(each.value.gw.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
   ip_pool_name                              = try(each.value.gw.ip_pool_name, null)
+  additional_ip_pools                       = lookup(each.value.gw, "pool_type", "") == "FABRIC_AP" || lookup(each.value.gw, "pool_type", "") == "EXTENDED_NODE" ? null : try([for idx, pool in each.value.gw.additional_ip_pools : { name = pool, order = idx + 2 }], null)
   vlan_name                                 = try(each.value.gw.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
   vlan_id                                   = try(each.value.gw.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
   traffic_type                              = try(each.value.gw.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -579,6 +582,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways" {
       fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.key].id
       virtual_network_name                      = try(anycast_gateway.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
       ip_pool_name                              = try(anycast_gateway.ip_pool_name, null)
+      additional_ip_pools                       = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try([for idx, pool in anycast_gateway.additional_ip_pools : { name = pool, order = idx + 2 }], null)
       vlan_name                                 = try(anycast_gateway.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
       vlan_id                                   = try(anycast_gateway.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
       traffic_type                              = try(anycast_gateway.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -610,6 +614,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways_anchoring" {
       fabric_id                                 = catalystcenter_fabric_site.fabric_site[each.key].id
       virtual_network_name                      = try(anycast_gateway.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
       ip_pool_name                              = try(anycast_gateway.ip_pool_name, null)
+      additional_ip_pools                       = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try([for idx, pool in anycast_gateway.additional_ip_pools : { name = pool, order = idx + 2 }], null)
       vlan_name                                 = try(anycast_gateway.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
       vlan_id                                   = try(anycast_gateway.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
       traffic_type                              = try(anycast_gateway.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -650,6 +655,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways_zone" {
       fabric_id                                 = try(catalystcenter_fabric_zone.fabric_zone[each.key].id, catalystcenter_fabric_site.fabric_site[each.key].id)
       virtual_network_name                      = try(anycast_gateway.l3_virtual_network, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.l3_virtual_network, null)
       ip_pool_name                              = try(anycast_gateway.ip_pool_name, null)
+      additional_ip_pools                       = lookup(anycast_gateway, "pool_type", "") == "FABRIC_AP" || lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? null : try([for idx, pool in anycast_gateway.additional_ip_pools : { name = pool, order = idx + 2 }], null)
       vlan_name                                 = try(anycast_gateway.vlan_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_name, null)
       vlan_id                                   = try(anycast_gateway.vlan_id, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.vlan_id, null)
       traffic_type                              = try(anycast_gateway.traffic_type, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.traffic_type, null)
@@ -829,7 +835,7 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) && ((length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 && var.use_bulk_api == false && length(try(site.wireless_ssids, [])) != 0) || (var.use_bulk_api == true && length(try(site.wireless_ssids, [])) != 0)) } : {}
+  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) && length(try(site.wireless_ssids, [])) != 0 && (var.use_bulk_api || length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 || length(keys(catalystcenter_fabric_ewlc.ewlc_device)) > 0) } : {}
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
@@ -839,7 +845,7 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
     }
   ])
 
-  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_anycast_gateways.anycast_gateways, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateway.anycast_gateway_anchoring, catalystcenter_anycast_gateways.anycast_gateways_anchoring, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_device.wireless_controller, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_wireless_profile.wireless_profile]
+  depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_fabric_l2_virtual_network.l2_vn, catalystcenter_anycast_gateways.anycast_gateways, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateway.anycast_gateway_anchoring, catalystcenter_anycast_gateways.anycast_gateways_anchoring, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_ewlc.ewlc_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_wireless_profile.wireless_profile]
 }
 
 resource "catalystcenter_fabric_l3_handoff_sda_transit" "sda_transit" {
