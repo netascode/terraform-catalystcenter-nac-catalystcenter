@@ -198,22 +198,15 @@ locals {
   network_settings = { for settings in try(local.catalyst_center.network_settings.network, []) : settings.name => settings }
   aaa_settings     = { for settings in try(local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
 
-  # AAA may be expressed two ways: inline under a site's network_settings
-  # (network_aaa / client_and_endpoint_aaa), or as a named reference into a
-  # top-level aaa_servers list via `aaa_servers: <name>`. Resolve both to one shape.
   site_aaa_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => {
-      network_aaa             = try(local.aaa_settings[v.aaa_servers].network_aaa, v.network_aaa, null)
-      client_and_endpoint_aaa = try(local.aaa_settings[v.aaa_servers].client_and_endpoint_aaa, v.client_and_endpoint_aaa, null)
+      network_aaa             = try(local.aaa_settings[tostring(v.aaa_servers)].network_aaa, v.network_aaa, null)
+      client_and_endpoint_aaa = try(local.aaa_settings[tostring(v.aaa_servers)].client_and_endpoint_aaa, v.client_and_endpoint_aaa, null)
     }
-    if v != null && try(coalesce(try(v.aaa_servers, null), try(v.network_aaa, null), try(v.client_and_endpoint_aaa, null)), null) != null
+    if v != null && try(coalesce(try(tostring(v.aaa_servers), null), try(v.network_aaa, null), try(v.client_and_endpoint_aaa, null)), null) != null
   }
   telemetry_settings = { for settings in try(local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
 
-  # Per-site network settings. Like AAA, these may be expressed two ways:
-  # inline under a site's network_settings (new model), or as a named reference
-  # into a top-level network_settings.network list via `network: <name>` (old model).
-  # Resolved to one shape here so each resource reads a single path.
   site_network_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => {
       ntp_servers  = try(local.network_settings[v.network].ntp_servers, v.ntp_servers, null)
@@ -413,27 +406,12 @@ data "catalystcenter_ip_pools" "all_ip_pools" {
 }
 
 locals {
-  # Reservations are declared per-site under `network_settings.ip_pools_reservations`,
-  # with address-family details in `ipv4:` / `ipv6:` sub-blocks and the parent global
-  # pool referenced by name via `global_pool`.
-  #
-  # Reservations are keyed by their bare name throughout (matching the legacy module),
-  # so a reservation address is `pool_reservation["<reservation name>"]`. The reservation
-  # -> site mapping is carried separately (in each flat record's `site`) rather than baked
-  # into the key.
   site_to_ip_pools_reservation_map = merge(
     local.area_ip_pool_reservations,
     { for building in local.flat_buildings : "${building.parent_name}/${building.name}" => try(building.network_settings.ip_pools_reservations, building.ip_pools_reservations, []) if try(coalesce(try(building.network_settings.ip_pools_reservations, null), try(building.ip_pools_reservations, null)), null) != null },
     { for floor in local.flat_floors : "${floor.parent_name}/${floor.name}" => try(floor.network_settings.ip_pools_reservations, floor.ip_pools_reservations, []) if try(coalesce(try(floor.network_settings.ip_pools_reservations, null), try(floor.ip_pools_reservations, null)), null) != null }
   )
 
-  # A site reservation may be given two ways:
-  #  - as a full object carrying its own detail (flat DM shape), or
-  #  - as a bare name string referencing a reservation defined once under
-  #    `network_settings.ip_pools[].ip_pools_reservations` (the released-module shape).
-  # Build a name -> detail lookup from the network_settings objects so bare-string
-  # references can be resolved to their detail. Each detail object is stamped with the
-  # parent pool's name as `global_pool`.
   ip_pools_reservation_detail_by_name = {
     for entry in flatten([
       for pool in try(local.catalyst_center.network_settings.ip_pools, []) : [
@@ -444,22 +422,11 @@ locals {
     ]) : entry.name => entry
   }
 
-  # One flat record per reservation, carrying its site and both address families.
-  # The ported (PR-aligned) DM uses a FLAT reservation shape: an IPv4-primary
-  # `global_pool` + `subnet`/`prefix_length`/`gateway`/`dns_servers`/`dhcp_servers`
-  # at the top level, plus an OPTIONAL additive IPv6 space via `ipv6_global_pool`
-  # and `ipv6_*` fields. (The provider marks the ipv4_* args Required, so every
-  # reservation is v4-primary with v6 optional.) The legacy nested `ipv4:` / `ipv6:`
-  # sub-block shape is still carried through as a fallback.
   ip_pool_reservations_flat = flatten([
     for site, reservations in local.site_to_ip_pools_reservation_map : [
       # A bare-string reservation is a name reference: resolve it to the detail object
       # from network_settings; an object is used as-is.
       for r_raw in reservations : [
-        # Normalize to an object. A bare-string reservation is a name reference:
-        # resolve it to its detail object (or a minimal { name } if undefined).
-        # An object reservation is used as-is. tostring() on an object errors, so the
-        # try() falls through to r_raw for the object case.
         for r in [
           try(local.ip_pools_reservation_detail_by_name[tostring(r_raw)], { name = tostring(r_raw) }, r_raw)
           ] : {
@@ -508,12 +475,6 @@ locals {
 }
 
 locals {
-  # Global IP pools live under `sites.global.network_settings.ip_pools` in the
-  # per-site model. The ported (PR-aligned) DM uses a FLAT shape:
-  #   ip_address_space: IPv4|IPv6   +   ip_pool_cidr: <subnet>/<prefix>
-  # with gateway/dns_servers/dhcp_servers at the top level. The legacy nested shape
-  # (`ipv4:` / `ipv6:` sub-blocks) is still read as a fallback so pre-existing
-  # datasets keep working.
   _global_ip_pools_raw = try(local.global_network_settings.ip_pools, try(local.catalyst_center.network_settings.ip_pools, []))
 
   global_ip_pools = {
@@ -563,9 +524,6 @@ resource "catalystcenter_ip_pool" "ip_pool_v6" {
 }
 
 locals {
-  # Parent global pool per reservation. Flat form: IPv4-primary pool via top-level
-  # `global_pool`; optional additive IPv6 pool via `ipv6_global_pool`. Legacy nested
-  # form carries `global_pool` inside the `ipv4:` / `ipv6:` sub-block.
   reservation_parent_pool_v4 = {
     for r in local.ip_pool_reservations_flat : r.key => try(coalesce(r.flat_global_pool, try(r.ipv4.global_pool, null)), null)
     if try(coalesce(r.flat_global_pool, try(r.ipv4.global_pool, null)), null) != null
@@ -601,9 +559,6 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
   ipv4_dns_servers    = lookup(local.reservation_parent_pool_v4, each.key, null) != null ? try(local.ip_pool_reservations[each.key].flat.dns_servers, local.ip_pool_reservations[each.key].ipv4.dns_servers, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.dns_servers, null) : null
   ipv4_subnet         = lookup(local.reservation_parent_pool_v4, each.key, null) != null ? try(local.ip_pool_reservations[each.key].flat.subnet, local.ip_pool_reservations[each.key].ipv4.subnet, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv4.subnet, null) : null
 
-  # Optional additive IPv6 space: flat reservations feed the ipv6_* args from their
-  # `ipv6_*` top-level attributes; legacy nested reservations feed them from `ipv6:`.
-  # Gated on a resolved IPv6 parent pool so v4-only reservations leave these null.
   ipv6_global_pool_id = try(coalesce(lookup(local.ip_pool_ids_v6, lookup(local.reservation_parent_pool_v6, each.key, ""), null), lookup(local.data_source_ip_pool_ids, lookup(local.reservation_parent_pool_v6, each.key, ""), null)), null)
   ipv6_prefix_length  = lookup(local.reservation_parent_pool_v6, each.key, null) != null ? try(local.ip_pool_reservations[each.key].flat_ipv6.prefix_length, local.ip_pool_reservations[each.key].ipv6.prefix_length, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.prefix_length, null) : null
   ipv6_gateway        = lookup(local.reservation_parent_pool_v6, each.key, null) != null ? try(local.ip_pool_reservations[each.key].flat_ipv6.gateway, local.ip_pool_reservations[each.key].ipv6.gateway, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.ipv6.gateway, null) : null
