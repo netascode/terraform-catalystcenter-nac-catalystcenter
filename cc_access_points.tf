@@ -117,10 +117,11 @@ resource "catalystcenter_provision_access_points" "access_points" {
 # Access point configuration
 #
 # Applies the optional `inventory.devices[].access_point` block and reconciles
-# AP hostnames to `inventory.devices[].name`. Two independent opt-ins, both
-# default false so brownfield estates are never touched implicitly:
-#   var.manage_ap_configuration -> apply the `access_point` settings block
-#   var.manage_ap_hostname      -> rename the AP to its data-model `name`
+# AP hostnames to `inventory.devices[].name`. Both opt-ins live in the data
+# model rather than in module variables, so intent travels with the device and
+# can be set per access point or once under `defaults`:
+#   `access_point` block or `access_point_configuration` -> apply those settings
+#   `access_point.manage_hostname: true` (default false) -> rename to `name`
 #
 # Named configurations are read from `wireless.access_point_configurations` and
 # referenced by `inventory.devices[].access_point_configuration` — reusable radio
@@ -163,7 +164,7 @@ locals {
   ap_hostname_managed = {
     for d in local.provisioned_access_points :
     d.serial_number => true
-    if var.manage_ap_hostname
+    if try(d.access_point.manage_hostname, local.ap_config_defaults.manage_hostname, false)
     && try(d.serial_number, null) != null
     && try(d.name, null) != null
   }
@@ -175,22 +176,28 @@ locals {
 
   ap_config_defaults = try(local.defaults.catalyst_center.inventory.devices.access_point, {})
 
+  # `manage_hostname` is rename intent, not a setting: counting it as an inline
+  # override would re-key the resource away from the named configuration the
+  # device shares with everyone else.
+  ap_inline_settings = {
+    for d in local.provisioned_access_points :
+    d.serial_number => setsubtract(keys(try(d.access_point, {})), ["manage_hostname"])
+    if try(d.serial_number, null) != null
+  }
+
   ap_candidates = [
     for d in local.provisioned_access_points : d
     if try(d.serial_number, null) != null
     && (
-      (
-        var.manage_ap_configuration
-        && (try(d.access_point, null) != null || try(d.access_point_configuration, null) != null)
-      )
+      length(lookup(local.ap_inline_settings, try(d.serial_number, ""), [])) > 0
+      || try(d.access_point_configuration, null) != null
       || lookup(local.ap_hostname_managed, try(d.serial_number, ""), false)
     )
   ]
 
   ap_unknown_config_refs = [
     for d in local.provisioned_access_points : d
-    if var.manage_ap_configuration
-    && try(d.access_point_configuration, null) != null
+    if try(d.access_point_configuration, null) != null
     && lookup(local.ap_named_configs, d.access_point_configuration, null) == null
   ]
 
@@ -202,7 +209,7 @@ locals {
   ap_config_resolved = {
     for d in local.ap_candidates : d.serial_number => {
       config_name = try(d.access_point_configuration, null)
-      has_inline  = try(d.access_point, null) != null
+      has_inline  = length(lookup(local.ap_inline_settings, d.serial_number, [])) > 0
 
       admin_status                 = try(d.access_point.admin_status, local.ap_named_configs[d.access_point_configuration].admin_status, local.ap_config_defaults.admin_status, null)
       ap_mode                      = try(d.access_point.ap_mode, local.ap_named_configs[d.access_point_configuration].ap_mode, local.ap_config_defaults.ap_mode, null)
@@ -327,7 +334,7 @@ locals {
     if lookup(local.device_serial_to_ap_eth_mac, a.serial_number, null) == null
   ]
 
-  ap_config_missing_mac_error = length(local.ap_config_missing_mac) > 0 ? "❌ The following access points cannot be configured because Catalyst Center returned no ethernet MAC address for them:\n\n${join("\n", [for s in local.ap_config_missing_mac : "  • serial ${s}"])}\n\nThe Configure Access Points intent API selects access points by their ethernet MAC address (`apEthernetMacAddress` in inventory) and accepts no other identifier. Note this is not the device `macAddress`, which on an access point is the base radio MAC. An ethernet MAC is only present once the access point has been claimed and is in inventory.\n\nAction required: Claim these access points, or remove their `access_point` block and set `manage_ap_hostname = false` for them." : ""
+  ap_config_missing_mac_error = length(local.ap_config_missing_mac) > 0 ? "❌ The following access points cannot be configured because Catalyst Center returned no ethernet MAC address for them:\n\n${join("\n", [for s in local.ap_config_missing_mac : "  • serial ${s}"])}\n\nThe Configure Access Points intent API selects access points by their ethernet MAC address (`apEthernetMacAddress` in inventory) and accepts no other identifier. Note this is not the device `macAddress`, which on an access point is the base radio MAC. An ethernet MAC is only present once the access point has been claimed and is in inventory.\n\nAction required: Claim these access points, or remove their `access_point` block, or set `access_point.manage_hostname: false` for them." : ""
 
   ap_config_location_conflict = [
     for d in local.ap_candidates : d
