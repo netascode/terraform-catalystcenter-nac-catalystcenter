@@ -51,6 +51,18 @@ variable "use_bulk_api" {
   default     = false
 }
 
+variable "manage_ap_hostname" {
+  description = "Flag indicating whether access point hostnames should be reconciled to the `name` defined in the data model. Disabled by default so brownfield deployments are not renamed unexpectedly."
+  type        = bool
+  default     = false
+}
+
+variable "manage_ap_configuration" {
+  description = "Flag indicating whether the `inventory.devices[].access_point` configuration block should be applied. Disabled by default so brownfield access point settings are not overwritten."
+  type        = bool
+  default     = false
+}
+
 variable "bulk_site_provisioning" {
   description = "Site path for bulk device provisioning. When set with use_bulk_api=true, provisions all devices from this site and all child sites in a single bulk operation. Example: 'Global/Poland' will provision all devices under Poland hierarchy."
   type        = string
