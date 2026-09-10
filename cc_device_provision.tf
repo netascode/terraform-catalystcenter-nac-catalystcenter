@@ -163,6 +163,7 @@ locals {
       has_ap_locs     = try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null
       has_anchor_locs = try(device.anchor_managed_ap_locations, null) != null
       is_fabric       = length(coalesce(try(device.fabric_roles, []), [])) > 0
+      has_type_wc     = try(device.type, null) == "WirelessController"
     }
   ]
 
@@ -203,6 +204,19 @@ locals {
   ]
 
   fabric_anchor_ap_locations_error = length(local.fabric_devices_with_anchor_ap_locations) > 0 ? "❌ The following devices define anchor managed AP locations but carry fabric roles:\n\n${join("\n", [for d in local.fabric_devices_with_anchor_ap_locations : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nanchor_managed_ap_locations applies only to non-fabric Guest Anchor Wireless Controllers. Such a device must not be assigned to a fabric_site and must carry no fabric_roles.\n\nAction required: Remove the fabric_roles (and fabric_site) from the anchor WLC, or use primary_managed_ap_locations / secondary_managed_ap_locations if the device is a fabric wireless controller." : ""
+
+  # Rule: a device that defines any managed AP location (primary/secondary/anchor)
+  # or carries a WIRELESS_CONTROLLER_NODE / EMBEDDED_WIRELESS_CONTROLLER_NODE fabric
+  # role MUST declare type: WirelessController, because controller provisioning
+  # (catalystcenter_wireless_device_provision) is keyed solely on that type.
+  # Without it the controller is silently not provisioned (or destroyed on an
+  # existing deployment), so reject the combination at plan time.
+  wireless_controller_missing_type = [
+    for d in local.wireless_device_facts : d
+    if(d.has_ap_locs || d.has_anchor_locs || d.has_wlc || d.has_embedded) && !d.has_type_wc
+  ]
+
+  wireless_controller_missing_type_error = length(local.wireless_controller_missing_type) > 0 ? "❌ The following devices look like wireless controllers but are missing type: WirelessController:\n\n${join("\n", [for d in local.wireless_controller_missing_type : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA device that defines primary_managed_ap_locations, secondary_managed_ap_locations, or anchor_managed_ap_locations, or that carries a WIRELESS_CONTROLLER_NODE / EMBEDDED_WIRELESS_CONTROLLER_NODE fabric role, MUST be declared with type: WirelessController (exact spelling). Controller provisioning is keyed solely on this type.\n\nAction required: Add type: WirelessController to each device above, or remove its managed AP locations / wireless-controller fabric role if it is not a wireless controller." : ""
 }
 
 check "device_discovery_validation" {
@@ -225,6 +239,10 @@ resource "terraform_data" "wireless_validation" {
     precondition {
       condition     = length(local.fabric_devices_with_anchor_ap_locations) == 0
       error_message = local.fabric_anchor_ap_locations_error
+    }
+    precondition {
+      condition     = length(local.wireless_controller_missing_type) == 0
+      error_message = local.wireless_controller_missing_type_error
     }
   }
 }
