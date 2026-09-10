@@ -41,8 +41,6 @@ defaults:
     inventory:
       devices:
         role_source: MANUAL
-        access_point:
-          manage_hostname: false
     sites:
       areas:
         parent_name: Global
