@@ -18,14 +18,6 @@ locals {
     && try(device.serial_number, "") != ""
   }
 
-  # Current hostname as Catalyst Center knows it — the rename comparison source.
-  device_serial_to_hostname = {
-    for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
-    device.serial_number => device.hostname
-    if try(device.serial_number, "") != ""
-    && try(device.hostname, null) != null
-  }
-
   # The Configure Access Points API selects APs by their ETHERNET MAC. This is
   # not `mac_address`, which on an AP is the base radio MAC and is rejected with
   # "There are no Access points with the specified ethernet mac addresses".
@@ -518,6 +510,13 @@ resource "time_sleep" "provision_device_wait" {
 # inside `ap_list`, never in a key. Putting them in a key reproduces the
 # "Invalid for_each argument" failure that forced the RMA rework
 # (netascode/nac-catalystcenter#530).
+#
+# IDEMPOTENCY: `ap_list` must never be derived from a value this resource itself
+# mutates, or a successful apply changes its own arguments and costs a second
+# apply to settle. So `ap_name_new` is always the desired data-model name, never
+# the result of comparing against the live hostname, and `ap_name` stays null —
+# the API keys on `mac_address`. Renaming an AP to the name it already holds is a
+# no-op, which is what makes sending it unconditionally safe.
 # ---------------------------------------------------------------------------
 locals {
   ap_mode_map            = { LOCAL = 0, MONITOR = 1, SNIFFER = 4, BRIDGE = 5 }
@@ -533,13 +532,12 @@ locals {
     if try(d.serial_number, null) != null
   }
 
-  ap_rename_needed = {
+  ap_hostname_managed = {
     for d in local.provisioned_access_points :
     d.serial_number => true
     if var.manage_ap_hostname
     && try(d.serial_number, null) != null
-    && lookup(local.device_serial_to_hostname, try(d.serial_number, ""), null) != null
-    && lookup(local.device_serial_to_hostname, try(d.serial_number, ""), null) != d.name
+    && try(d.name, null) != null
   }
 
   ap_named_configs = {
@@ -557,7 +555,7 @@ locals {
         var.manage_ap_configuration
         && (try(d.access_point, null) != null || try(d.access_point_configuration, null) != null)
       )
-      || lookup(local.ap_rename_needed, try(d.serial_number, ""), false)
+      || lookup(local.ap_hostname_managed, try(d.serial_number, ""), false)
     )
   ]
 
@@ -830,8 +828,8 @@ resource "catalystcenter_access_point_configuration" "ap_config" {
   ap_list = [
     for s in each.value.serials : {
       mac_address = local.device_serial_to_ap_eth_mac[s]
-      ap_name     = lookup(local.device_serial_to_hostname, s, null)
-      ap_name_new = lookup(local.ap_rename_needed, s, false) ? local.ap_serial_to_desired_name[s] : null
+      ap_name     = null
+      ap_name_new = lookup(local.ap_hostname_managed, s, false) ? local.ap_serial_to_desired_name[s] : null
     }
     if lookup(local.device_serial_to_ap_eth_mac, s, null) != null
   ]
