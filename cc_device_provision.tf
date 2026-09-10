@@ -452,8 +452,7 @@ locals {
   ]
 
   provisioned_access_points_by_site = {
-    for site in distinct([for d in local.provisioned_access_points : d.site]) :
-    site => [for d in local.provisioned_access_points : d if d.site == site]
+    for d in local.provisioned_access_points : d.site => d...
   }
 }
 
@@ -685,14 +684,12 @@ locals {
     }
   ]
 
+  ap_config_by_key = { for a in local.ap_config_normalised : a.group_key => a... }
+
   ap_config_groups = {
-    for key in distinct([for a in local.ap_config_normalised : a.group_key]) :
-    key => {
-      settings = [for a in local.ap_config_normalised : a.settings if a.group_key == key][0]
-      serials = [
-        for a in local.ap_config_normalised : a.serial_number
-        if a.group_key == key
-      ]
+    for key, entries in local.ap_config_by_key : key => {
+      settings = entries[0].settings
+      serials  = [for a in entries : a.serial_number]
     }
   }
 
