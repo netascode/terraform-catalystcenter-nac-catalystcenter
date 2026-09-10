@@ -359,7 +359,7 @@ resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (try(device.type, null) == "WirelessController" || contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null || try(device.anchor_managed_ap_locations, null) != null) && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && try(device.type, null) == "WirelessController" && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.site, "NONE")) }
 
   network_device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
