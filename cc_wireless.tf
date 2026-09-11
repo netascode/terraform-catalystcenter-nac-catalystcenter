@@ -499,3 +499,98 @@ resource "catalystcenter_wireless_interface" "interface" {
   interface_name = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
   vlan_id        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
 }
+
+# ============================================================================
+# Leg-2 (site-level SSID enablement) VALIDATION — Issue #526 three-way SSID model
+#
+# The wireless SSID model is split across three files:
+#   1. Global definition  -> wireless.ssids[]                     (drives catalystcenter_wireless_ssid, above)
+#   2. Site enablement     -> sites…network_settings.wireless.ssids[] (validated here — drives NO resource)
+#   3. Fabric VLAN mapping -> fabric.fabric_sites[].wireless_ssids[]  (drives catalystcenter_fabric_vlan_to_ssid)
+#
+# The provider's catalystcenter_wireless_ssid is Global-only and there is no per-site SSID
+# resource; "enable an SSID at a site" is expressed only through a wireless network profile
+# (network_profiles.wireless[].ssid_details + site assignment, wired above). Leg 2 is therefore
+# validation/cross-check only: it stays as declarative intent and is checked against the global
+# definitions (leg 1) and the profile-based enablement, failing the plan on inconsistency.
+# ============================================================================
+locals {
+  # Every site.wireless.ssids[] entry surfaced by #523's flattened site tree, keyed by full
+  # hierarchy path. site_key is the "Parent/…/Name" string used everywhere else in the module.
+  site_enabled_ssids = flatten([
+    for site_key, settings in try(local.sites_to_settings_map, {}) : [
+      for entry in try(settings.wireless.ssids, []) : {
+        site      = site_key
+        ssid_name = entry.name
+        entry     = entry
+      }
+    ]
+  ])
+
+  # Leg-1 global SSID names (the only SSIDs that can legitimately be enabled anywhere).
+  global_ssid_names = toset([for s in try(local.catalyst_center.wireless.ssids, []) : s.name])
+
+  # Global SSID definitions keyed by name, for attribute cross-checks (leg-1 source of truth).
+  global_ssids_by_name = { for s in try(local.catalyst_center.wireless.ssids, []) : s.name => s }
+
+  # site -> set(ssid_name) actually delivered there by a wireless network profile assigned to
+  # the site or any ancestor. A profile assigned at Global/Poland credits Global/Poland and all
+  # its descendants (startswith on the full path, matching the descender used in cc_sites.tf).
+  profile_ssid_enablement = {
+    for site_key in local.sites : site_key => toset(flatten([
+      for np in try(local.catalyst_center.network_profiles.wireless, []) : [
+        for np_site in try(np.sites, []) : [
+          for ssid in try(np.ssid_details, []) : ssid.name
+        ]
+        if startswith(site_key, np_site)
+      ]
+    ]))
+  }
+
+  # Gate all validation to sites actually in scope (manage_global_settings / managed_sites),
+  # exactly like the resources above.
+  site_enabled_ssids_in_scope = [for e in local.site_enabled_ssids : e if contains(local.sites, e.site)]
+
+  # (a) undefined-global: a site enables an SSID with no matching global definition (leg 1).
+  wireless_ssid_errors_undefined = [
+    for e in local.site_enabled_ssids_in_scope :
+    "  • Site '${e.site}' enables SSID '${e.ssid_name}', which is not defined in wireless.ssids (global definitions)."
+    if !contains(local.global_ssid_names, e.ssid_name)
+  ]
+
+  # (b) not-enabled-by-profile: the SSID is globally defined but no wireless network profile
+  # assigned to the site (or an ancestor) lists it — the site-level enablement is inert.
+  wireless_ssid_errors_no_profile = [
+    for e in local.site_enabled_ssids_in_scope :
+    "  • Site '${e.site}' enables SSID '${e.ssid_name}', but no wireless network profile assigned to this site (or an ancestor) delivers it — the enablement is inert. Add it to a network_profiles.wireless[].ssid_details and assign that profile to the site."
+    if contains(local.global_ssid_names, e.ssid_name) && !contains(try(local.profile_ssid_enablement[e.site], []), e.ssid_name)
+  ]
+
+  # (c) attribute contradiction (hard): where the site entry pins wlan_type or auth_type, it must
+  # match the global definition. Radio/broadcast fields are advisory (provider can't apply them
+  # per-site) and are NOT checked.
+  wireless_ssid_errors_contradiction = flatten([
+    for e in local.site_enabled_ssids_in_scope : [
+      for attr in ["wlan_type", "auth_type"] :
+      "  • Site '${e.site}' sets ${attr}='${try(e.entry[attr], "")}' for SSID '${e.ssid_name}', contradicting the global definition (${attr}='${try(local.global_ssids_by_name[e.ssid_name][attr], "")}')."
+      if contains(local.global_ssid_names, e.ssid_name) && try(e.entry[attr], null) != null && try(local.global_ssids_by_name[e.ssid_name][attr], null) != null && try(e.entry[attr], null) != try(local.global_ssids_by_name[e.ssid_name][attr], null)
+    ]
+  ])
+
+  wireless_ssid_validation_errors = concat(
+    local.wireless_ssid_errors_undefined,
+    local.wireless_ssid_errors_no_profile,
+    local.wireless_ssid_errors_contradiction,
+  )
+
+  wireless_ssid_validation_error = length(local.wireless_ssid_validation_errors) > 0 ? "❌ Site-level wireless SSID enablement (network_settings.wireless.ssids) is inconsistent with the global definitions and/or wireless network profiles:\n\n${join("\n", local.wireless_ssid_validation_errors)}\n\nAction required: ensure each site-enabled SSID is defined in wireless.ssids, is delivered by a wireless network profile assigned to that site, and does not contradict the global wlan_type/auth_type." : ""
+}
+
+resource "terraform_data" "wireless_site_ssid_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.wireless_ssid_validation_errors) == 0
+      error_message = local.wireless_ssid_validation_error
+    }
+  }
+}

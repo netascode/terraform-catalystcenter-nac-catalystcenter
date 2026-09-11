@@ -645,9 +645,9 @@ locals {
     for fabric_site in try(local.catalyst_center.fabric.fabric_sites, []) : [
       for fd in try(fabric_site.fabric_devices, []) : merge(fd, {
         fabric_site_name = fabric_site.name
-        state            = try(local.inventory_by_name[fd.name].state, null)
-        device_ip        = try(local.inventory_by_name[fd.name].device_ip, null)
-        fqdn_name        = try(fd.fqdn_name, local.inventory_by_name[fd.name].fqdn_name, null)
+        state            = try(local.inventory_by_name[fd.name].state, fd.state, null)
+        device_ip        = try(local.inventory_by_name[fd.name].device_ip, fd.device_ip, null)
+        fqdn_name        = try(coalesce(try(fd.fqdn_name, null), try(local.inventory_by_name[fd.name].fqdn_name, null)), null)
       })
     ]
   ])
@@ -697,7 +697,7 @@ resource "catalystcenter_fabric_devices" "fabric_devices" {
     }
     if(
       lookup(local.device_name_to_id, device.name, null) != null ||
-      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
+      lookup(local.device_name_to_id, try(coalesce(try(device.fqdn_name, null), ""), ""), null) != null ||
       lookup(local.device_ip_to_id, device.device_ip, null) != null
     )
   ]
@@ -799,8 +799,11 @@ resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
     for vlan in distinct([for ssid in try(each.value.wireless_ssids, []) : ssid.vlan_name]) : {
-      vlan_name    = vlan
-      ssid_details = [for ssid in each.value.wireless_ssids : { name = ssid.name } if ssid.vlan_name == vlan]
+      vlan_name = vlan
+      ssid_details = [for ssid in each.value.wireless_ssids : {
+        name               = ssid.name
+        security_group_tag = try(ssid.security_group_name, null)
+      } if ssid.vlan_name == vlan]
     }
   ])
 

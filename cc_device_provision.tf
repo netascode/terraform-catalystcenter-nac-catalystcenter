@@ -151,7 +151,7 @@ locals {
     && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
   ]
 
-  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${try(d.site, "N/A")})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
 
   # Devices Terraform will actually provision — same scope as the AP-location /
   # controller resources, so the guard fires only when the destructive delete is

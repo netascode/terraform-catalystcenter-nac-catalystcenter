@@ -11,9 +11,21 @@ resource "catalystcenter_lan_automation_link" "link" {
   peer_device_management_ip_address    = try(each.value.secondary_device_management_ip_address, local.defaults.catalyst_center.lan_automation.links.secondary_device_management_ip_address, null)
   peer_device_interface_name           = try(each.value.secondary_device_interface_name, local.defaults.catalyst_center.lan_automation.links.secondary_device_interface_name, null)
   ip_pool_name                         = try(each.value.ip_pool_name, local.defaults.catalyst_center.lan_automation.links.ip_pool_name, null)
+
+  # Link add/remove operates on the seed device and the devices a LAN automation session
+  # discovered, so both endpoints must already be onboarded: sessions run first, and the
+  # seed/discovered devices are assigned to their site before any link operation.
+  depends_on = [
+    catalystcenter_lan_automation.lanauto_edge,
+    catalystcenter_assign_device_to_site.devices_to_site,
+  ]
 }
 
 resource "catalystcenter_lan_automation" "lanauto_edge" {
+  # The provider models a session as create=START / delete=STOP: creating this resource
+  # starts LAN automation, destroying it stops it. So we only instantiate entries with
+  # status == "START"; a "STOP" entry (or a removed entry) produces no resource, which
+  # tears the session down on the next apply.
   for_each = {
     for lanauto in try(local.catalyst_center.lan_automation.devices, []) :
     lanauto.name => lanauto
@@ -40,15 +52,4 @@ resource "catalystcenter_lan_automation" "lanauto_edge" {
   discovery_timeout               = try(each.value.discovery_timeout, local.defaults.catalyst_center.lan_automation.devices.discovery_timeout, null)
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
-}
-
-resource "catalystcenter_lan_automation_link" "lanauto_link" {
-  for_each = { for link in try(local.catalyst_center.lan_automation.links, []) : link.name => link }
-
-  action                               = try(each.value.action, local.defaults.catalyst_center.lan_automation.links.action, null)
-  primary_device_management_ip_address = try(each.value.primary_device_management_ip_address, local.defaults.catalyst_center.lan_automation.links.primary_device_management_ip_address, null)
-  primary_device_interface_name        = try(each.value.primary_device_interface_name, local.defaults.catalyst_center.lan_automation.links.primary_device_interface_name, null)
-  peer_device_management_ip_address    = try(each.value.peer_device_management_ip_address, each.value.secondary_device_management_ip_address, local.defaults.catalyst_center.lan_automation.links.peer_device_management_ip_address, null)
-  peer_device_interface_name           = try(each.value.peer_device_interface_name, each.value.secondary_device_interface_name, local.defaults.catalyst_center.lan_automation.links.peer_device_interface_name, null)
-  ip_pool_name                         = try(each.value.ip_pool_name, local.defaults.catalyst_center.lan_automation.links.ip_pool_name, null)
 }

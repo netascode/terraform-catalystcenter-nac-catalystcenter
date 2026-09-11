@@ -195,8 +195,13 @@ data "catalystcenter_assign_credentials" "global_assign_credentials" {
 # Network Settings
 
 locals {
-  network_settings = { for settings in try(local.catalyst_center.network_settings.network, []) : settings.name => settings }
-  aaa_settings     = { for settings in try(local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
+  # Named global definitions live under sites.global.network_settings now that
+  # network settings are folded into the sites tree (issue #523). A site level
+  # may reference one of these by name (e.g. `network: Global_Network`), so the
+  # lookup maps must be built from global_network_settings. The old top-level
+  # network_settings path is kept as a fallback for back-compat.
+  network_settings = { for settings in try(local.global_network_settings.network, local.catalyst_center.network_settings.network, []) : settings.name => settings }
+  aaa_settings     = { for settings in try(local.global_network_settings.aaa_servers, local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
 
   site_aaa_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => {
@@ -205,24 +210,33 @@ locals {
     }
     if v != null && try(coalesce(try(tostring(v.aaa_servers), null), try(v.network_aaa, null), try(v.client_and_endpoint_aaa, null)), null) != null
   }
-  telemetry_settings = { for settings in try(local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
+  telemetry_settings = { for settings in try(local.global_network_settings.telemetry, local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
 
   site_network_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => {
-      ntp_servers  = try(local.network_settings[v.network].ntp_servers, v.ntp_servers, null)
-      dhcp_servers = try(local.network_settings[v.network].dhcp_servers, v.dhcp_servers, null)
-      dns_servers  = try(local.network_settings[v.network].dns_servers, v.dns_servers, null)
-      domain_name  = try(local.network_settings[v.network].domain_name, v.domain_name, null)
-      timezone     = try(local.network_settings[v.network].timezone, v.timezone, null)
-      banner       = try(local.network_settings[v.network].banner, v.banner, null)
+      # `network` accepts three forms (issue #523 embed-or-reference):
+      #   1. string reference  -> local.network_settings[<name>]
+      #   2. inline object      -> v.network.<field>
+      #   3. flat siblings      -> v.<field>  (back-compat)
+      ntp_servers  = try(local.network_settings[v.network].ntp_servers, v.network.ntp_servers, v.ntp_servers, null)
+      dhcp_servers = try(local.network_settings[v.network].dhcp_servers, v.network.dhcp_servers, v.dhcp_servers, null)
+      dns_servers  = try(local.network_settings[v.network].dns_servers, v.network.dns_servers, v.dns_servers, null)
+      domain_name  = try(local.network_settings[v.network].domain_name, v.network.domain_name, v.domain_name, null)
+      timezone     = try(local.network_settings[v.network].timezone, v.network.timezone, v.timezone, null)
+      banner       = try(local.network_settings[v.network].banner, v.network.banner, v.banner, null)
     }
     if v != null
   }
 
-  # Telemetry, same two forms: `telemetry: <name>` reference or an inline block.
+  # Telemetry, same two forms: `telemetry: <name>` reference (a string) or an
+  # inline block (an object). The global definitions live under
+  # global.network_settings as a *list* (`telemetry:` is a list of named defs) —
+  # that is a definition source, not a site-applied value, so a list-typed
+  # value is excluded from per-site resolution (can(tolist()) is true only for
+  # lists/tuples, false for strings and objects).
   site_telemetry_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => try(local.telemetry_settings[v.telemetry], v.telemetry, null)
-    if v != null && try(v.telemetry, null) != null
+    if v != null && try(v.telemetry, null) != null && !can(tolist(v.telemetry))
   }
 }
 
@@ -482,7 +496,7 @@ locals {
       name = pool.name
       # Falls back to the module default; a literal null here would short-circuit
       # the try() chain at the resource and defeat that default.
-      type = try(pool.type, local.defaults.catalyst_center.network_settings.ip_pools.type, null)
+      type = try(title(pool.type), title(local.defaults.catalyst_center.network_settings.ip_pools.type), null)
       # Flat form declares the family explicitly; legacy nested form infers it from
       # whichever sub-block is present.
       family        = try(pool.ip_address_space, try(pool.ipv6, null) != null ? "IPv6" : "IPv4")
