@@ -120,7 +120,7 @@ locals {
       name      = d.name
       fqdn_name = d.fqdn_name
       device_ip = try(d.device_ip, null)
-    }... if(strcontains(d.state, "PROVISION")) && (try(d.type, null) == "WirelessController" || try(d.primary_managed_ap_locations, null) != null || try(d.secondary_managed_ap_locations, null) != null || try(d.anchor_managed_ap_locations, null) != null) && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
+    }... if(strcontains(d.state, "PROVISION")) && try(d.type, null) == "WirelessController" && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
