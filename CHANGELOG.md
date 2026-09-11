@@ -1,4 +1,4 @@
-## 0.5.0 (unreleased)
+## 0.5.0
 
 **New Features:**
 - Add write-only support for secrets; declaring a `<secret>_version` key in the data model routes that secret through the provider's `<secret>_wo` / `<secret>_wo_version` pair instead of the state-storing attribute, so the plaintext value is never persisted to Terraform state. A secret without a version keeps the existing behavior. Requires Terraform `>= 1.15.0` and provider `~> 0.6.1`
