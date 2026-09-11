@@ -15,17 +15,43 @@ locals {
   # "There are no Access points with the specified ethernet mac addresses".
   # Requires catalystcenter provider 0.6.1 or later.
   #
-  # The explicit null test matters: `try(x, "")` only substitutes on an error,
-  # not on a null, so a device with no serial number would otherwise survive the
-  # filter and produce a null map key ("Invalid object key"). `device_serial_to_id`
-  # in cc_device_provision.tf guards the same way.
-  device_serial_to_ap_eth_mac = {
+  # Both maps are grouped with `...` before being keyed. Catalyst Center does not
+  # guarantee a unique hostname, and can briefly hold two entries for one serial
+  # number, so a `for` expression keying either directly aborts the entire plan
+  # with "Duplicate object key" — for every user of the module, not only those
+  # configuring access points. An access point and its RMA replacement sit in
+  # inventory under the same hostname until the old unit is removed.
+  #
+  # The explicit null tests matter: `try(x, "")` only substitutes on an error,
+  # not on a null, so a device with no serial number or hostname would otherwise
+  # survive the filter and produce a null map key. `device_serial_to_id` in
+  # cc_device_provision.tf guards the same way.
+  device_serial_ap_eth_macs = {
     for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
-    device.serial_number => device.ap_ethernet_mac_address
+    device.serial_number => device.ap_ethernet_mac_address...
     if try(device.serial_number, null) != null
     && try(device.serial_number, "") != ""
     && try(device.ap_ethernet_mac_address, null) != null
     && try(device.ap_ethernet_mac_address, "") != ""
+  }
+
+  device_hostname_ap_eth_macs = {
+    for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
+    device.hostname => device.ap_ethernet_mac_address...
+    if try(device.hostname, null) != null
+    && try(device.hostname, "") != ""
+    && try(device.ap_ethernet_mac_address, null) != null
+    && try(device.ap_ethernet_mac_address, "") != ""
+  }
+
+  # An identifier that maps to more than one ethernet MAC resolves to nothing
+  # rather than to an arbitrary one of the candidates. Guessing would push a
+  # configuration to the wrong physical access point, which is worse than
+  # skipping it; `access_point_ambiguous_identifier_validation` reports the
+  # affected access points.
+  device_serial_to_ap_eth_mac = {
+    for serial, macs in local.device_serial_ap_eth_macs :
+    serial => macs[0] if length(distinct(macs)) == 1
   }
 
   # Applying a configuration does not require a serial number — the ethernet MAC
@@ -34,12 +60,8 @@ locals {
   # for site assignment and provisioning. Only `manage_hostname` genuinely needs
   # a serial; see `ap_hostname_without_serial`.
   device_name_to_ap_eth_mac = {
-    for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
-    device.hostname => device.ap_ethernet_mac_address
-    if try(device.hostname, null) != null
-    && try(device.hostname, "") != ""
-    && try(device.ap_ethernet_mac_address, null) != null
-    && try(device.ap_ethernet_mac_address, "") != ""
+    for hostname, macs in local.device_hostname_ap_eth_macs :
+    hostname => macs[0] if length(distinct(macs)) == 1
   }
 
   assigned_access_points_map = {
@@ -384,8 +406,37 @@ locals {
 # Validation
 # ---------------------------------------------------------------------------
 locals {
+  # Every access point declaring the block, whatever its state. An undefined
+  # configuration name, or a rename with no serial number to drive it, is a
+  # data-model error independent of provisioning, so validation is scoped here
+  # rather than to the PROVISION-gated `ap_devices`.
+  ap_declared = {
+    for d in try(local.catalyst_center.inventory.devices, []) : d.name => d
+    if try(d.type, null) == "AccessPoint" && try(d.access_point, null) != null
+  }
+
+  # The block is only acted on once the access point is provisioned. Warn rather
+  # than silently ignore it, so a block that does nothing yet is visible.
+  ap_block_not_provisioned = [
+    for name, d in local.ap_declared : name
+    if !strcontains(try(d.state, ""), "PROVISION")
+  ]
+
+  ap_block_not_provisioned_error = length(local.ap_block_not_provisioned) > 0 ? "⚠️ The following access points declare an `access_point` block that is not applied yet:\n\n${join("\n", [for name in local.ap_block_not_provisioned : "  • ${name} (state: ${try(local.ap_declared[name].state, "N/A")})"])}\n\nAccess point configuration and hostname reconciliation run only once the access point reaches a `PROVISION` state, because both depend on it having been provisioned to its site.\n\nNo action is required if this is intentional — the block takes effect when the state changes. Otherwise set `state: PROVISION`." : ""
+
+  # An identifier resolving to more than one ethernet MAC is not resolved at all,
+  # so these access points are skipped rather than configured by guess.
+  ap_ambiguous_identifier = [
+    for name, d in local.ap_devices : name
+    if length(distinct(lookup(local.device_serial_ap_eth_macs, try(d.serial_number, ""), []))) > 1
+    || length(distinct(lookup(local.device_hostname_ap_eth_macs, name, []))) > 1
+    || length(distinct(lookup(local.device_hostname_ap_eth_macs, try(d.fqdn_name, ""), []))) > 1
+  ]
+
+  ap_ambiguous_identifier_error = length(local.ap_ambiguous_identifier) > 0 ? "⚠️ The following access points cannot be configured because their identifier matches more than one ethernet MAC address in Catalyst Center inventory:\n\n${join("\n", [for name in local.ap_ambiguous_identifier : "  • ${name}"])}\n\nCatalyst Center does not guarantee a unique hostname, and can briefly hold two entries for one serial number — an access point and its RMA replacement both appear until the old unit is removed. The module does not guess which one to configure, because pushing a configuration to the wrong physical access point is worse than skipping it.\n\nAction required: Remove the stale inventory entry, or give the access point a `serial_number` that resolves to exactly one device." : ""
+
   ap_unknown_config_refs = [
-    for name, d in local.ap_devices : d
+    for name, d in local.ap_declared : d
     if try(d.access_point.configuration, null) != null
     && lookup(local.ap_named_configs, try(d.access_point.configuration, ""), null) == null
   ]
@@ -399,8 +450,8 @@ locals {
   # the next apply. Applying settings has no such problem, because nothing the
   # module sends changes the identifier it looked the access point up by.
   ap_hostname_without_serial = [
-    for name, d in local.ap_devices : d
-    if lookup(local.ap_hostname_managed, name, false)
+    for name, d in local.ap_declared : d
+    if try(d.access_point.manage_hostname, local.ap_device_defaults.manage_hostname, false)
     && try(d.serial_number, null) == null
   ]
 
@@ -547,6 +598,20 @@ check "access_point_configuration_ethernet_mac_validation" {
   assert {
     condition     = length(local.ap_config_missing_mac) == 0
     error_message = local.ap_config_missing_mac_error
+  }
+}
+
+check "access_point_ambiguous_identifier_validation" {
+  assert {
+    condition     = length(local.ap_ambiguous_identifier) == 0
+    error_message = local.ap_ambiguous_identifier_error
+  }
+}
+
+check "access_point_block_not_provisioned_validation" {
+  assert {
+    condition     = length(local.ap_block_not_provisioned) == 0
+    error_message = local.ap_block_not_provisioned_error
   }
 }
 
