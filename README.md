@@ -36,7 +36,7 @@ module "catalystcenter" {
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
 | <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.25 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
@@ -45,7 +45,7 @@ module "catalystcenter" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_bulk_site_provisioning"></a> [bulk\_site\_provisioning](#input\_bulk\_site\_provisioning) | Site path for bulk device provisioning. When set with use\_bulk\_api=true, provisions all devices from this site and all child sites in a single bulk operation. Example: 'Global/Poland' will provision all devices under Poland hierarchy. | `string` | `null` | no |
 | <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag indicating whether global settings should be managed, used in combination with managed\_sites. | `bool` | `false` | no |
 | <a name="input_manage_specific_sites_only"></a> [manage\_specific\_sites\_only](#input\_manage\_specific\_sites\_only) | If true, manage only the specified site listed in managed\_sites. If false, also manage all child sites under each managed site. | `bool` | `false` | no |
@@ -59,14 +59,14 @@ module "catalystcenter" {
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
 | <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [catalystcenter_aaa_settings.aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_aaa_settings.global_aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_anchor_group.anchor_group](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anchor_group) | resource |
@@ -121,8 +121,6 @@ module "catalystcenter" {
 | [catalystcenter_dns_settings.dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
 | [catalystcenter_dns_settings.global_dns_settings](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dns_settings) | resource |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/dot11be_profile) | resource |
-| [catalystcenter_external_authentication.external_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/external_authentication) | resource |
-| [catalystcenter_external_authentication_aaa_attribute.external_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/external_authentication_aaa_attribute) | resource |
 | [catalystcenter_extranet_policy.extranet_policy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/extranet_policy) | resource |
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
@@ -186,7 +184,6 @@ module "catalystcenter" {
 | [catalystcenter_update_device_management_address.management_ip](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/update_device_management_address) | resource |
 | [catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
 | [catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/virtual_network_to_fabric_site) | resource |
-| [catalystcenter_wireless_cleanair_configuration.cleanair](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_cleanair_configuration) | resource |
 | [catalystcenter_wireless_device_provision.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_device_provision) | resource |
 | [catalystcenter_wireless_fabric_multicast.wireless_multicast](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_fabric_multicast) | resource |
 | [catalystcenter_wireless_interface.interface](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_interface) | resource |
@@ -195,13 +192,12 @@ module "catalystcenter" {
 | [catalystcenter_wireless_profile_policy_tag.policy_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile_policy_tag) | resource |
 | [catalystcenter_wireless_profile_site_tag.site_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_profile_site_tag) | resource |
 | [catalystcenter_wireless_rf_profile.rf_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rf_profile) | resource |
-| [catalystcenter_wireless_rrm_fra_configuration.rrm_fra](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rrm_fra_configuration) | resource |
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
 | [terraform_data.bulk_site_provisioning_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.managed_sites_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.wireless_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.wireless_site_ssid_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [time_sleep.provision_device_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
@@ -213,7 +209,6 @@ module "catalystcenter" {
 | [catalystcenter_credentials_snmpv2_read.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_read) | data source |
 | [catalystcenter_credentials_snmpv2_write.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_write) | data source |
 | [catalystcenter_credentials_snmpv3.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv3) | data source |
-| [catalystcenter_device_replacement.rma_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/device_replacement) | data source |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l2_virtual_network.l2_vn_zone_parent](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l2_virtual_network) | data source |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l3_virtual_network) | data source |
