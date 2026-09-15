@@ -1,3 +1,8 @@
+## 0.5.1 (unreleased)
+
+**Bug Fixes:**
+- Fix a device tag defined under `inventory.tags` (or `templates.tags`) without `system_tag` showing a perpetual `update in-place` on every plan; `system_tag` now defaults to `false` (settable per tag or once under `defaults.catalyst_center.inventory.tags.system_tag`), matching what Catalyst Center returns for user-defined tags
+
 ## 0.5.0
 
 **New Features:**
