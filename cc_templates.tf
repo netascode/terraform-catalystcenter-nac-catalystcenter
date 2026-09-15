@@ -303,9 +303,9 @@ resource "catalystcenter_tag" "tag" {
   for_each = { for name, tag in local.combined_tags : name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   name          = each.key
-  description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
-  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.templates.tags.sytem_tag, null)
-  dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.templates.tags.dynamic_rules, null)
+  description   = try(each.value.description, local.defaults.catalyst_center.inventory.tags.description, null)
+  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.inventory.tags.system_tag, false)
+  dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.inventory.tags.dynamic_rules, null)
 }
 
 data "catalystcenter_tag" "device_tag" {
