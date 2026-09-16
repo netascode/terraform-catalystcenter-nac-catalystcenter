@@ -1,5 +1,8 @@
 ## 0.5.1 (unreleased)
 
+**New Features:**
+- Add `preserve_unmanaged_global_credentials` variable (default `false`). When managing `Global` device credentials, enabling it preserves credential slots configured outside Terraform (e.g. via the GUI) instead of unsetting the slots not present in the data model, while slots removed from the data model are still unset. This also applies on destroy: removing `Global` credentials from the data model unsets only the Terraform-managed slots and preserves the ones configured outside Terraform. Only affects `Global`; child sites always inherit unspecified slots from their parent. Requires provider `~> 0.6.2`
+
 **Bug Fixes:**
 - Fix a device tag defined under `inventory.tags` (or `templates.tags`) without `system_tag` showing a perpetual `update in-place` on every plan; `system_tag` now defaults to `false` (settable per tag or once under `defaults.catalyst_center.inventory.tags.system_tag`), matching what Catalyst Center returns for user-defined tags
 

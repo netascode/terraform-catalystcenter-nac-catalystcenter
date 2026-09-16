@@ -79,3 +79,9 @@ variable "write_default_values_file" {
   type        = string
   default     = ""
 }
+
+variable "preserve_unmanaged_global_credentials" {
+  description = "When managing Global device credentials, preserve credential slots that are set outside Terraform (e.g. via the GUI) instead of unsetting the slots not present in the data model. Slots previously managed in the data model and then removed are still unset. Only affects the Global site; child sites always inherit unspecified slots from their parent."
+  type        = bool
+  default     = false
+}
