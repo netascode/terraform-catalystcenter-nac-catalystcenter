@@ -205,6 +205,20 @@ check "device_discovery_validation" {
   }
 }
 
+check "wireless_device_controller_role_validation" {
+  assert {
+    condition     = length(local.wireless_devices_with_invalid_controller_role) == 0
+    error_message = local.wireless_invalid_controller_role_error
+  }
+}
+
+check "wireless_controller_managed_ap_locations_validation" {
+  assert {
+    condition     = length(local.wireless_controller_missing_ap_locations) == 0
+    error_message = local.wireless_controller_missing_ap_locations_error
+  }
+}
+
 resource "terraform_data" "bulk_site_provisioning_validation" {
   count = var.bulk_site_provisioning != null && var.use_bulk_api ? 1 : 0
 

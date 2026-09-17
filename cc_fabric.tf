@@ -674,8 +674,6 @@ locals {
     for site in distinct([for fd in values(local.fabric_devices) : fd.fabric_site_name]) :
     site => [for fd in values(local.fabric_devices) : fd if fd.fabric_site_name == site]
   }
-
-  fabric_devices_by_zone = {}
 }
 
 resource "catalystcenter_fabric_devices" "fabric_devices" {
