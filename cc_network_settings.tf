@@ -193,7 +193,7 @@ resource "catalystcenter_assign_credentials" "global_assign_credentials" {
   snmp_v2_read_id    = each.value.snmpv2_read != null ? catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials[each.value.snmpv2_read].id : null
   snmp_v2_write_id   = each.value.snmpv2_write != null ? catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id : null
   snmp_v3_id         = each.value.snmpv3 != null ? catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id : null
-  preserve_unmanaged = var.preserve_unmanaged_global_credentials
+  preserve_unmanaged = try(local.defaults.catalyst_center.network_settings.device_credentials.preserve_unmanaged_global, true)
 }
 
 data "catalystcenter_assign_credentials" "global_assign_credentials" {
