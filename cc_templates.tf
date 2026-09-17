@@ -10,13 +10,22 @@ locals {
     for file in local.yaml_templates_directories : split(".", split("/", file)[length(split("/", file)) - 1])[0] => replace(file(file), "\r\n", "\n")
   }
 
+  project_all_templates = {
+    for project in try(local.catalyst_center.templates.projects, []) :
+    project.name => concat(
+      try(project.onboarding_templates, []),
+      try(project.dayn_templates, []),
+      [for t in try(project.composite_templates, []) : merge(t, { composite = try(t.composite, true) })],
+    )
+  }
+
   # Count how many times each template name appears across all projects.
   # Used to determine if a bare name can serve as a unique resource key.
   template_name_counts = {
     for name, occurrences in {
       for t in flatten([
         for project in try(local.catalyst_center.templates.projects, []) : [
-          for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : {
+          for template in local.project_all_templates[project.name] : {
             name = template.name
           }
         ]
@@ -26,7 +35,7 @@ locals {
 
   templates = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
-      for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : merge(template,
+      for template in local.project_all_templates[project.name] : merge(template,
         {
           project_name  = project.name
           template_name = template.name
@@ -44,7 +53,7 @@ locals {
 
   project_templates = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
-      for template in concat(try(project.onboarding_templates, []), try(project.dayn_templates, [])) : {
+      for template in local.project_all_templates[project.name] : {
         project_name  = project.name
         template_name = template.name
         template_key  = "${project.name}#${template.name}"
@@ -54,7 +63,7 @@ locals {
 
   composite_templates_list = flatten([
     for project in try(local.catalyst_center.templates.projects, []) : [
-      for tmpl in try(project.dayn_templates, []) : [
+      for tmpl in local.project_all_templates[project.name] : [
         {
           "containing_templates" : [for ct in tmpl.containing_templates : local.template_name_counts[ct] == 1 ? ct : "${project.name}#${ct}"]
           "template_name" : tmpl.name
@@ -118,7 +127,7 @@ locals {
         "device_ip"   = try(device.device_ip, null)
         "fqdn_name"   = device.fqdn_name
       }
-    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE"))
   ])
 
   devices_to_tag = [
@@ -161,7 +170,7 @@ locals {
     for t_name in local.device_referenced_tag_names : t_name
   ]
 
-  combined_templates = flatten([
+  combined_templates = concat(flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
         {
@@ -176,15 +185,34 @@ locals {
           "fqdn_name"           = try(device.fqdn_name, null)
           "copying_config"      = try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
           "force_push_template" = try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+          "deploy_order"        = null
         }
       ]
     ]
-  ])
+  ]), local.provisioning_combined_templates)
 
   # Group devices by template for deployment
   templates_by_device = {
     for tmpl in distinct([for d in local.combined_templates : d.template]) : tmpl => [
       for d in local.combined_templates : d if d.template == tmpl
+    ]
+  }
+
+  templates_by_device_unordered = {
+    for tmpl, devices in local.templates_by_device : tmpl => [
+      for device in devices : device if try(device.deploy_order, null) == null
+    ]
+  }
+
+  templates_by_device_before_fabric = {
+    for tmpl, devices in local.templates_by_device : tmpl => [
+      for device in devices : device if try(device.deploy_order, null) == "BEFORE_FABRIC"
+    ]
+  }
+
+  templates_by_device_after_fabric = {
+    for tmpl, devices in local.templates_by_device : tmpl => [
+      for device in devices : device if try(device.deploy_order, null) == "AFTER_FABRIC"
     ]
   }
 
@@ -202,23 +230,23 @@ locals {
   # Distinct list of regular Day-N template keys referenced by any device.
   # Built with the same key formula used everywhere else in the module so that
   # `combined_templates.template` and `dayn_templates_map[<key>]` match.
-  device_referenced_dayn_template_keys = distinct(flatten([
+  device_referenced_dayn_template_keys = distinct(concat(flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for t in try(device.dayn_templates.regular, []) :
       try("${t.project_name}#${t.name}", t.name)
     ]
-  ]))
+  ]), local.provisioning_dayn_template_keys))
 
   # Distinct list of composite Day-N template keys referenced by any device
   # under `dayn_templates.composite[]`. The section a reference is written in is
   # the user's declaration of composite-ness (same convention as managed
   # templates), which keeps the deploy resources' for_each routing static.
-  device_referenced_composite_template_keys = distinct(flatten([
+  device_referenced_composite_template_keys = distinct(concat(flatten([
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for t in try(device.dayn_templates.composite, []) :
       try("${t.project_name}#${t.name}", t.name)
     ]
-  ]))
+  ]), local.provisioning_composite_template_keys))
 
   # Distinct list of onboarding template keys referenced by any device via the
   # singular `onboarding_template.name` (consumed by PnP device claim config_id).
@@ -525,10 +553,10 @@ resource "catalystcenter_template_version" "composite_commit_version" {
 
 resource "catalystcenter_deploy_template" "regular_template_deploy" {
   for_each = {
-    for tmpl, devices in local.templates_by_device : tmpl => devices
+    for tmpl, devices in local.templates_by_device_unordered : tmpl => devices
     if try(local.template_lookup_extended[tmpl].composite, false) == false &&
     try(local.template_lookup_extended[tmpl].template_type, null) == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
@@ -561,10 +589,105 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
           )
         }
       ]
-    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions]
+}
+
+resource "catalystcenter_deploy_template" "regular_template_deploy_before_fabric" {
+  for_each = {
+    for tmpl, devices in local.templates_by_device_before_fabric : tmpl => devices
+    if try(local.template_lookup_extended[tmpl].composite, false) == false &&
+    try(local.template_lookup_extended[tmpl].template_type, null) == "dayn" &&
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+  }
+
+  template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
+  redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+  force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite        = false
+
+  target_info = [
+    for device in each.value : {
+      id = coalesce(
+        try(lookup(local.device_name_to_id, device.device_name, null), null),
+        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+      )
+      type                  = "MANAGED_DEVICE_UUID"
+      redeploy              = try(device.redeploy_template, local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[device.template], device.template)].id, [for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
+      params = try({
+        for item in local.all_devices[device.name].dayn_templates_map[device.template].variables : item.name => try(tolist(item.value), [item.value])
+      }, {})
+      resource_params = [
+        {
+          type  = "MANAGED_DEVICE_UUID"
+          scope = "RUNTIME"
+          value = coalesce(
+            try(lookup(local.device_name_to_id, device.device_name, null), null),
+            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+          )
+        }
+      ]
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
+  ]
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions]
+}
+
+# Aggregate pre-fabric deployments into one dependency for the fabric graph.
+resource "terraform_data" "before_fabric_template_deployments" {
+  input = {
+    for key, deployment in catalystcenter_deploy_template.regular_template_deploy_before_fabric : key => deployment.id
+  }
+}
+
+resource "catalystcenter_deploy_template" "regular_template_deploy_after_fabric" {
+  for_each = {
+    for tmpl, devices in local.templates_by_device_after_fabric : tmpl => devices
+    if try(local.template_lookup_extended[tmpl].composite, false) == false &&
+    try(local.template_lookup_extended[tmpl].template_type, null) == "dayn" &&
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+  }
+
+  template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
+  redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+  force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite        = false
+
+  target_info = [
+    for device in each.value : {
+      id = coalesce(
+        try(lookup(local.device_name_to_id, device.device_name, null), null),
+        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+      )
+      type                  = "MANAGED_DEVICE_UUID"
+      redeploy              = try(device.redeploy_template, local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+      versioned_template_id = try(catalystcenter_template_version.regular_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[device.template], device.template)].id, [for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
+      params = try({
+        for item in local.all_devices[device.name].dayn_templates_map[device.template].variables : item.name => try(tolist(item.value), [item.value])
+      }, {})
+      resource_params = [
+        {
+          type  = "MANAGED_DEVICE_UUID"
+          scope = "RUNTIME"
+          value = coalesce(
+            try(lookup(local.device_name_to_id, device.device_name, null), null),
+            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+          )
+        }
+      ]
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
+  ]
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions, terraform_data.fabric_configuration_complete]
 }
 
 resource "catalystcenter_deploy_template" "composite_template_deploy" {
@@ -572,7 +695,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if try(local.template_lookup[tmpl].composite, false) == true &&
     local.template_lookup[tmpl].template_type == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   redeploy            = try(local.template_lookup[each.key].redeploy_template, "NEVER")
@@ -612,7 +735,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
             }
           ]
         }
-      ] if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+      ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
     ])
     }
   ]
@@ -637,7 +760,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
           )
         }
       ]
-    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]
@@ -655,7 +778,7 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
   for_each = {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if contains(local.unmanaged_composite_keys, tmpl) &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
@@ -695,7 +818,7 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
             }
           ]
         }
-      ] if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+      ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
     ])
     }
   ]
@@ -720,7 +843,7 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
           )
         }
       ]
-    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member]
