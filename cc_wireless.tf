@@ -267,7 +267,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   web_passthrough                             = try(each.value.web_passthrough, local.defaults.catalyst_center.wireless.ssids.web_passthrough, null)
   wlan_band_select                            = try(each.value.wlan_band_select, local.defaults.catalyst_center.wireless.ssids.wlan_band_select, null)
 
-  depends_on = [catalystcenter_wireless_pre_auth_acl.pre_auth_acl]
+  depends_on = [catalystcenter_wireless_pre_auth_acl.pre_auth_acl, catalystcenter_authentication_policy_server.aaa]
 }
 
 resource "catalystcenter_wireless_rf_profile" "rf_profile" {

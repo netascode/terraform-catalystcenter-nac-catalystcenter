@@ -1,6 +1,17 @@
 # CREDENTIALS
 
 locals {
+  # A single top-level AAA definition is used for Global automatically.
+  # Multiple definitions require an explicit Global reference.
+  top_level_aaa_definitions = try(local.catalyst_center.network_settings.aaa_servers, [])
+  top_level_aaa_names       = [for definition in local.top_level_aaa_definitions : definition.name]
+  global_aaa_reference      = try(tostring(local.global_network_settings.aaa_servers), null)
+  global_aaa_is_explicit = (local.global_aaa_reference != null && contains(local.top_level_aaa_names, local.global_aaa_reference)) || (
+    try(local.global_network_settings.network_aaa, null) != null ||
+    try(local.global_network_settings.client_and_endpoint_aaa, null) != null
+  )
+  top_level_global_aaa = length(local.top_level_aaa_definitions) == 1 ? one(local.top_level_aaa_definitions) : null
+
   sites_to_creds_map = merge(
     { for area in local.flat_areas : "${area.parent_name}/${area.name}" => {
       cli          = try(area.cli_credentials, null)
@@ -29,11 +40,32 @@ locals {
   )
 
   sites_to_settings_map = merge(
-    { "Global" = local.global_network_settings },
+    {
+      "Global" = merge(
+        local.global_network_settings,
+        local.top_level_global_aaa != null && try(local.global_network_settings.aaa_servers, null) == null && try(local.global_network_settings.network_aaa, null) == null ? {
+          network_aaa             = try(local.top_level_global_aaa.network_aaa, null)
+          client_and_endpoint_aaa = try(local.top_level_global_aaa.client_and_endpoint_aaa, null)
+        } : {},
+      )
+    },
     local.area_network_settings,
     { for building in local.flat_buildings : "${building.parent_name}/${building.name}" => try(building.network_settings, null) if try(building.network_settings, null) != null },
     { for floor in local.flat_floors : "${floor.parent_name}/${floor.name}" => try(floor.network_settings, null) if try(floor.network_settings, null) != null }
   )
+}
+
+resource "terraform_data" "top_level_aaa_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.top_level_aaa_definitions) <= 1 || local.global_aaa_is_explicit
+      error_message = "Multiple top-level network_settings.aaa_servers definitions are ambiguous for Global. Select one by name under sites.global.network_settings.aaa_servers."
+    }
+    precondition {
+      condition     = local.global_aaa_reference == null || contains(local.top_level_aaa_names, local.global_aaa_reference)
+      error_message = "sites.global.network_settings.aaa_servers must name a definition declared under the top-level network_settings.aaa_servers list."
+    }
+  }
 }
 
 resource "catalystcenter_credentials_https_read" "https_read_credentials" {
@@ -389,7 +421,7 @@ resource "catalystcenter_aaa_settings" "aaa_servers" {
   client_aaa_shared_secret_wo_version  = try(each.value.client_and_endpoint_aaa.shared_secret_version, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret_version, 1)
   client_aaa_pan                       = try(each.value.client_and_endpoint_aaa.server_type, "") == "ISE" ? try(each.value.client_and_endpoint_aaa.pan, each.value.client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.pan, null) : null
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_area.area_10, catalystcenter_telemetry_settings.telemetry_settings, data.catalystcenter_sites.created_sites]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_area.area_10, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_authentication_policy_server.aaa, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_aaa_settings" "global_aaa_servers" {
@@ -411,7 +443,7 @@ resource "catalystcenter_aaa_settings" "global_aaa_servers" {
   client_aaa_shared_secret_wo_version  = try(each.value.client_and_endpoint_aaa.shared_secret_version, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.shared_secret_version, 1)
   client_aaa_pan                       = try(each.value.client_and_endpoint_aaa.server_type, "") == "ISE" ? try(each.value.client_and_endpoint_aaa.pan, each.value.client_and_endpoint_aaa.primary_ip, local.defaults.catalyst_center.network_settings.aaa_servers.client_and_endpoint_aaa.pan, null) : null
 
-  depends_on = [catalystcenter_telemetry_settings.global_telemetry_settings]
+  depends_on = [catalystcenter_telemetry_settings.global_telemetry_settings, catalystcenter_authentication_policy_server.aaa]
 }
 
 ### IP Pools

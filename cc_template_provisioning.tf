@@ -132,6 +132,7 @@ locals {
         "fqdn_name"           = try(local.tp_inventory_by_name[device.name].fqdn_name, null)
         "copying_config"      = try(device.copying_config, block.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
         "force_push_template" = try(device.force_push_template, block.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+        "deploy_order"        = try(device.deploy_order, block.deploy_order, null)
       }
     ]
   ])
@@ -179,4 +180,3 @@ locals {
     if contains(keys(local.tp_inventory_by_name), device_name)
   }
 }
-

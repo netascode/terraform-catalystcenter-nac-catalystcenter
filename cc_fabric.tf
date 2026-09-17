@@ -252,7 +252,7 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   site_id                     = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.key], null), try(local.data_source_created_sites_list[each.key], null)) : coalesce(try(local.site_id_list[each.key], null), try(local.data_source_site_list[each.key], null), try(local.data_source_created_sites_list[each.key], null))
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites, terraform_data.before_fabric_template_deployments]
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
@@ -466,7 +466,12 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   security_group_name                       = try(each.value.security_group_name, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.security_group_name, null)
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
-  group_based_policy_enforcement_enabled    = lookup(each.value, "pool_type", "") == "EXTENDED_NODE" ? try(each.value.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
+  group_based_policy_enforcement_enabled    = try(each.value.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null)
+
+  lifecycle {
+    # The provider cannot refresh this write-only create-time value.
+    ignore_changes = [auto_generate_vlan_name]
+  }
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_l3_virtual_network.anchored_site_l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site]
 }
@@ -1245,4 +1250,43 @@ resource "catalystcenter_fabric_port_channel" "port_channel" {
   }
 
   depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
+}
+
+# Aggregate fabric resources into one dependency for post-fabric deployments.
+resource "terraform_data" "fabric_configuration_complete" {
+  depends_on = [
+    catalystcenter_transit_network.transit,
+    catalystcenter_apply_pending_fabric_events.fabric_pending_events,
+    catalystcenter_fabric_zone.fabric_zone,
+    catalystcenter_fabric_l3_virtual_network.global_l3_vn,
+    catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site,
+    catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_zone,
+    catalystcenter_fabric_l3_virtual_network.l3_vn,
+    catalystcenter_fabric_l3_virtual_network.anchored_site_l3_vn,
+    catalystcenter_fabric_l2_virtual_network.l2_vn,
+    catalystcenter_fabric_l2_virtual_network.l2_vn_zone,
+    catalystcenter_anycast_gateway.anycast_gateway,
+    catalystcenter_anycast_gateway.anycast_gateway_anchoring,
+    catalystcenter_anycast_gateway.anycast_gateway_zone,
+    catalystcenter_anycast_gateways.anycast_gateways,
+    catalystcenter_anycast_gateways.anycast_gateways_anchoring,
+    catalystcenter_anycast_gateways.anycast_gateways_zone,
+    catalystcenter_fabric_devices.fabric_devices,
+    catalystcenter_fabric_devices.fabric_devices_zone,
+    catalystcenter_fabric_device.border_device,
+    catalystcenter_fabric_device.wireless_controller,
+    catalystcenter_fabric_device.edge_device,
+    catalystcenter_fabric_ewlc.ewlc_device,
+    catalystcenter_fabric_vlan_to_ssid.vlan_to_ssid,
+    catalystcenter_fabric_l3_handoff_sda_transit.sda_transit,
+    catalystcenter_fabric_l3_handoff_ip_transits.l3_handoff_ip_transits,
+    catalystcenter_fabric_l2_handoff.l2_handoff,
+    catalystcenter_fabric_l2_handoff.l2_handoff_no_anycast,
+    catalystcenter_fabric_port_assignments.port_assignments,
+    catalystcenter_fabric_multicast_virtual_networks.multicast,
+    catalystcenter_fabric_multicast_replication_mode.replication_mode,
+    catalystcenter_wireless_fabric_multicast.wireless_multicast,
+    catalystcenter_extranet_policy.extranet_policy,
+    catalystcenter_fabric_port_channel.port_channel,
+  ]
 }
