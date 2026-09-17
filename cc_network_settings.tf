@@ -186,13 +186,14 @@ resource "catalystcenter_assign_credentials" "assign_credentials" {
 resource "catalystcenter_assign_credentials" "global_assign_credentials" {
   for_each = { for k, v in try(local.sites_to_creds_map, {}) : k => v if(v.cli != null || v.snmpv3 != null || v.https_read != null || v.https_write != null || v.snmpv2_read != null || v.snmpv2_write != null) && ((var.manage_global_settings && k == "Global") || (!var.manage_global_settings && length(var.managed_sites) == 0)) && k == "Global" }
 
-  site_id          = try(data.catalystcenter_site.global.id, null)
-  cli_id           = each.value.cli != null ? catalystcenter_credentials_cli.cli_credentials[each.value.cli].id : null
-  https_read_id    = each.value.https_read != null ? catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id : null
-  https_write_id   = each.value.https_write != null ? catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id : null
-  snmp_v2_read_id  = each.value.snmpv2_read != null ? catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials[each.value.snmpv2_read].id : null
-  snmp_v2_write_id = each.value.snmpv2_write != null ? catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id : null
-  snmp_v3_id       = each.value.snmpv3 != null ? catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id : null
+  site_id            = try(data.catalystcenter_site.global.id, null)
+  cli_id             = each.value.cli != null ? catalystcenter_credentials_cli.cli_credentials[each.value.cli].id : null
+  https_read_id      = each.value.https_read != null ? catalystcenter_credentials_https_read.https_read_credentials[each.value.https_read].id : null
+  https_write_id     = each.value.https_write != null ? catalystcenter_credentials_https_write.https_write_credentials[each.value.https_write].id : null
+  snmp_v2_read_id    = each.value.snmpv2_read != null ? catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials[each.value.snmpv2_read].id : null
+  snmp_v2_write_id   = each.value.snmpv2_write != null ? catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id : null
+  snmp_v3_id         = each.value.snmpv3 != null ? catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id : null
+  preserve_unmanaged = try(local.defaults.catalyst_center.network_settings.device_credentials.preserve_unmanaged_global, true)
 }
 
 data "catalystcenter_assign_credentials" "global_assign_credentials" {
