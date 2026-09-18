@@ -1,5 +1,8 @@
 ## 0.5.1 (unreleased)
 
+**New Features:**
+- Add `wireless_flooding_enabled` to `fabric.fabric_sites.l2_virtual_networks` and `fabric.fabric_sites.anycast_gateways`, covering fabric sites, fabric zones, anchored virtual networks and the bulk (`use_bulk_api`) path. Not applicable to the `FABRIC_AP` and `EXTENDED_NODE` pool types. Requires provider `~> 0.6.2` and Catalyst Center 3.1 or later
+
 **Bug Fixes:**
 - Fix a device tag defined under `inventory.tags` (or `templates.tags`) without `system_tag` showing a perpetual `update in-place` on every plan; `system_tag` now defaults to `false` (settable per tag or once under `defaults.catalyst_center.inventory.tags.system_tag`), matching what Catalyst Center returns for user-defined tags
 
