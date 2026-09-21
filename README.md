@@ -9,7 +9,7 @@ This module supports an inventory driven approach, where a complete Catalyst Cen
 
 ## Examples
 
-Configuring an area under `Design -> Network Hierarchy` using YAML:
+Configuring a nested area hierarchy under `Design -> Network Hierarchy` using YAML.
 
 #### `area.yaml`
 
@@ -19,7 +19,9 @@ catalyst_center:
   sites:
     areas:
       - name: Site1
-        parent_name: Global
+        areas:
+          - name: Site1a
+          - name: Site1b
 ```
 
 #### `main.tf`
