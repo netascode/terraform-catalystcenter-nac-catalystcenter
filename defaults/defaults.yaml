@@ -43,6 +43,8 @@ defaults:
         role_source: MANUAL
         access_point:
           manage_hostname: false
+      tags:
+        system_tag: false
     sites:
       areas:
         parent_name: Global
