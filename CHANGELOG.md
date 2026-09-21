@@ -1,6 +1,7 @@
 ## 0.5.1 (unreleased)
 
 **New Features:**
+- Add `wireless_flooding_enabled` to `fabric.fabric_sites.l2_virtual_networks` and `fabric.fabric_sites.anycast_gateways`, covering fabric sites, fabric zones, anchored virtual networks and the bulk (`use_bulk_api`) path. Not applicable to the `FABRIC_AP` and `EXTENDED_NODE` pool types. Requires provider `~> 0.6.2` and Catalyst Center 3.1 or later
 - Add `network_settings.device_credentials.preserve_unmanaged_global` data model attribute (default `true`). When managing `Global` device credentials, credential slots configured outside Terraform (e.g. via the GUI) are preserved instead of unsetting the slots not present in the data model, while slots removed from the data model are still unset. This also applies on destroy: removing `Global` credentials from the data model unsets only the Terraform-managed slots and preserves the ones configured outside Terraform. Set it to `false` to instead unset every `Global` slot not present in the data model. Only affects `Global`; child sites always inherit unspecified slots from their parent. Requires provider `~> 0.6.2`
 
 **Bug Fixes:**
