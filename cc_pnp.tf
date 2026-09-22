@@ -98,11 +98,16 @@ resource "catalystcenter_pnp_device_claim_svl" "claim_svl" {
 
   svl_members = [
     for member in each.value.svl.members : {
-      serial_number    = member.serial_number
-      role             = member.role
-      svl_links        = [for link in member.svl_links : { local_interface = link.local_interface, remote_interface = link.remote_interface }]
-      local_interface  = try(member.dad_link.local_interface, null)
-      remote_interface = try(member.dad_link.remote_interface, null)
+      serial_number = member.serial_number
+      role          = member.role
+      svl_links = [
+        for link in each.value.svl.svl_links : {
+          local_interface  = member.role == "ACTIVE" ? link.active_interface : link.standby_interface
+          remote_interface = member.role == "ACTIVE" ? link.standby_interface : link.active_interface
+        }
+      ]
+      local_interface  = member.role == "ACTIVE" ? try(each.value.svl.dad_link.active_interface, null) : try(each.value.svl.dad_link.standby_interface, null)
+      remote_interface = member.role == "ACTIVE" ? try(each.value.svl.dad_link.standby_interface, null) : try(each.value.svl.dad_link.active_interface, null)
     }
   ]
 
