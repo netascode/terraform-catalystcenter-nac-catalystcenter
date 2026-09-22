@@ -1,6 +1,7 @@
 # CREDENTIALS
 
 locals {
+  global_device_credentials = try(local.raw_catalyst_center.sites.global.device_credentials, local.catalyst_center.network_settings.device_credentials, {})
   # A single top-level AAA definition is used for Global automatically.
   # Multiple definitions require an explicit Global reference.
   top_level_aaa_definitions = try(local.catalyst_center.network_settings.aaa_servers, [])
@@ -13,6 +14,16 @@ locals {
   top_level_global_aaa = length(local.top_level_aaa_definitions) == 1 ? one(local.top_level_aaa_definitions) : null
 
   sites_to_creds_map = merge(
+    {
+      "Global" = {
+        cli          = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.cli_credentials, null)
+        snmpv3       = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv3_credentials, null)
+        snmpv2_read  = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv2_read_credentials, null)
+        snmpv2_write = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv2_write_credentials, null)
+        https_read   = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_read_credentials, null)
+        https_write  = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_write_credentials, null)
+      }
+    },
     { for area in local.flat_areas : "${area.parent_name}/${area.name}" => {
       cli          = try(area.cli_credentials, null)
       snmpv3       = try(area.snmpv3_credentials, null)
@@ -69,7 +80,7 @@ resource "terraform_data" "top_level_aaa_validation" {
 }
 
 resource "catalystcenter_credentials_https_read" "https_read_credentials" {
-  for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.https_read_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for cred in try(local.global_device_credentials.https_read_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description         = each.key
   username            = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.https_read_credentials.username, null)
@@ -79,7 +90,7 @@ resource "catalystcenter_credentials_https_read" "https_read_credentials" {
 }
 
 resource "catalystcenter_credentials_https_write" "https_write_credentials" {
-  for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.https_write_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for cred in try(local.global_device_credentials.https_write_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description         = each.key
   username            = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.https_write_credentials.username, null)
@@ -89,7 +100,7 @@ resource "catalystcenter_credentials_https_write" "https_write_credentials" {
 }
 
 resource "catalystcenter_credentials_cli" "cli_credentials" {
-  for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.cli_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for cred in try(local.global_device_credentials.cli_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description                = each.key
   username                   = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.cli_credentials.username, null)
@@ -100,7 +111,7 @@ resource "catalystcenter_credentials_cli" "cli_credentials" {
 }
 
 resource "catalystcenter_credentials_snmpv2_read" "snmpv2_read_credentials" {
-  for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for cred in try(local.global_device_credentials.snmpv2_read_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description               = each.key
   read_community_wo         = try(each.value.read_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials.read_community, null)
@@ -108,7 +119,7 @@ resource "catalystcenter_credentials_snmpv2_read" "snmpv2_read_credentials" {
 }
 
 resource "catalystcenter_credentials_snmpv2_write" "snmpv2_write_credentials" {
-  for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for cred in try(local.global_device_credentials.snmpv2_write_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description                = each.key
   write_community_wo         = try(each.value.write_community, local.defaults.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials.write_community, null)
@@ -116,7 +127,7 @@ resource "catalystcenter_credentials_snmpv2_write" "snmpv2_write_credentials" {
 }
 
 resource "catalystcenter_credentials_snmpv3" "snmpv3_credentials" {
-  for_each = { for cred in try(local.catalyst_center.network_settings.device_credentials.snmpv3_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for cred in try(local.global_device_credentials.snmpv3_credentials, []) : cred.name => cred if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   description                 = each.key
   username                    = try(each.value.username, local.defaults.catalyst_center.network_settings.device_credentials.snmpv3_credentials.username, null)
@@ -232,8 +243,8 @@ locals {
   # may reference one of these by name (e.g. `network: Global_Network`), so the
   # lookup maps must be built from global_network_settings. The old top-level
   # network_settings path is kept as a fallback for back-compat.
-  network_settings = { for settings in try(local.global_network_settings.network, local.catalyst_center.network_settings.network, []) : settings.name => settings }
-  aaa_settings     = { for settings in try(local.global_network_settings.aaa_servers, local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
+  network_settings = { for settings in try(tolist(local.global_network_settings.network), local.catalyst_center.network_settings.network, []) : settings.name => settings }
+  aaa_settings     = { for settings in try(tolist(local.global_network_settings.aaa_servers), local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
 
   site_aaa_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => {
@@ -242,7 +253,7 @@ locals {
     }
     if v != null && try(coalesce(try(tostring(v.aaa_servers), null), try(v.network_aaa, null), try(v.client_and_endpoint_aaa, null)), null) != null
   }
-  telemetry_settings = { for settings in try(local.global_network_settings.telemetry, local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
+  telemetry_settings = { for settings in try(tolist(local.global_network_settings.telemetry), local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
 
   site_network_settings = {
     for k, v in try(local.sites_to_settings_map, {}) : k => {

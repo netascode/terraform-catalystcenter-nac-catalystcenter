@@ -248,7 +248,7 @@ resource "catalystcenter_transit_network" "transit" {
 resource "catalystcenter_fabric_site" "fabric_site" {
   for_each = { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) }
 
-  authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
+  authentication_profile_name = try(each.value.authentication_template.name, each.value.authentication_template_name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
   site_id                     = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.key], null), try(local.data_source_created_sites_list[each.key], null)) : coalesce(try(local.site_id_list[each.key], null), try(local.data_source_site_list[each.key], null), try(local.data_source_created_sites_list[each.key], null))
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
@@ -289,7 +289,7 @@ resource "catalystcenter_fabric_zone" "fabric_zone" {
     )
   }
 
-  authentication_profile_name = try(each.value.authentication_template.name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
+  authentication_profile_name = try(each.value.authentication_template.name, each.value.authentication_template_name, local.defaults.catalyst_center.fabric.fabric_sites.authentication_template.name, null)
   site_id                     = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.key], null), try(local.data_source_created_sites_list[each.key], null)) : coalesce(try(local.site_id_list[each.key], null), try(local.data_source_site_list[each.key], null), try(local.data_source_created_sites_list[each.key], null))
 
   depends_on = [catalystcenter_fabric_site.fabric_site]
@@ -467,6 +467,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway" {
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
   group_based_policy_enforcement_enabled    = try(each.value.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null)
+  additional_ip_pools                       = try(each.value.additional_ip_pools, null)
 
   lifecycle {
     # The provider cannot refresh this write-only create-time value.
@@ -497,6 +498,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway_anchoring" {
   supplicant_based_extended_node_onboarding = try(each.value.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
   group_based_policy_enforcement_enabled    = lookup(each.value, "pool_type", "") == "EXTENDED_NODE" ? try(each.value.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
+  additional_ip_pools                       = try(each.value.additional_ip_pools, null)
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_l3_virtual_network.anchored_site_l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways]
 }
@@ -534,6 +536,7 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway_zone" {
   supplicant_based_extended_node_onboarding = try(each.value.gw.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
   tcp_mss_adjustment                        = try(each.value.gw.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
   group_based_policy_enforcement_enabled    = lookup(each.value.gw, "pool_type", "") == "EXTENDED_NODE" ? try(each.value.gw.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
+  additional_ip_pools                       = try(each.value.gw.additional_ip_pools, null)
 
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_l3_virtual_network.anchored_site_l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateway.anycast_gateway_anchoring]
 }
@@ -563,6 +566,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways" {
       supplicant_based_extended_node_onboarding = try(anycast_gateway.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
       tcp_mss_adjustment                        = try(anycast_gateway.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
       group_based_policy_enforcement_enabled    = lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? try(anycast_gateway.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
+      additional_ip_pools                       = try(anycast_gateway.additional_ip_pools, null)
     }
   ]
 
@@ -594,6 +598,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways_anchoring" {
       supplicant_based_extended_node_onboarding = try(anycast_gateway.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
       tcp_mss_adjustment                        = try(anycast_gateway.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
       group_based_policy_enforcement_enabled    = lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? try(anycast_gateway.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
+      additional_ip_pools                       = try(anycast_gateway.additional_ip_pools, null)
     }
   ]
 
@@ -634,6 +639,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways_zone" {
       supplicant_based_extended_node_onboarding = try(anycast_gateway.supplicant_based_extended_node_onboarding, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.supplicant_based_extended_node_onboarding, null)
       tcp_mss_adjustment                        = try(anycast_gateway.tcp_mss_adjustment, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.tcp_mss_adjustment, null)
       group_based_policy_enforcement_enabled    = lookup(anycast_gateway, "pool_type", "") == "EXTENDED_NODE" ? try(anycast_gateway.group_based_policy_enforcement_enabled, local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways.group_based_policy_enforcement_enabled, null) : null
+      additional_ip_pools                       = try(anycast_gateway.additional_ip_pools, null)
     }
   ]
 

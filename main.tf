@@ -17,6 +17,12 @@ locals {
   normalized_network_settings = merge(
     local.top_level_network_settings,
     local.site_global_network_settings,
+    # A list under sites.global is a definition collection. A string/object is
+    # the Global site's selected setting and must not replace the legacy
+    # top-level definition collection used for name resolution.
+    { network = try(tolist(local.site_global_network_settings.network), tolist(local.top_level_network_settings.network), []) },
+    { aaa_servers = try(tolist(local.site_global_network_settings.aaa_servers), tolist(local.top_level_network_settings.aaa_servers), []) },
+    { telemetry = try(tolist(local.site_global_network_settings.telemetry), tolist(local.top_level_network_settings.telemetry), []) },
     length(setunion(toset(keys(local.top_level_ip_pools_by_name)), toset(keys(local.site_global_ip_pools_by_name)))) > 0 ? {
       ip_pools = [
         for name in sort(tolist(setunion(toset(keys(local.top_level_ip_pools_by_name)), toset(keys(local.site_global_ip_pools_by_name))))) :
