@@ -24,7 +24,7 @@ jobs:
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: 1.10.4
+          terraform_version: 1.15.0
 
       - name: Go Setup
         if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
@@ -81,7 +81,7 @@ jobs:
       - name: Terraform Docs Setup
         run: |
           mkdir terraform-docs && cd terraform-docs
-          curl -sSLo terraform-docs.tar.gz https://terraform-docs.io/dl/v0.18.0/terraform-docs-v0.18.0-linux-amd64.tar.gz
+          curl -sSLo terraform-docs.tar.gz https://terraform-docs.io/dl/v0.24.0/terraform-docs-v0.24.0-linux-amd64.tar.gz
           tar -xzf terraform-docs.tar.gz
           chmod +x terraform-docs
           echo "$GITHUB_WORKSPACE/terraform-docs" >> $GITHUB_PATH

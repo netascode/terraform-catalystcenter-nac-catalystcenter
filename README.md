@@ -9,7 +9,7 @@ This module supports an inventory driven approach, where a complete Catalyst Cen
 
 ## Examples
 
-Configuring an area under `Design -> Network Hierarchy` using YAML:
+Configuring a nested area hierarchy under `Design -> Network Hierarchy` using YAML.
 
 #### `area.yaml`
 
@@ -19,7 +19,9 @@ catalyst_center:
   sites:
     areas:
       - name: Site1
-        parent_name: Global
+        areas:
+          - name: Site1a
+          - name: Site1b
 ```
 
 #### `main.tf`
@@ -36,22 +38,23 @@ module "catalystcenter" {
 ## Requirements
 
 | Name | Version |
-|------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.25 |
+| ---- | ------- |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.15.0 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.6.1 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.0.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_bulk_site_provisioning"></a> [bulk\_site\_provisioning](#input\_bulk\_site\_provisioning) | Site path for bulk device provisioning. When set with use\_bulk\_api=true, provisions all devices from this site and all child sites in a single bulk operation. Example: 'Global/Poland' will provision all devices under Poland hierarchy. | `string` | `null` | no |
 | <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag indicating whether global settings should be managed, used in combination with managed\_sites. | `bool` | `false` | no |
 | <a name="input_manage_specific_sites_only"></a> [manage\_specific\_sites\_only](#input\_manage\_specific\_sites\_only) | If true, manage only the specified site listed in managed\_sites. If false, also manage all child sites under each managed site. | `bool` | `false` | no |
 | <a name="input_managed_sites"></a> [managed\_sites](#input\_managed\_sites) | List of sites to be managed. By default all sites will be managed. | `list(string)` | `[]` | no |
 | <a name="input_model"></a> [model](#input\_model) | As an alternative to YAML files, a native Terraform data structure can be provided as well. | `map(any)` | `{}` | no |
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |
+| <a name="input_templates_var_directories"></a> [templates\_var\_directories](#input\_templates\_var\_directories) | List of paths to template variable (CSV) directories. | `list(string)` | `[]` | no |
 | <a name="input_use_bulk_api"></a> [use\_bulk\_api](#input\_use\_bulk\_api) | Flag indicating whether to use the bulk API for faster operations. | `bool` | `false` | no |
 | <a name="input_write_default_values_file"></a> [write\_default\_values\_file](#input\_write\_default\_values\_file) | Write all default values to a YAML file. Value is a path pointing to the file to be created. | `string` | `""` | no |
 | <a name="input_yaml_directories"></a> [yaml\_directories](#input\_yaml\_directories) | List of paths to YAML directories. | `list(string)` | `[]` | no |
@@ -59,14 +62,21 @@ module "catalystcenter" {
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
+| <a name="output_debug_area_tiers"></a> [debug\_area\_tiers](#output\_debug\_area\_tiers) | Which area\_N tier each area maps to (depth of parent\_name) |
+| <a name="output_debug_bulk_area_map"></a> [debug\_bulk\_area\_map](#output\_debug\_bulk\_area\_map) | The areas map that would be sent to the bulk API |
+| <a name="output_debug_flat_areas"></a> [debug\_flat\_areas](#output\_debug\_flat\_areas) | All areas flattened, as full hierarchy strings |
+| <a name="output_debug_flat_areas_full"></a> [debug\_flat\_areas\_full](#output\_debug\_flat\_areas\_full) | Flattened areas with name + computed parent\_name |
+| <a name="output_debug_flat_buildings"></a> [debug\_flat\_buildings](#output\_debug\_flat\_buildings) | Flattened buildings with computed parent hierarchy |
+| <a name="output_debug_flat_floors"></a> [debug\_flat\_floors](#output\_debug\_flat\_floors) | Flattened floors with computed parent hierarchy |
+| <a name="output_debug_sites"></a> [debug\_sites](#output\_debug\_sites) | Final list of managed site hierarchies (drives contains() filters) |
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
 | <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [catalystcenter_aaa_settings.aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_aaa_settings.global_aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_anchor_group.anchor_group](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anchor_group) | resource |
@@ -80,6 +90,7 @@ module "catalystcenter" {
 | [catalystcenter_apply_pending_fabric_events.fabric_pending_events](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_pending_fabric_events) | resource |
 | [catalystcenter_area.area_0](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_1](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
+| [catalystcenter_area.area_10](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_2](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_3](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_4](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
@@ -111,6 +122,8 @@ module "catalystcenter" {
 | [catalystcenter_credentials_snmpv3.snmpv3_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/credentials_snmpv3) | resource |
 | [catalystcenter_deploy_template.composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.regular_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.regular_template_deploy_after_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.regular_template_deploy_before_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.unmanaged_composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_device_replacement.mark](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement) | resource |
 | [catalystcenter_device_replacement_workflow.rma](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement_workflow) | resource |
@@ -198,10 +211,13 @@ module "catalystcenter" {
 | [catalystcenter_wireless_rrm_fra_configuration.rrm_fra](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rrm_fra_configuration) | resource |
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
+| [terraform_data.before_fabric_template_deployments](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.bulk_site_provisioning_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.fabric_configuration_complete](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.managed_sites_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.top_level_aaa_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [terraform_data.wireless_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.wireless_site_ssid_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [time_sleep.provision_device_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
@@ -213,7 +229,6 @@ module "catalystcenter" {
 | [catalystcenter_credentials_snmpv2_read.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_read) | data source |
 | [catalystcenter_credentials_snmpv2_write.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_write) | data source |
 | [catalystcenter_credentials_snmpv3.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv3) | data source |
-| [catalystcenter_device_replacement.rma_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/device_replacement) | data source |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l2_virtual_network.l2_vn_zone_parent](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l2_virtual_network) | data source |
 | [catalystcenter_fabric_l3_virtual_network.l3_vn](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l3_virtual_network) | data source |
