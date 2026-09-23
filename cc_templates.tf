@@ -419,6 +419,7 @@ resource "catalystcenter_template" "regular_template" {
 
   template_params = [for param in try(each.value.variables, []) : {
     parameter_name   = try(param.name, null)
+    binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
     data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
     default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
     description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
@@ -498,6 +499,7 @@ resource "catalystcenter_template_version" "regular_commit_version" {
     local.templates_content[each.value.template_file_name],
     jsonencode([for param in try(each.value.variables, []) : {
       parameter_name   = try(param.name, null)
+      binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
       data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
       default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
       description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
@@ -527,6 +529,7 @@ locals {
           local.templates_content[local.templates_map[tmpl].template_file_name],
           jsonencode([for param in try(local.templates_map[tmpl].variables, []) : {
             parameter_name   = try(param.name, null)
+            binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
             data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
             default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
             description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
@@ -848,3 +851,4 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member]
 }
+

@@ -228,6 +228,11 @@ resource "catalystcenter_assign_credentials" "global_assign_credentials" {
   snmp_v2_read_id  = each.value.snmpv2_read != null ? catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials[each.value.snmpv2_read].id : null
   snmp_v2_write_id = each.value.snmpv2_write != null ? catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials[each.value.snmpv2_write].id : null
   snmp_v3_id       = each.value.snmpv3 != null ? catalystcenter_credentials_snmpv3.snmpv3_credentials[each.value.snmpv3].id : null
+  preserve_unmanaged = try(
+    local.catalyst_center.sites.global.network_settings.device_credentials.preserve_unmanaged_global,
+    local.defaults.catalyst_center.network_settings.device_credentials.preserve_unmanaged_global,
+    true,
+  )
 }
 
 data "catalystcenter_assign_credentials" "global_assign_credentials" {
@@ -273,7 +278,7 @@ locals {
 
   # Telemetry, same two forms: `telemetry: <name>` reference (a string) or an
   # inline block (an object). The global definitions live under
-  # global.network_settings as a *list* (`telemetry:` is a list of named defs) —
+  # global.network_settings as a *list* (`telemetry:` is a list of named defs) Ă˘â‚¬â€ť
   # that is a definition source, not a site-applied value, so a list-typed
   # value is excluded from per-site resolution (can(tolist()) is true only for
   # lists/tuples, false for strings and objects).
@@ -626,3 +631,4 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
 
   depends_on = [catalystcenter_ip_pool.ip_pool_v4, catalystcenter_ip_pool.ip_pool_v6, data.catalystcenter_sites.created_sites]
 }
+

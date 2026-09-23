@@ -8,6 +8,16 @@ locals {
     && !startswith(device.platform_id, "CW91")
   }
 
+  # Access points get their hostname from Catalyst Center at claim time and use
+  # an ephemeral management IP Ă˘â‚¬â€ť which is why AP platforms are excluded from
+  # device_ip_to_id above. Serial number is their only stable, pre-known identifier.
+  device_serial_to_id = {
+    for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
+    device.serial_number => device.id
+    if try(device.serial_number, null) != null
+    && try(device.serial_number, "") != ""
+  }
+
   name_to_fqdn_mapping = try({
     for device in local.catalyst_center.inventory.devices : device.name => try(device.fqdn_name, device.name, null)
   }, {})
@@ -31,22 +41,18 @@ locals {
               copying_config      = try(template.copying_config, null)
               force_push_template = try(template.force_push_template, null)
             }
-          },
-          # Top-level template_provisioning variables for this device (new DM).
-          # Keyed identically ("project#template"); folded in so the deploy
-          # resources' params lookup resolves for provisioning-sourced templates.
-          try(local.provisioning_dayn_templates_map_by_device[device.name], {})
+          }
         )
       }
     )
   }
 
   provisioned_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION")) && ((try(device.primary_managed_ap_locations, null) == null && try(device.secondary_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) || ((try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null) && contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))) && contains(local.sites, try(device.site, "NONE"))
+    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION")) && (try(device.type, null) != "WirelessController" || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) && ((try(device.primary_managed_ap_locations, null) == null && try(device.secondary_managed_ap_locations, null) == null && try(device.anchor_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   all_provisioned_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION")) && try(device.primary_managed_ap_locations, null) == null && try(device.managed_ap_locations, null) == null
+    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION")) && try(device.primary_managed_ap_locations, null) == null
   ]
 
   provisioned_devices_filtered = [
@@ -98,23 +104,9 @@ locals {
     for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => {
       name      = d.name
-      fqdn_name = d.fqdn_name
+      fqdn_name = try(d.fqdn_name, d.name)
       device_ip = try(d.device_ip, null)
     }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) != "AccessPoint"
-    && (
-      lookup(local.device_name_to_id, d.name, null) != null ||
-      lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, try(d.device_ip, ""), null) != null
-    )
-  }
-
-  assigned_access_points_map = {
-    for d in try(local.catalyst_center.inventory.devices, []) :
-    d.site => {
-      name      = d.name
-      fqdn_name = d.fqdn_name
-      device_ip = try(d.device_ip, null)
-    }... if(strcontains(d.state, "PROVISION") || d.state == "ASSIGN") && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
@@ -126,9 +118,9 @@ locals {
     for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => {
       name      = d.name
-      fqdn_name = d.fqdn_name
+      fqdn_name = try(d.fqdn_name, d.name)
       device_ip = try(d.device_ip, null)
-    }... if(strcontains(d.state, "PROVISION")) && (try(d.primary_managed_ap_locations, null) != null || try(d.secondary_managed_ap_locations, null) != null) && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
+    }... if(strcontains(d.state, "PROVISION")) && try(d.type, null) == "WirelessController" && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
     && (
       lookup(local.device_name_to_id, d.name, null) != null ||
       lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
@@ -151,9 +143,9 @@ locals {
     && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
   ]
 
-  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${try(d.site, "N/A")})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+  missing_devices_error = length(local.missing_devices) > 0 ? "Ă˘ĹĄĹš The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  Ă˘â‚¬Ë ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
 
-  # Devices Terraform will actually provision — same scope as the AP-location /
+  # Devices Terraform will actually provision Ă˘â‚¬â€ť same scope as the AP-location /
   # controller resources, so the guard fires only when the destructive delete is
   # possible.
   provisioned_wireless_candidate_devices = [
@@ -164,17 +156,19 @@ locals {
   # contains(coalesce(try(...))) role lookups.
   wireless_device_facts = [
     for device in local.provisioned_wireless_candidate_devices : {
-      name         = device.name
-      roles        = coalesce(try(device.fabric_roles, []), [])
-      has_embedded = contains(coalesce(try(device.fabric_roles, []), []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")
-      has_wlc      = contains(coalesce(try(device.fabric_roles, []), []), "WIRELESS_CONTROLLER_NODE")
-      has_ap_locs  = try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null
-      is_fabric    = length(coalesce(try(device.fabric_roles, []), [])) > 0
+      name            = device.name
+      roles           = coalesce(try(device.fabric_roles, []), [])
+      has_embedded    = contains(coalesce(try(device.fabric_roles, []), []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")
+      has_wlc         = contains(coalesce(try(device.fabric_roles, []), []), "WIRELESS_CONTROLLER_NODE")
+      has_ap_locs     = try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null
+      has_anchor_locs = try(device.anchor_managed_ap_locations, null) != null
+      is_fabric       = length(coalesce(try(device.fabric_roles, []), [])) > 0
+      has_type_wc     = try(device.type, null) == "WirelessController"
     }
   ]
 
   # Rule: a FABRIC device (has any fabric_roles) WITH managed AP locations must
-  # carry EXACTLY ONE wireless-controller role — EMBEDDED_WIRELESS_CONTROLLER_NODE
+  # carry EXACTLY ONE wireless-controller role Ă˘â‚¬â€ť EMBEDDED_WIRELESS_CONTROLLER_NODE
   # or WIRELESS_CONTROLLER_NODE, never both and never neither.
   # `has_embedded == has_wlc` is true when the device carries both roles or
   # neither, both of which are invalid for a fabric device managing APs.
@@ -186,16 +180,49 @@ locals {
     if d.has_ap_locs && d.is_fabric && (d.has_embedded == d.has_wlc)
   ]
 
-  wireless_invalid_controller_role_error = length(local.wireless_devices_with_invalid_controller_role) > 0 ? "❌ The following fabric devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_devices_with_invalid_controller_role : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA fabric device (one with fabric_roles) that has primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role (or remove the managed AP locations), so each fabric wireless device is exactly one kind of controller. Non-fabric wireless controllers must have no fabric_roles at all." : ""
+  wireless_invalid_controller_role_error = length(local.wireless_devices_with_invalid_controller_role) > 0 ? "Ă˘ĹĄĹš The following fabric devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_devices_with_invalid_controller_role : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA fabric device (one with fabric_roles) that has primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role (or remove the managed AP locations), so each fabric wireless device is exactly one kind of controller. Non-fabric wireless controllers must have no fabric_roles at all." : ""
 
-  # Rule: a device WITH a controller role must have at least one managed AP
-  # location.
+  # Rule: a wireless controller (declared by an EMBEDDED_WIRELESS_CONTROLLER_NODE
+  # or WIRELESS_CONTROLLER_NODE fabric role, or by type: WirelessController) must
+  # define at least one managed AP location. Fabric/embedded controllers use
+  # primary/secondary; a non-fabric Guest Anchor WLC may instead use anchor
+  # locations (anchor-on-fabric is separately rejected). Catalyst Center requires
+  # this (NCWL10085 "at least one managed site is mandatory").
   wireless_controller_missing_ap_locations = [
     for d in local.wireless_device_facts : d
-    if(d.has_embedded || d.has_wlc) && !d.has_ap_locs
+    if(d.has_embedded || d.has_wlc || d.has_type_wc) && !d.has_ap_locs && !d.has_anchor_locs
   ]
 
-  wireless_controller_missing_ap_locations_error = length(local.wireless_controller_missing_ap_locations) > 0 ? "❌ The following devices carry a wireless-controller role but have no managed AP locations:\n\n${join("\n", [for d in local.wireless_controller_missing_ap_locations : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA device with EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE MUST have at least one of primary_managed_ap_locations or secondary_managed_ap_locations.\n\nAction required: Add primary_managed_ap_locations (and/or secondary_managed_ap_locations), or remove the wireless-controller role if the device is not a controller." : ""
+  wireless_controller_missing_ap_locations_error = length(local.wireless_controller_missing_ap_locations) > 0 ? "Ă˘ĹĄĹš The following devices are wireless controllers but have no managed AP locations:\n\n${join("\n", [for d in local.wireless_controller_missing_ap_locations : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA wireless controller Ă˘â‚¬â€ť a device with EMBEDDED_WIRELESS_CONTROLLER_NODE, WIRELESS_CONTROLLER_NODE, or type: WirelessController Ă˘â‚¬â€ť MUST define at least one managed AP location. Use primary_managed_ap_locations and/or secondary_managed_ap_locations for standalone / fabric / embedded controllers, or anchor_managed_ap_locations for a non-fabric Guest Anchor WLC.\n\nAction required: Add the appropriate managed AP locations, or remove the wireless-controller role / type if the device is not a controller." : ""
+
+  # Rule: anchor managed AP locations describe a NON-FABRIC Guest Anchor WLC.
+  # The anchor WLC terminates tunneled guest traffic in a DMZ segment; it is not
+  # assigned to a fabric_site and carries no fabric_roles. A fabric device with
+  # anchor_managed_ap_locations would be skipped by every provisioning path (it is
+  # excluded from catalystcenter_provision_device / catalystcenter_provision_devices,
+  # and an embedded controller is excluded from catalystcenter_wireless_device_provision),
+  # so reject the combination at plan time instead of silently not provisioning it.
+  fabric_devices_with_anchor_ap_locations = [
+    for d in local.wireless_device_facts : d
+    if d.has_anchor_locs && d.is_fabric
+  ]
+
+  fabric_anchor_ap_locations_error = length(local.fabric_devices_with_anchor_ap_locations) > 0 ? "Ă˘ĹĄĹš The following devices define anchor managed AP locations but carry fabric roles:\n\n${join("\n", [for d in local.fabric_devices_with_anchor_ap_locations : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nanchor_managed_ap_locations applies only to non-fabric Guest Anchor Wireless Controllers. Such a device must not be assigned to a fabric_site and must carry no fabric_roles.\n\nAction required: Remove the fabric_roles (and fabric_site) from the anchor WLC, or use primary_managed_ap_locations / secondary_managed_ap_locations if the device is a fabric wireless controller." : ""
+
+  # Rule: a device that IS a wireless controller declared via type must set it.
+  # That covers a non-fabric device with managed AP locations (standalone / anchor
+  # WLC) and a fabric device carrying WIRELESS_CONTROLLER_NODE, because type is the
+  # key that provisions them via catalystcenter_wireless_device_provision. Embedded
+  # controllers are exempt (provisioned by catalystcenter_fabric_ewlc, keyed on the
+  # EMBEDDED_WIRELESS_CONTROLLER_NODE role). A fabric device that has AP locations
+  # but no wireless-controller role is NOT flagged here Ă˘â‚¬â€ť that contradictory config
+  # is reported by wireless_devices_with_invalid_controller_role instead.
+  wireless_controller_missing_type = [
+    for d in local.wireless_device_facts : d
+    if((((d.has_ap_locs || d.has_anchor_locs) && !d.is_fabric) || d.has_wlc) && !d.has_embedded && !d.has_type_wc)
+  ]
+
+  wireless_controller_missing_type_error = length(local.wireless_controller_missing_type) > 0 ? "Ă˘ĹĄĹš The following devices look like wireless controllers but are missing type: WirelessController:\n\n${join("\n", [for d in local.wireless_controller_missing_type : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA non-fabric or fabric wireless controller that defines *managed_ap_locations in its device data model, MUST also have type: WirelessController (exact spelling) specified in its device data model. Embedded Wireless Controllers do not require the type attribute.\n\nAction required: Add type: WirelessController to each device above, or remove its managed AP locations / wireless-controller fabric role if it is not a wireless controller." : ""
 }
 
 check "device_discovery_validation" {
@@ -205,17 +232,24 @@ check "device_discovery_validation" {
   }
 }
 
-check "wireless_device_controller_role_validation" {
-  assert {
-    condition     = length(local.wireless_devices_with_invalid_controller_role) == 0
-    error_message = local.wireless_invalid_controller_role_error
-  }
-}
-
-check "wireless_controller_managed_ap_locations_validation" {
-  assert {
-    condition     = length(local.wireless_controller_missing_ap_locations) == 0
-    error_message = local.wireless_controller_missing_ap_locations_error
+resource "terraform_data" "wireless_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.wireless_devices_with_invalid_controller_role) == 0
+      error_message = local.wireless_invalid_controller_role_error
+    }
+    precondition {
+      condition     = length(local.wireless_controller_missing_ap_locations) == 0
+      error_message = local.wireless_controller_missing_ap_locations_error
+    }
+    precondition {
+      condition     = length(local.fabric_devices_with_anchor_ap_locations) == 0
+      error_message = local.fabric_anchor_ap_locations_error
+    }
+    precondition {
+      condition     = length(local.wireless_controller_missing_type) == 0
+      error_message = local.wireless_controller_missing_type_error
+    }
   }
 }
 
@@ -226,7 +260,7 @@ resource "terraform_data" "bulk_site_provisioning_validation" {
     precondition {
       condition     = contains(local.sites, var.bulk_site_provisioning)
       error_message = <<-EOT
-        ❌ The bulk_site_provisioning site '${var.bulk_site_provisioning}' is not defined in your YAML configuration.
+        Ă˘ĹĄĹš The bulk_site_provisioning site '${var.bulk_site_provisioning}' is not defined in your YAML configuration.
 
         Available sites in your configuration:
         ${join("\n  ", sort(local.sites))}
@@ -272,21 +306,6 @@ resource "catalystcenter_assign_device_to_site" "devices_to_site" {
   site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
 }
 
-resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
-  for_each = local.assigned_access_points_map
-
-  device_ids = [
-    for device in each.value :
-    try(local.device_name_to_id[device.name], local.device_name_to_id[device.fqdn_name], local.device_ip_to_id[device.device_ip])
-    if(
-      lookup(local.device_name_to_id, device.name, null) != null ||
-      lookup(local.device_name_to_id, try(device.fqdn_name, ""), null) != null ||
-      lookup(local.device_ip_to_id, try(device.device_ip, ""), null) != null
-    )
-  ]
-  site_id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key]
-}
-
 resource "catalystcenter_device_role" "role" {
   for_each = {
     for device in try(local.catalyst_center.inventory.devices, []) :
@@ -313,7 +332,7 @@ resource "catalystcenter_device_role" "role" {
 }
 
 resource "catalystcenter_provision_device" "provision_device" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && ((try(device.primary_managed_ap_locations, null) == null && try(device.secondary_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) || ((try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null) && contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))) && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false && try(device.type, null) != "AccessPoint" }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && ((try(device.primary_managed_ap_locations, null) == null && try(device.secondary_managed_ap_locations, null) == null && try(device.anchor_managed_ap_locations, null) == null && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) && contains(local.sites, try(device.site, "NONE")) && var.use_bulk_api == false && try(device.type, null) != "AccessPoint" && (try(device.type, null) != "WirelessController" || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE")) }
 
   site_id           = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
   network_device_id = try(local.device_name_to_id[each.value.name], local.device_name_to_id[each.value.fqdn_name], local.device_ip_to_id[each.value.device_ip])
@@ -364,7 +383,7 @@ resource "catalystcenter_assign_device_to_site" "wireless_devices_to_site" {
 }
 
 resource "catalystcenter_wireless_device_provision" "wireless_controller" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null || try(device.managed_ap_locations, null) != null) && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && try(device.type, null) == "WirelessController" && !contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.site, "NONE")) }
 
   network_device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
@@ -373,13 +392,13 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   )
   reprovision = try(each.value.state, null) == "REPROVISION" ? true : false
 
-  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, time_sleep.wait_for_managed_ap_locations, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile, data.catalystcenter_sites.created_sites]
+  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, time_sleep.wait_for_managed_ap_locations, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
-  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null || try(device.managed_ap_locations, null) != null) && contains(local.sites, try(device.site, "NONE")) }
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || try(device.primary_managed_ap_locations, null) != null || try(device.secondary_managed_ap_locations, null) != null) && contains(local.sites, try(device.site, "NONE")) }
 
-  primary_managed_ap_locations_site_ids   = [for site in try(each.value.primary_managed_ap_locations, each.value.managed_ap_locations, []) : try(local.site_id_list[each.value.primary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
+  primary_managed_ap_locations_site_ids   = [for site in try(each.value.primary_managed_ap_locations, []) : try(local.site_id_list[each.value.primary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
   secondary_managed_ap_locations_site_ids = [for site in try(each.value.secondary_managed_ap_locations, []) : try(local.site_id_list[each.value.secondary_managed_ap_locations], local.site_id_list[site], coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]), null)]
   device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
@@ -387,44 +406,27 @@ resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {
     try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
   )
 
-  depends_on = [catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
+  depends_on = [catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
+}
+
+resource "catalystcenter_assign_anchor_managed_ap_locations" "anchor_managed_ap_locations" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && try(device.anchor_managed_ap_locations, null) != null && contains(local.sites, try(device.site, "NONE")) }
+
+  anchor_managed_ap_locations_site_ids = [for site in try(each.value.anchor_managed_ap_locations, []) : try(local.site_id_list[site], local.site_id_list_bulk[site], local.data_source_created_sites_list[site], null)]
+  device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+
+  depends_on = [catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
 }
 
 resource "time_sleep" "wait_for_managed_ap_locations" {
-  depends_on = [catalystcenter_assign_managed_ap_locations.managed_ap_locations]
+  depends_on = [catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations]
 
   create_duration = "10s"
 }
-locals {
-  provisioned_access_points = [
-    for device in try(local.catalyst_center.inventory.devices, []) : device if(strcontains(device.state, "PROVISION")) && try(device.type, null) == "AccessPoint" && contains(local.sites, try(device.site, "NONE"))
-  ]
-
-  provisioned_access_points_by_site = {
-    for site in distinct([for d in local.provisioned_access_points : d.site]) :
-    site => [for d in local.provisioned_access_points : d if d.site == site]
-  }
-}
-
-
-resource "catalystcenter_provision_access_points" "access_points" {
-  for_each = { for site, devices in try(local.provisioned_access_points_by_site, {}) : site => devices if length(devices) > 0 }
-
-  network_devices = [for device in each.value : {
-    device_id = coalesce(
-      try(lookup(local.device_name_to_id, device.name, null), null),
-      try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-      try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-    )
-    reprovision = try(device.state, null) == "REPROVISION" ? true : false
-  }]
-  rf_profile_name = try(each.value[0].rf_profile)
-  site_id         = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
-
-  depends_on = [catalystcenter_assign_device_to_site.access_points_to_site]
-}
-
-
 
 resource "time_sleep" "provision_device_wait" {
   count = length(try(local.provisioned_devices, [])) > 0 && !var.manage_global_settings ? 1 : 0
@@ -433,3 +435,4 @@ resource "time_sleep" "provision_device_wait" {
 
   depends_on = [catalystcenter_provision_device.provision_device, catalystcenter_provision_devices.provision_devices, catalystcenter_wireless_device_provision.wireless_controller]
 }
+
