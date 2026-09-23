@@ -517,9 +517,13 @@ locals {
 }
 
 resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
+  # `create_per_site` tags are handled per-site in per-site mode by the read-modify-write
+  # `catalystcenter_wireless_profile_site_tag_site_assignment` resource below, so they are excluded
+  # here to avoid each site state re-creating the same name-unique global tag (collision / ping-pong
+  # on the shared siteIds list). Everything else keeps the existing monolithic behavior.
   for_each = {
     for key, tag in local.wireless_profile_site_tags : key => tag
-    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)])
+    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)]) && !(local.per_site_mode && try(tag.create_per_site, local.defaults.catalyst_center.network_profiles.wireless.site_tags.create_per_site, false))
   }
 
   wireless_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id)
@@ -531,6 +535,49 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
     var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
     if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
+
+  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
+}
+
+locals {
+  # Per-site Site Tag membership (`create_per_site`). In per-site mode a shared Site Tag cannot be
+  # created by the monolithic resource from each state (name-unique global object -> collisions and
+  # ping-pong on the shared siteIds list). Instead each (tag, site) pair owned by this state is
+  # managed by the read-modify-write `catalystcenter_wireless_profile_site_tag_site_assignment`
+  # resource, which first-creates the tag and then appends/removes only its own site.
+  # Catalyst Center collapses a child site into its parent in a Site Tag: assigning a parent
+  # (e.g. a building) subsumes its descendants (floors) and GET only ever returns the parent's id.
+  # A descendant listed alongside its ancestor therefore never round-trips, which would make its
+  # per-site assignment resource flap (create/destroy every plan). Mirror that behavior here and
+  # keep only the "maximal" sites: drop any site whose hierarchy path is under another site listed
+  # for the same tag (site hierarchy names cannot contain '/', so a strict "<ancestor>/" prefix is
+  # an unambiguous descendant test).
+  #
+  # The `for_each` keys of the resource below are derived from this map, so the membership predicate
+  # must stay plan-time static (like the monolithic `site_tag` resource): it only uses the data
+  # model (`local.sites`, `tag.*`, `local.per_site_mode`). Site-id resolution is intentionally NOT
+  # done here - a brand-new site resolves to a value that is "known after apply" (via the
+  # `created_sites` data source), and putting that in the key-selecting `if` makes the whole map
+  # unknown ("Invalid for_each argument"). The `site_id` attribute below performs the resolution in
+  # the resource *value* instead, where an unknown-after-apply value is allowed.
+  wireless_profile_site_tag_site_assignments = merge([
+    for key, tag in local.wireless_profile_site_tags : {
+      for site in try(tag.sites, []) :
+      "${key}/${site}" => merge(tag, { site = site })
+      if local.per_site_mode && try(tag.create_per_site, local.defaults.catalyst_center.network_profiles.wireless.site_tags.create_per_site, false) && contains(local.sites, site) &&
+      !anytrue([for ancestor in try(tag.sites, []) : startswith(site, "${ancestor}/")])
+    }
+  ]...)
+}
+
+resource "catalystcenter_wireless_profile_site_tag_site_assignment" "site_tag_assignment" {
+  for_each = local.wireless_profile_site_tag_site_assignments
+
+  wireless_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id)
+  site_tag_name       = each.value.name
+  site_id             = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.value.site], null), local.data_source_created_sites_list[each.value.site]) : coalesce(try(local.site_id_list[each.value.site], null), try(local.data_source_site_list[each.value.site], null), try(local.data_source_created_sites_list[each.value.site], null))
+  ap_profile_name     = try(each.value.ap_profile_name, local.defaults.catalyst_center.network_profiles.wireless.site_tags.ap_profile_name, null)
+  flex_profile_name   = try(each.value.flex_profile_name, local.defaults.catalyst_center.network_profiles.wireless.site_tags.flex_profile_name, null)
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
 }
