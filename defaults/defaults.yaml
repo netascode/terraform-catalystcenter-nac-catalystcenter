@@ -65,6 +65,7 @@ defaults:
           ipv6:
             address_space: false
       device_credentials:
+        preserve_unmanaged_global: true
         https_write_credentials:
           port: 443
         https_read_credentials:
