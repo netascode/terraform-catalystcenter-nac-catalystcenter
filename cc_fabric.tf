@@ -1285,3 +1285,64 @@ resource "catalystcenter_fabric_port_channel" "port_channel" {
 
   depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
 }
+
+# ------------------------------------------------------------------------------
+# Anchor-role change guard (multistate)
+#
+# This module-level guard reads the LIVE VN state from the controller (which is
+# visible regardless of for_each membership) and hard-blocks at plan time when an
+# already-anchored VN that is still associated with fabric sites has its anchor
+# role changed. The only supported way to change the anchor is to first remove the
+# VN (and its anycast gateways) from ALL fabric sites, apply, then set the new
+# anchor in a subsequent apply.
+# ------------------------------------------------------------------------------
+
+data "catalystcenter_fabric_l3_virtual_network" "anchor_guard" {
+  for_each = { for name, _ in local.anchored_vn_lookup : name => name }
+
+  virtual_network_name = each.key
+}
+
+locals {
+  guard_fabric_site_uuids = merge(
+    local.fabric_site_id_list,
+    {
+      for site_name, site_id in local.data_source_site_list :
+      site_name => local.data_source_fabric_site_id_list[site_id]
+      if contains(keys(local.data_source_fabric_site_id_list), site_id)
+    }
+  )
+
+  anchor_guard_block = {
+    for name, desired_anchor_path in local.anchored_vn_lookup : name => (
+      try(data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].anchored_site_id, "") != "" &&
+      length(compact(coalesce(try(data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].fabric_ids, []), []))) > 0 &&
+      (
+        (
+          desired_anchor_path != null &&
+          contains(local.sites, desired_anchor_path) &&
+          try(local.guard_fabric_site_uuids[desired_anchor_path], null) != null &&
+          data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].anchored_site_id != local.guard_fabric_site_uuids[desired_anchor_path]
+        ) ||
+        (
+          contains(toset(values(local.fabric_site_id_list)), data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].anchored_site_id) &&
+          (desired_anchor_path == null || !contains(local.sites, desired_anchor_path))
+        )
+      )
+    )
+  }
+}
+
+resource "terraform_data" "anchor_change_guard" {
+  for_each = local.anchored_vn_lookup
+
+  input = each.key
+
+  lifecycle {
+    precondition {
+      # Blocked-ness is evaluated here (unknowns tolerated), never in for_each membership
+      condition     = !try(local.anchor_guard_block[each.key], false)
+      error_message = "This Virtual Network '${each.key}' has already been Anchored to a site and its Anchor Role cannot be changed, without first removing the VN with its associated anycast gateway from ALL existing fabric sites (Anchor + Anchoring sites). Unassociate the VN from all fabric sites, apply, then configure the new anchor site in a subsequent apply."
+    }
+  }
+}
