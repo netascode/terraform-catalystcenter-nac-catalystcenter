@@ -1369,12 +1369,26 @@ locals {
     name => local.guard_live_is_anchored[name] && contains(toset(values(local.fabric_site_id_list)), anchor_id)
   }
 
+  # The second clause covers the multistate case: a per-site state that owns the
+  # current anchor cannot resolve an anchor_site belonging to another state, so
+  # the move is invisible to the first clause and would otherwise demote the
+  # anchor site unguarded. Requiring the live anchor to be locally managed keeps
+  # a state that owns only an anchoring child site from matching here.
   guard_anchor_changed = {
     for name, _ in local.global_l3_virtual_networks : name => (
       local.guard_live_is_anchored[name] &&
       local.guard_live_on_fabric_sites[name] &&
-      local.guard_desired_anchor_id[name] != null &&
-      local.guard_live_anchor_id[name] != local.guard_desired_anchor_id[name]
+      (
+        (
+          local.guard_desired_anchor_id[name] != null &&
+          local.guard_live_anchor_id[name] != local.guard_desired_anchor_id[name]
+        ) ||
+        (
+          local.guard_anchor_locally_managed[name] &&
+          local.guard_desired_anchor_path[name] != null &&
+          !contains(local.sites, local.guard_desired_anchor_path[name])
+        )
+      )
     )
   }
 
