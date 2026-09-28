@@ -1398,11 +1398,11 @@ locals {
   anchor_guard_message = {
     for name, _ in local.global_l3_virtual_networks : name => (
       local.guard_anchor_changed[name] ?
-      "Virtual Network '${name}' is already anchored to a fabric site and its anchor cannot be moved to a different site while the VN is still associated with fabric sites. This is a Catalyst Center API limitation. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
+      "Virtual Network '${name}' is already anchored to a fabric site and its anchor cannot be moved to a different site while the VN is still associated with fabric sites. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
       local.guard_anchor_added[name] ?
-      "Virtual Network '${name}' already exists on Catalyst Center and is associated across multiple fabric sites without an anchor, and an anchor cannot be added to an existing Layer 3 Virtual Network that spans more than one fabric site. This is a Catalyst Center API limitation. Remove the VN and its anycast gateways from ALL fabric sites it is currently associated with, apply, then re-add the VN with anchor_site set in a subsequent apply." :
+      "Virtual Network '${name}' already exists on Catalyst Center and is associated across multiple fabric sites without an anchor, and an anchor cannot be added to an existing Layer 3 Virtual Network that spans more than one fabric site. Remove the VN and its anycast gateways from ALL fabric sites it is currently associated with, apply, then re-add the VN with anchor_site set in a subsequent apply." :
       local.guard_anchor_removed[name] ?
-      "Virtual Network '${name}' is anchored and is still associated with one or more anchoring (child) fabric sites, so its anchor cannot be removed. This is a Catalyst Center API limitation. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply." :
+      "Virtual Network '${name}' is anchored and is still associated with one or more anchoring (child) fabric sites, so its anchor cannot be removed. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply." :
       ""
     )
   }
