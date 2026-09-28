@@ -6,6 +6,7 @@
 
 **Bug Fixes:**
 - Fix a device tag defined under `inventory.tags` (or `templates.tags`) without `system_tag` showing a perpetual `update in-place` on every plan; `system_tag` now defaults to `false` (settable per tag or once under `defaults.catalyst_center.inventory.tags.system_tag`), matching what Catalyst Center returns for user-defined tags
+- Fix a mid-apply failure when the anchor site of an already-anchored L3 virtual network is changed or removed while the virtual network is still associated with fabric sites; Catalyst Center rejects the change, leaving the deployment partially applied. A new plan-time guard reads the live virtual network state from the controller — so it sees the anchor regardless of `for_each` membership, including in per-site states that do not manage the anchor site — and blocks the plan with an explanatory error. The supported migration path is unchanged: remove the virtual network and its anycast gateways from ALL fabric sites (anchor plus anchoring sites), apply, then set the new anchor in a subsequent apply. The guard is scoped to locally-managed fabric sites, so adding or removing an anchoring child site is not affected
 
 ## 0.5.0
 
