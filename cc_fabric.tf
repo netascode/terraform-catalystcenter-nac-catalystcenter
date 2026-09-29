@@ -1401,9 +1401,13 @@ locals {
     )
   }
 
+  # Scoped by the absence of a declared anchor rather than by local ownership: a
+  # child-site state cannot resolve a parent's anchor_site, so requiring the live
+  # anchor to be locally managed would silently skip this check in every state
+  # except the one owning the anchor site.
   guard_anchor_removed = {
     for name, _ in local.global_l3_virtual_networks : name => (
-      local.guard_anchor_locally_managed[name] &&
+      local.guard_live_is_anchored[name] &&
       local.guard_live_on_multiple_fabric_sites[name] &&
       local.guard_desired_anchor_path[name] == null
     )
