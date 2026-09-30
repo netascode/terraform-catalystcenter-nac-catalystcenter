@@ -16,6 +16,10 @@ locals {
   pnp_standard_devices = { for name, device in local.pnp_managed_devices : name => device if try(device.svl, null) == null }
   pnp_svl_devices      = { for name, device in local.pnp_managed_devices : name => device if try(device.svl, null) != null }
 
+  # Only the ACTIVE member is registered. Catalyst Center merges the pair into one
+  # Plug and Play record under the ACTIVE serial once the SVL claim succeeds, so a
+  # STANDBY `catalystcenter_pnp_device` would be dropped from state on the next
+  # refresh and re-created on every apply.
   pnp_svl_member_registrations = merge([
     for name, device in local.pnp_svl_devices : {
       for member in device.svl.members : "${name}::${member.serial_number}" => {
@@ -23,6 +27,7 @@ locals {
         serial_number = member.serial_number
         pid           = try(device.pid, null)
       }
+      if member.role == "ACTIVE"
     }
   ]...)
 
