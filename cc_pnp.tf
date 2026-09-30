@@ -84,10 +84,11 @@ resource "catalystcenter_pnp_device" "pnp_svl_member" {
   }
 }
 
-resource "catalystcenter_pnp_device_claim_svl" "claim_svl" {
+resource "catalystcenter_pnp_network_device_claim" "claim_svl" {
   for_each = local.pnp_svl_devices
 
   device_id           = catalystcenter_pnp_device.pnp_svl_member[local.pnp_svl_active_registration_key_by_name[each.key]].id
+  device_type         = "SVL"
   site_id             = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
   hostname            = try(each.value.name, each.value.fqdn_name, local.defaults.catalyst_center.pnp.devices.hostname, null)
   image_id            = try(each.value.image_id, local.image_name_to_id[each.value.image_name], local.defaults.catalyst_center.pnp.devices.image_id, null)
