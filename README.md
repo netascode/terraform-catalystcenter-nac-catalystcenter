@@ -79,6 +79,8 @@ module "catalystcenter" {
 | ---- | ---- |
 | [catalystcenter_aaa_settings.aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_aaa_settings.global_aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
+| [catalystcenter_access_point_configuration.access_point_configuration](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/access_point_configuration) | resource |
+| [catalystcenter_access_point_configuration.ap_config](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/access_point_configuration) | resource |
 | [catalystcenter_anchor_group.anchor_group](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anchor_group) | resource |
 | [catalystcenter_anycast_gateway.anycast_gateway](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateway) | resource |
 | [catalystcenter_anycast_gateway.anycast_gateway_anchoring](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateway) | resource |
@@ -100,6 +102,7 @@ module "catalystcenter" {
 | [catalystcenter_area.area_8](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_area.area_9](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
 | [catalystcenter_areas.bulk_areas](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/areas) | resource |
+| [catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_anchor_managed_ap_locations) | resource |
 | [catalystcenter_assign_credentials.assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_credentials) | resource |
 | [catalystcenter_assign_device_to_site.access_points_to_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_device_to_site) | resource |
@@ -211,6 +214,7 @@ module "catalystcenter" {
 | [catalystcenter_wireless_rrm_fra_configuration.rrm_fra](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_rrm_fra_configuration) | resource |
 | [catalystcenter_wireless_ssid.ssid](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/wireless_ssid) | resource |
 | [local_sensitive_file.defaults](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/sensitive_file) | resource |
+| [terraform_data.ap_configuration_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.before_fabric_template_deployments](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.bulk_site_provisioning_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.fabric_configuration_complete](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
@@ -218,16 +222,23 @@ module "catalystcenter" {
 | [terraform_data.top_level_aaa_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.wireless_site_ssid_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.wireless_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [time_sleep.provision_device_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.template_wait](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_anycast_gateways.created_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
+| [catalystcenter_credentials_cli.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
 | [catalystcenter_credentials_cli.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
+| [catalystcenter_credentials_https_read.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_https_read) | data source |
 | [catalystcenter_credentials_https_read.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_https_read) | data source |
+| [catalystcenter_credentials_https_write.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_https_write) | data source |
 | [catalystcenter_credentials_https_write.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_https_write) | data source |
+| [catalystcenter_credentials_snmpv2_read.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_read) | data source |
 | [catalystcenter_credentials_snmpv2_read.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_read) | data source |
+| [catalystcenter_credentials_snmpv2_write.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_write) | data source |
 | [catalystcenter_credentials_snmpv2_write.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv2_write) | data source |
+| [catalystcenter_credentials_snmpv3.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv3) | data source |
 | [catalystcenter_credentials_snmpv3.multi_state_non_global_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_snmpv3) | data source |
 | [catalystcenter_dot11be_profile.dot11be_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/dot11be_profile) | data source |
 | [catalystcenter_fabric_l2_virtual_network.l2_vn_zone_parent](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/fabric_l2_virtual_network) | data source |

@@ -24,14 +24,7 @@ locals {
         https_write  = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_write_credentials, null)
       }
     },
-    { for area in local.flat_areas : "${area.parent_name}/${area.name}" => {
-      cli          = try(area.cli_credentials, null)
-      snmpv3       = try(area.snmpv3_credentials, null)
-      snmpv2_read  = try(area.snmpv2_read_credentials, null)
-      snmpv2_write = try(area.snmpv2_write_credentials, null)
-      https_read   = try(area.https_read_credentials, null)
-      https_write  = try(area.https_write_credentials, null)
-    } },
+    { for area in local._all_area_levels : area._self => area.credentials },
     { for building in local.flat_buildings : "${building.parent_name}/${building.name}" => {
       cli          = try(building.cli_credentials, null)
       snmpv3       = try(building.snmpv3_credentials, null)
@@ -537,7 +530,7 @@ locals {
 }
 
 locals {
-  _global_ip_pools_raw = try(local.global_network_settings.ip_pools, try(local.catalyst_center.network_settings.ip_pools, []))
+  _global_ip_pools_raw = try(local.catalyst_center.network_settings.ip_pools, local.global_network_settings.ip_pools, [])
 
   global_ip_pools = {
     for pool in local._global_ip_pools_raw : pool.name => {

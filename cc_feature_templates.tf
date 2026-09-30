@@ -29,8 +29,8 @@ locals {
     "SUPER_HIGH"  = "Super High"
   }
 
-  ft_cleanair = { for c in try(local.ft_wireless.cleanair, []) : c.name => c }
-  ft_rrm_fra  = { for f in try(local.ft_wireless.rrm_fra, []) : f.name => f }
+  ft_cleanair = { for c in try(local.ft_wireless.cleanair, []) : c.name => c if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  ft_rrm_fra  = { for f in try(local.ft_wireless.rrm_fra, []) : f.name => f if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 }
 
 resource "catalystcenter_wireless_cleanair_configuration" "cleanair" {
@@ -67,11 +67,12 @@ resource "catalystcenter_wireless_cleanair_configuration" "cleanair" {
 resource "catalystcenter_wireless_rrm_fra_configuration" "rrm_fra" {
   for_each = local.ft_rrm_fra
 
-  design_name     = each.value.name
-  radio_band      = local.ft_fra_band_map[each.value.radio_band]
-  fra_freeze      = try(each.value.fra_freeze, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_freeze, null)
-  fra_status      = try(each.value.fra_status, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_status, null)
-  fra_interval    = try(each.value.fra_interval, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_interval, null)
-  fra_sensitivity = try(local.ft_fra_sensitivity_map[each.value.fra_sensitivity], local.ft_fra_sensitivity_map[local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity], null)
+  design_name  = each.value.name
+  radio_band   = local.ft_fra_band_map[each.value.radio_band]
+  fra_freeze   = try(each.value.fra_freeze, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_freeze, null)
+  fra_status   = try(each.value.fra_status, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_status, null)
+  fra_interval = try(each.value.fra_interval, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_interval, null)
+  # fra_sensitivity is only accepted for the 2.4GHz_5GHz band
+  fra_sensitivity = each.value.radio_band == "2.4GHz_5GHz" ? try(local.ft_fra_sensitivity_map[each.value.fra_sensitivity], local.ft_fra_sensitivity_map[local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity], null) : null
 }
 
