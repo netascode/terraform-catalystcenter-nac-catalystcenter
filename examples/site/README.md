@@ -27,7 +27,9 @@ catalyst_center:
   sites:
     areas:
       - name: Site1
-        parent_name: Global
+        areas:
+          - name: Site1a
+          - name: Site1b
 ```
 
 #### `main.tf`

@@ -2,6 +2,13 @@
 
 **Bug Fixes:**
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
+- Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
+
+**New Features:**
+- Add support for deploying built-in or pre-existing CLI templates that are not declared under `cli_templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
+
+**Breaking Changes:**
+- Rework the RMA (Return Material Authorization) device replacement workflow into a 3-step process driven by a new `inventory.devices[].rma` block (`action: MARK_FOR_REPLACEMENT` then `action: REPLACE` with `replacement_serial_number`, then remove the block). The device `state` now stays `PROVISION` throughout a replacement, so the `MARK_FOR_REPLACEMENT` device `state` value is removed. Migrate any device using `state: MARK_FOR_REPLACEMENT` to `state: PROVISION` with the corresponding `rma` block
 
 ## 0.4.6
 
@@ -28,24 +35,16 @@
 ## 0.4.4
 
 **Bug Fixes:**
-- Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. The `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
+- Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. Requires provider `~> 0.5.18`, where the `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
 - Fix `fabric_zones[].l2_virtual_networks` being silently ignored; L2 virtual networks listed by name under a fabric zone are now deployed to the zone (parallel to the existing `l3_virtual_networks` and `anycast_gateways` inheritance) using a new `catalystcenter_fabric_l2_virtual_network.l2_vn_zone` resource keyed `${name}#_#${zone_name}`. The vlan_name/traffic_type/wireless flag and L3 VN association are inherited from the matching site-level L2 VN definition.
 - Fix fabric-zone L2 virtual network creation failing with `NCHS20538` ("include the vlanId for this create on fabric zone request") when the parent site L2 VN has no explicit `vlan_id`. Catalyst Center auto-assigns the VLAN id on the fabric site, and the zone create requires the same id; the module now reads the parent site L2 VN's assigned `vlan_id` (via a `catalystcenter_fabric_l2_virtual_network` data source) and applies it to the zone when `vlan_id` is not set in the data model.
 - Fix `is_bpdu_guard_enabled` being set on the global authentication profile; the field is not settable at the global level in Catalyst Center (not exposed in the API or UI) and is now always `null` there, while remaining configurable per fabric-site `Closed Authentication` profile
-- Fix `catalystcenter_fabric_port_channel` on fabric-zone edge nodes being created before the zone's fabric device exists; `catalystcenter_fabric_devices.fabric_devices_zone` is now included in the resource `depends_on` so port channels on devices inside a fabric zone apply reliably
 - Fix credential assignment in multi-state deployments: site-level assignment no longer silently inherits the Global credential when global settings are managed in a separate state (named credentials are now resolved via `catalystcenter_credentials_*` data sources before the Global fallback), and sites/Global entries configured with only SNMPv2 credentials are no longer skipped by the `catalystcenter_assign_credentials` `for_each` filter
 - Fix imported L3 virtual networks with no associated fabric sites (e.g. `DEFAULT_VN`) showing a spurious `fabric_ids = []` in-place update on the first plan after import; `catalystcenter_fabric_l3_virtual_network.l3_vn` now emits `null` instead of an empty list when a VN has no fabric site/zone associations, matching the provider's read behavior (which maps an empty `fabricIds` response to `null`)
 - Fix PnP device claim `hostname` resolution in `catalystcenter_pnp_device_claim_site`; the device `name` (then `fqdn_name`, then the `defaults.yaml` value) is now used as the claim hostname instead of an unset `hostname` attribute, ensuring the device is named consistently in Catalyst Center inventory
-- Fix embedded Wireless Controller (eWLC) / Fabric-in-a-Box provisioning: `EMBEDDED_WIRELESS_CONTROLLER_NODE` devices managing AP locations are now provisioned via both the bulk and non-bulk paths (with `primary` and/or `secondary_managed_ap_locations`), managed-AP-location assignment now waits for provisioning to complete, and the fabric border device ignores `device_roles` changes to avoid a perpetual diff on FIAB deployments
 
 **New Features:**
-- Add RRM FRA feature template support under `feature_templates.wireless.rrm_fra[]` via `catalystcenter_wireless_rrm_fra_configuration` resources; data-model `radio_band` values `2.4GHz_5GHz` and `5GHz_6GHz` are mapped to provider enums through `rrm_fra_radio_band_mapping`, `fra_sensitivity` (only for `2.4GHz_5GHz`) is mapped to API title-case through `rrm_fra_sensitivity_mapping`, and templates can be associated with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates` (requires provider `>= 0.5.20`)
 - Add support for deploying built-in or pre-existing CLI templates that are not declared under `templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
-- Add CleanAir feature template support under `feature_templates.wireless.cleanair[]` (creating `catalystcenter_wireless_cleanair_configuration` resources) and associate them with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates`.
-- Add `system_settings.external_authentication` data model support via `catalystcenter_external_authentication` and `catalystcenter_external_authentication_aaa_attribute` resources to enable external user login and configure the custom AAA attribute for role mapping
-
-**Improvements:**
-- Add plan-time pre-condition validation for wireless controllers via a new `terraform_data.wireless_validation` resource: a device with `primary_/secondary_managed_ap_locations` must carry exactly one wireless-controller role (`WIRELESS_CONTROLLER_NODE` or `EMBEDDED_WIRELESS_CONTROLLER_NODE`, never both or neither), and a device with a wireless-controller role must define at least one managed AP location; misconfigurations now fail early with an actionable error instead of a mid-apply failure
 
 ## 0.4.3
 
@@ -75,7 +74,7 @@
 ## 0.4.2
 
 **Bug Fixes:**
-- Fix AP provisioning for devices without IP address
+- Fix AP provisioning for devices without IP address 
 - Fix issue with provisioning the embedded wireless controller and enabling the edge role in a single Terraform run
 - Fix multicast rendezvous point IP addresses being sent for Fabric-internal RPs; `ipv4_address` and `ipv6_address` are now only populated when `rp_location` is not `FABRIC`
 - Fix extranet policy to only be managed when not using `manage_global_settings` with `managed_sites`, resolving incorrect state evaluation in single-state deployments

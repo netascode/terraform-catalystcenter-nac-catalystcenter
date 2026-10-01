@@ -42,8 +42,6 @@ defaults:
       devices:
         role_source: MANUAL
     sites:
-      areas:
-        parent_name: Global
       floors:
         height: 3
         length: 30
