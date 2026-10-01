@@ -41,7 +41,8 @@ locals {
               copying_config      = try(template.copying_config, null)
               force_push_template = try(template.force_push_template, null)
             }
-          }
+          },
+          try(local.provisioning_dayn_templates_map_by_device[device.name], {})
         )
       }
     )

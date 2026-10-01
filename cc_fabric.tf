@@ -667,6 +667,12 @@ locals {
         state            = try(local.inventory_by_name[fd.name].state, fd.state, null)
         device_ip        = try(local.inventory_by_name[fd.name].device_ip, fd.device_ip, null)
         fqdn_name        = try(coalesce(try(fd.fqdn_name, null), try(local.inventory_by_name[fd.name].fqdn_name, null)), null)
+        # CatC only accepts pure edge nodes inside a fabric zone, and rejects
+        # them on the parent fabric site once provisioned under the zone.
+        fabric_zone_name = anytrue([for role in try(fd.fabric_roles, []) : contains(["BORDER_NODE", "CONTROL_PLANE_NODE", "WIRELESS_CONTROLLER_NODE"], role)]) ? null : try(split("|", reverse(sort([
+          for zone in try(fabric_site.fabric_zones, []) : format("%03d|%s", length(split("/", zone.name)), zone.name)
+          if try(local.inventory_by_name[fd.name].site, "") == zone.name || startswith(try(local.inventory_by_name[fd.name].site, ""), "${zone.name}/")
+        ]))[0])[1], null)
       })
     ]
   ])
@@ -685,8 +691,13 @@ locals {
   }
 
   fabric_devices_by_site = {
-    for site in distinct([for fd in values(local.fabric_devices) : fd.fabric_site_name]) :
-    site => [for fd in values(local.fabric_devices) : fd if fd.fabric_site_name == site]
+    for site in distinct([for fd in values(local.fabric_devices) : fd.fabric_site_name if fd.fabric_zone_name == null]) :
+    site => [for fd in values(local.fabric_devices) : fd if fd.fabric_site_name == site && fd.fabric_zone_name == null]
+  }
+
+  fabric_devices_by_zone = {
+    for zone in distinct(compact([for fd in values(local.fabric_devices) : fd.fabric_zone_name])) :
+    zone => [for fd in values(local.fabric_devices) : fd if fd.fabric_zone_name == zone]
   }
 }
 
@@ -723,10 +734,27 @@ resource "catalystcenter_fabric_devices" "fabric_devices" {
 }
 
 resource "catalystcenter_fabric_devices" "fabric_devices_zone" {
-  for_each = {}
+  for_each = { for fabric_zone, devices in local.fabric_devices_by_zone : fabric_zone => devices if length(devices) > 0 && var.use_bulk_api }
 
-  fabric_id      = try(local.fabric_zone_id_list[each.key], null)
-  fabric_devices = []
+  fabric_id = try(local.fabric_zone_id_list[each.key], null)
+  fabric_devices = [
+    for device in each.value : {
+      network_device_id = coalesce(
+        try(lookup(local.device_name_to_id, device.name, null), null),
+        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+      )
+      fabric_id = try(local.fabric_zone_id_list[each.key], null)
+      device_roles = try([
+        for fabric_role in try(device.fabric_roles, []) : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
+      ], local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
+    }
+    if(
+      lookup(local.device_name_to_id, device.name, null) != null ||
+      lookup(local.device_name_to_id, try(coalesce(try(device.fqdn_name, null), ""), ""), null) != null ||
+      lookup(local.device_ip_to_id, device.device_ip, null) != null
+    )
+  ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_devices.fabric_devices]
 }
@@ -779,7 +807,7 @@ resource "catalystcenter_fabric_device" "edge_device" {
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
     try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
   )
-  fabric_id = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id, null)
+  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone_name].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id, null)
   device_roles = try([
     for fabric_role in try(each.value.fabric_roles, []) : fabric_role
     if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
@@ -789,7 +817,7 @@ resource "catalystcenter_fabric_device" "edge_device" {
     ignore_changes = [device_roles]
   }
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_zone.fabric_zone]
 }
 
 resource "catalystcenter_fabric_ewlc" "ewlc_device" {
@@ -1053,7 +1081,7 @@ locals {
               try(lookup(local.device_ip_to_id, device.device_ip, null), null),
               "NOT_FOUND"
             )
-            fabric_id = try(local.fabric_site_id_list[device.fabric_site_name], null)
+            fabric_id = try(local.fabric_zone_id_list[device.fabric_zone_name], local.fabric_site_id_list[device.fabric_site_name], null)
           }
           ] : [
           {
@@ -1070,18 +1098,18 @@ locals {
               try(lookup(local.device_ip_to_id, device.device_ip, null), null),
               "NOT_FOUND"
             )
-            fabric_id = try(local.fabric_site_id_list[device.fabric_site_name], null)
+            fabric_id = try(local.fabric_zone_id_list[device.fabric_zone_name], local.fabric_site_id_list[device.fabric_site_name], null)
           }
         ]
       )
-    ]) if try(device.port_assignments.interfaces, null) != null
+    ]) if length(try(device.port_assignments.interfaces, [])) > 0
   }
 }
 
 resource "catalystcenter_fabric_port_assignments" "port_assignments" {
-  for_each = { for device in local.fabric_devices_flat : device.name => device if(strcontains(try(device.state, ""), "PROVISION")) && try(contains(device.fabric_roles, "EDGE_NODE"), false) && try(device.port_assignments.interfaces, null) != null && contains(local.sites, device.fabric_site_name) }
+  for_each = { for device in local.fabric_devices_flat : device.name => device if(strcontains(try(device.state, ""), "PROVISION")) && try(contains(device.fabric_roles, "EDGE_NODE"), false) && length(try(device.port_assignments.interfaces, [])) > 0 && contains(local.sites, device.fabric_site_name) }
 
-  fabric_id = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id, null)
+  fabric_id = try(catalystcenter_fabric_zone.fabric_zone[each.value.fabric_zone_name].id, catalystcenter_fabric_site.fabric_site[each.value.fabric_site_name].id, null)
   network_device_id = coalesce(
     try(lookup(local.device_name_to_id, each.value.name, null), null),
     try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
@@ -1231,7 +1259,7 @@ locals {
           lookup(local.device_name_to_id, try(device.fqdn_name, ""), null),
           lookup(local.device_ip_to_id, try(device.device_ip, ""), null)
         )
-        fabric_id = try(local.fabric_site_id_list[device.fabric_site_name], null)
+        fabric_id = try(local.fabric_zone_id_list[device.fabric_zone_name], local.fabric_site_id_list[device.fabric_site_name], null)
       }
       if length(try(pc.interface_names, [])) > 0
     }

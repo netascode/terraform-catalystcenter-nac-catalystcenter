@@ -9,12 +9,12 @@ locals {
     if local.per_site_mode && try(discovery.create_per_site, false)
   ]))
 
-  yaml_cli_credential_names          = toset([for credential in try(local.catalyst_center.network_settings.device_credentials.cli_credentials, []) : credential.name])
-  yaml_https_read_credential_names   = toset([for credential in try(local.catalyst_center.network_settings.device_credentials.https_read_credentials, []) : credential.name])
-  yaml_https_write_credential_names  = toset([for credential in try(local.catalyst_center.network_settings.device_credentials.https_write_credentials, []) : credential.name])
-  yaml_snmpv2_read_credential_names  = toset([for credential in try(local.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials, []) : credential.name])
-  yaml_snmpv2_write_credential_names = toset([for credential in try(local.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials, []) : credential.name])
-  yaml_snmpv3_credential_names       = toset([for credential in try(local.catalyst_center.network_settings.device_credentials.snmpv3_credentials, []) : credential.name])
+  yaml_cli_credential_names          = toset([for credential in try(local.global_device_credentials.cli_credentials, []) : credential.name])
+  yaml_https_read_credential_names   = toset([for credential in try(local.global_device_credentials.https_read_credentials, []) : credential.name])
+  yaml_https_write_credential_names  = toset([for credential in try(local.global_device_credentials.https_write_credentials, []) : credential.name])
+  yaml_snmpv2_read_credential_names  = toset([for credential in try(local.global_device_credentials.snmpv2_read_credentials, []) : credential.name])
+  yaml_snmpv2_write_credential_names = toset([for credential in try(local.global_device_credentials.snmpv2_write_credentials, []) : credential.name])
+  yaml_snmpv3_credential_names       = toset([for credential in try(local.global_device_credentials.snmpv3_credentials, []) : credential.name])
 
   discovery_cli_lookup          = setsubtract(setintersection(local.per_site_discovery_credential_names, local.yaml_cli_credential_names), local.multi_state_non_global_cli_creds)
   discovery_https_read_lookup   = setsubtract(setintersection(local.per_site_discovery_credential_names, local.yaml_https_read_credential_names), local.multi_state_non_global_https_read_creds)

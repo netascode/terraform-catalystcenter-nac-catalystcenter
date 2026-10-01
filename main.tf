@@ -19,10 +19,11 @@ locals {
     local.site_global_network_settings,
     # A list under sites.global is a definition collection. A string/object is
     # the Global site's selected setting and must not replace the legacy
-    # top-level definition collection used for name resolution.
-    { network = try(tolist(local.site_global_network_settings.network), tolist(local.top_level_network_settings.network), []) },
-    { aaa_servers = try(tolist(local.site_global_network_settings.aaa_servers), tolist(local.top_level_network_settings.aaa_servers), []) },
-    { telemetry = try(tolist(local.site_global_network_settings.telemetry), tolist(local.top_level_network_settings.telemetry), []) },
+    # top-level definition collection used for name resolution. Definitions
+    # may have differing attributes, so they cannot be passed through tolist().
+    { network = try([for v in [local.site_global_network_settings.network] : v if can(v[0])][0], local.top_level_network_settings.network, []) },
+    { aaa_servers = try([for v in [local.site_global_network_settings.aaa_servers] : v if can(v[0])][0], local.top_level_network_settings.aaa_servers, []) },
+    { telemetry = try([for v in [local.site_global_network_settings.telemetry] : v if can(v[0])][0], local.top_level_network_settings.telemetry, []) },
     length(setunion(toset(keys(local.top_level_ip_pools_by_name)), toset(keys(local.site_global_ip_pools_by_name)))) > 0 ? {
       ip_pools = [
         for name in sort(tolist(setunion(toset(keys(local.top_level_ip_pools_by_name)), toset(keys(local.site_global_ip_pools_by_name))))) :
@@ -137,6 +138,7 @@ locals {
             authenticate_template_name = try(assignment.authenticate_template_name, assignment.authentication_template)
           })
         ]
+        port_channels = try(device.port_assignments.port_channels, null)
       }
     })
   ]
@@ -203,8 +205,21 @@ locals {
     { network_settings = local.normalized_network_settings },
     # cli_templates -> top-level templates
     { templates = try(local.model.catalyst_center.cli_templates, {}) },
-    # cli_templates.feature_templates -> top-level feature_templates
-    { feature_templates = try(local.model.catalyst_center.cli_templates.feature_templates, {}) },
+    # cli_templates.feature_templates + top-level feature_templates -> top-level feature_templates
+    {
+      feature_templates = {
+        wireless = {
+          cleanair = concat(
+            try(local.model.catalyst_center.feature_templates.wireless.cleanair, []),
+            try(local.model.catalyst_center.cli_templates.feature_templates.wireless.cleanair, []),
+          )
+          rrm_fra = concat(
+            try(local.model.catalyst_center.feature_templates.wireless.rrm_fra, []),
+            try(local.model.catalyst_center.cli_templates.feature_templates.wireless.rrm_fra, []),
+          )
+        }
+      }
+    },
     # fabric.authentication_templates -> top-level authentication_templates
     { authentication_templates = try(local.model.catalyst_center.fabric.authentication_templates, []) },
     # typed LAN automation entries -> devices/links collections
