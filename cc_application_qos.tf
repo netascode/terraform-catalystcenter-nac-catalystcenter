@@ -60,10 +60,15 @@ locals {
     ])
   }
 
+  # Sites created by this module are preferred. A policy may also target a site
+  # that already exists on the controller, so fall back to the all-sites lookup.
   aqos_policy_site_ids = {
     for p in local.aqos_policies : p.name => [
       for s in try(p.sites, []) :
-      var.use_bulk_api ? coalesce(local.site_id_list_bulk[s], local.data_source_created_sites_list[s]) : local.site_id_list[s]
+      try(
+        var.use_bulk_api ? coalesce(local.site_id_list_bulk[s], local.data_source_created_sites_list[s]) : local.site_id_list[s],
+        local.data_source_site_list[s]
+      )
     ]
   }
 }
