@@ -32,6 +32,20 @@ locals {
 
   aqos_lookup_profile_names = setsubtract(local.aqos_referenced_profile_names, local.aqos_managed_profile_names)
 
+  # The GUI has a single Protocol control. The controller stores it twice: as
+  # networkIdentity.protocol and as the derived networkApplications.appProtocol,
+  # which it rejects the object without. URL applications only accept TCP.
+  aqos_app_protocol = {
+    for a in local.aqos_applications : a.name => (
+      try(a.type, null) == "url" ? "TCP" : try({
+        TCP_OR_UDP = "TCP/UDP"
+        TCP        = "TCP"
+        UDP        = "UDP"
+        IP         = "IP"
+      }[a.network_identities[0].protocol], null)
+    )
+  }
+
   # Name to id maps, combining resources created here with looked-up objects.
   aqos_set_ids = merge(
     { for k, v in catalystcenter_application_set.application_qos_application_set : k => v.id },
@@ -138,12 +152,12 @@ resource "catalystcenter_application" "application_qos_application" {
 
   name               = each.value.name
   application_set_id = local.aqos_set_ids[each.value.application_set]
-  category_id        = each.value.category_id
+  category_id        = try(each.value.category_id, local.defaults.catalyst_center.application_qos.applications.category_id, null)
   traffic_class      = each.value.traffic_class
   help_string        = try(each.value.help_string, local.defaults.catalyst_center.application_qos.applications.help_string, null)
   dscp               = try(each.value.dscp, local.defaults.catalyst_center.application_qos.applications.dscp, null)
   rank               = try(each.value.rank, local.defaults.catalyst_center.application_qos.applications.rank, null)
-  app_protocol       = try(each.value.app_protocol, local.defaults.catalyst_center.application_qos.applications.app_protocol, null)
+  app_protocol       = local.aqos_app_protocol[each.value.name]
   server_name        = try(each.value.server_name, local.defaults.catalyst_center.application_qos.applications.server_name, null)
   url                = try(each.value.url, local.defaults.catalyst_center.application_qos.applications.url, null)
 
@@ -174,7 +188,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
       for row in local.aqos_policy_relevance_rows[each.key] : {
         name                       = "${each.value.name}_${row.set_name}"
         policy_scope               = each.value.name
-        priority                   = try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null)
+        priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
         delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
         advanced_policy_scope_name = each.value.name
         site_ids                   = local.aqos_policy_site_ids[each.key]
@@ -188,7 +202,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
       {
         name                       = "${each.value.name}_queuing_customization"
         policy_scope               = each.value.name
-        priority                   = try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null)
+        priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
         delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
         advanced_policy_scope_name = each.value.name
         site_ids                   = local.aqos_policy_site_ids[each.key]
@@ -200,7 +214,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
       {
         name                       = "${each.value.name}_global_policy_configuration"
         policy_scope               = each.value.name
-        priority                   = try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null)
+        priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
         delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
         advanced_policy_scope_name = each.value.name
         site_ids                   = local.aqos_policy_site_ids[each.key]
