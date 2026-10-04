@@ -154,8 +154,10 @@ defaults:
     application_qos:
       applications:
         rank: 1
-        category_id: f378fea2-3b99-4172-b73b-2fd17a8b1df1
         engine_id: "6"
+        # Resolved to a category id per controller. 3com-amp3 is a built-in in
+        # the generic category the GUI assigns by default.
+        category_reference_application: 3com-amp3
       queuing_profiles:
         bandwidth:
           is_common: true

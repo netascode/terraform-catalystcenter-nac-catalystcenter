@@ -218,6 +218,7 @@ module "catalystcenter" {
 | [catalystcenter_anycast_gateways.anchor_guard](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_anycast_gateways.created_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/app_policy_queuing_profile) | data source |
+| [catalystcenter_application.category_reference](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/application) | data source |
 | [catalystcenter_application_set.application_qos_application_set](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/application_set) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |

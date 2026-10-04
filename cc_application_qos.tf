@@ -32,6 +32,19 @@ locals {
 
   lookup_queuing_profile_names = setsubtract(local.referenced_queuing_profile_names, local.managed_queuing_profile_names)
 
+  # Category ids are controller-local, so they cannot be carried in defaults.
+  # An application that does not pin category_id names a reference application
+  # instead, and the id is read from that application at apply time.
+  category_reference_by_application = {
+    for a in local.custom_applications : a.name => try(
+      a.category_reference_application,
+      local.defaults.catalyst_center.application_qos.applications.category_reference_application,
+      null
+    ) if try(a.category_id, null) == null
+  }
+
+  category_reference_names = toset(compact(values(local.category_reference_by_application)))
+
   # The GUI has a single Protocol control. The controller stores it twice: as
   # networkIdentity.protocol and as the derived networkApplications.appProtocol,
   # which it rejects the object without. URL applications only accept TCP.
@@ -99,6 +112,12 @@ data "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_profil
   name = each.value
 }
 
+data "catalystcenter_application" "category_reference" {
+  for_each = local.category_reference_names
+
+  name = each.value
+}
+
 resource "catalystcenter_qos_policy_setting" "application_qos_policy_setting" {
   count = can(local.application_qos.deploy_by_default_on_wired_devices) ? 1 : 0
 
@@ -152,15 +171,19 @@ resource "catalystcenter_application" "application_qos_application" {
 
   name               = each.value.name
   application_set_id = local.application_set_ids[each.value.application_set]
-  category_id        = try(each.value.category_id, local.defaults.catalyst_center.application_qos.applications.category_id, null)
-  traffic_class      = each.value.traffic_class
-  help_string        = try(each.value.help_string, local.defaults.catalyst_center.application_qos.applications.help_string, null)
-  dscp               = try(each.value.dscp, local.defaults.catalyst_center.application_qos.applications.dscp, null)
-  rank               = try(each.value.rank, local.defaults.catalyst_center.application_qos.applications.rank, null)
-  engine_id          = try(each.value.engine_id, local.defaults.catalyst_center.application_qos.applications.engine_id, null)
-  app_protocol       = local.derived_app_protocol[each.value.name]
-  server_name        = try(each.value.server_name, local.defaults.catalyst_center.application_qos.applications.server_name, null)
-  url                = try(each.value.url, local.defaults.catalyst_center.application_qos.applications.url, null)
+  category_id = try(
+    each.value.category_id,
+    data.catalystcenter_application.category_reference[local.category_reference_by_application[each.value.name]].category_id,
+    null
+  )
+  traffic_class = each.value.traffic_class
+  help_string   = try(each.value.help_string, local.defaults.catalyst_center.application_qos.applications.help_string, null)
+  dscp          = try(each.value.dscp, local.defaults.catalyst_center.application_qos.applications.dscp, null)
+  rank          = try(each.value.rank, local.defaults.catalyst_center.application_qos.applications.rank, null)
+  engine_id     = try(each.value.engine_id, local.defaults.catalyst_center.application_qos.applications.engine_id, null)
+  app_protocol  = local.derived_app_protocol[each.value.name]
+  server_name   = try(each.value.server_name, local.defaults.catalyst_center.application_qos.applications.server_name, null)
+  url           = try(each.value.url, local.defaults.catalyst_center.application_qos.applications.url, null)
 
   server_type = try({
     server_name = "_servername"
