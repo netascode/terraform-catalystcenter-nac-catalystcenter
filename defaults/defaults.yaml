@@ -155,6 +155,7 @@ defaults:
       applications:
         rank: 1
         category_id: f378fea2-3b99-4172-b73b-2fd17a8b1df1
+        engine_id: "6"
       queuing_profiles:
         bandwidth:
           is_common: true

@@ -1,42 +1,42 @@
 locals {
   application_qos = try(local.catalyst_center.application_qos, {})
 
-  aqos_application_sets = try(local.application_qos.application_sets, [])
-  aqos_applications     = try(local.application_qos.applications, [])
-  aqos_queuing_profiles = try(local.application_qos.queuing_profiles, [])
-  aqos_policies         = try(local.application_qos.policies, [])
+  application_sets     = try(local.application_qos.application_sets, [])
+  custom_applications  = try(local.application_qos.applications, [])
+  queuing_profiles     = try(local.application_qos.queuing_profiles, [])
+  application_policies = try(local.application_qos.policies, [])
 
   # Application set names managed by this module, versus names only referenced by
   # a policy. The ~29 built-in sets fall in the second group and must be resolved
   # through a data source because they are not Terraform-managed.
-  aqos_managed_set_names = toset([for s in local.aqos_application_sets : s.name])
+  managed_application_set_names = toset([for s in local.application_sets : s.name])
 
-  aqos_referenced_set_names = toset(flatten([
-    for p in local.aqos_policies : concat(
+  referenced_application_set_names = toset(flatten([
+    for p in local.application_policies : concat(
       try(p.application_sets.business_relevant, []),
       try(p.application_sets.default, []),
       try(p.application_sets.business_irrelevant, []),
     )
   ]))
 
-  aqos_lookup_set_names = setsubtract(local.aqos_referenced_set_names, local.aqos_managed_set_names)
+  lookup_application_set_names = setsubtract(local.referenced_application_set_names, local.managed_application_set_names)
 
   # Queuing profiles referenced by a policy but not managed here, such as the
   # built-in CVD_QUEUING_PROFILE.
-  aqos_managed_profile_names = toset([for q in local.aqos_queuing_profiles : q.name])
+  managed_queuing_profile_names = toset([for q in local.queuing_profiles : q.name])
 
-  aqos_referenced_profile_names = toset(compact([
-    for p in local.aqos_policies :
+  referenced_queuing_profile_names = toset(compact([
+    for p in local.application_policies :
     try(p.queuing_profile, local.defaults.catalyst_center.application_qos.policies.queuing_profile, null)
   ]))
 
-  aqos_lookup_profile_names = setsubtract(local.aqos_referenced_profile_names, local.aqos_managed_profile_names)
+  lookup_queuing_profile_names = setsubtract(local.referenced_queuing_profile_names, local.managed_queuing_profile_names)
 
   # The GUI has a single Protocol control. The controller stores it twice: as
   # networkIdentity.protocol and as the derived networkApplications.appProtocol,
   # which it rejects the object without. URL applications only accept TCP.
-  aqos_app_protocol = {
-    for a in local.aqos_applications : a.name => (
+  derived_app_protocol = {
+    for a in local.custom_applications : a.name => (
       try(a.type, null) == "url" ? "TCP" : try({
         TCP_OR_UDP = "TCP/UDP"
         TCP        = "TCP"
@@ -47,20 +47,20 @@ locals {
   }
 
   # Name to id maps, combining resources created here with looked-up objects.
-  aqos_set_ids = merge(
+  application_set_ids = merge(
     { for k, v in catalystcenter_application_set.application_qos_application_set : k => v.id },
     { for k, v in data.catalystcenter_application_set.application_qos_application_set : k => v.id },
   )
 
-  aqos_profile_ids = merge(
+  queuing_profile_ids = merge(
     { for k, v in catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile : k => v.id },
     { for k, v in data.catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile : k => v.id },
   )
 
   # The GUI shows three columns. The controller stores one sibling policy per
   # application set. Expand the columns into that dense form.
-  aqos_policy_relevance_rows = {
-    for p in local.aqos_policies : p.name => flatten([
+  policy_relevance_rows = {
+    for p in local.application_policies : p.name => flatten([
       for level, names in {
         BUSINESS_RELEVANT   = try(p.application_sets.business_relevant, [])
         DEFAULT             = try(p.application_sets.default, [])
@@ -76,8 +76,8 @@ locals {
 
   # Sites created by this module are preferred. A policy may also target a site
   # that already exists on the controller, so fall back to the all-sites lookup.
-  aqos_policy_site_ids = {
-    for p in local.aqos_policies : p.name => [
+  policy_site_ids = {
+    for p in local.application_policies : p.name => [
       for s in try(p.sites, []) :
       try(
         var.use_bulk_api ? coalesce(local.site_id_list_bulk[s], local.data_source_created_sites_list[s]) : local.site_id_list[s],
@@ -88,13 +88,13 @@ locals {
 }
 
 data "catalystcenter_application_set" "application_qos_application_set" {
-  for_each = local.aqos_lookup_set_names
+  for_each = local.lookup_application_set_names
 
   name = each.value
 }
 
 data "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_profile" {
-  for_each = local.aqos_lookup_profile_names
+  for_each = local.lookup_queuing_profile_names
 
   name = each.value
 }
@@ -107,14 +107,14 @@ resource "catalystcenter_qos_policy_setting" "application_qos_policy_setting" {
 }
 
 resource "catalystcenter_application_set" "application_qos_application_set" {
-  for_each = { for s in local.aqos_application_sets : s.name => s }
+  for_each = { for s in local.application_sets : s.name => s }
 
   name                       = each.value.name
   default_business_relevance = try(each.value.default_business_relevance, local.defaults.catalyst_center.application_qos.application_sets.default_business_relevance, null)
 }
 
 resource "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_profile" {
-  for_each = { for q in local.aqos_queuing_profiles : q.name => q }
+  for_each = { for q in local.queuing_profiles : q.name => q }
 
   name        = each.value.name
   description = try(each.value.description, local.defaults.catalyst_center.application_qos.queuing_profiles.description, null)
@@ -148,16 +148,17 @@ resource "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_pr
 }
 
 resource "catalystcenter_application" "application_qos_application" {
-  for_each = { for a in local.aqos_applications : a.name => a }
+  for_each = { for a in local.custom_applications : a.name => a }
 
   name               = each.value.name
-  application_set_id = local.aqos_set_ids[each.value.application_set]
+  application_set_id = local.application_set_ids[each.value.application_set]
   category_id        = try(each.value.category_id, local.defaults.catalyst_center.application_qos.applications.category_id, null)
   traffic_class      = each.value.traffic_class
   help_string        = try(each.value.help_string, local.defaults.catalyst_center.application_qos.applications.help_string, null)
   dscp               = try(each.value.dscp, local.defaults.catalyst_center.application_qos.applications.dscp, null)
   rank               = try(each.value.rank, local.defaults.catalyst_center.application_qos.applications.rank, null)
-  app_protocol       = local.aqos_app_protocol[each.value.name]
+  engine_id          = try(each.value.engine_id, local.defaults.catalyst_center.application_qos.applications.engine_id, null)
+  app_protocol       = local.derived_app_protocol[each.value.name]
   server_name        = try(each.value.server_name, local.defaults.catalyst_center.application_qos.applications.server_name, null)
   url                = try(each.value.url, local.defaults.catalyst_center.application_qos.applications.url, null)
 
@@ -169,8 +170,12 @@ resource "catalystcenter_application" "application_qos_application" {
 
   network_identity = [
     for n in try(each.value.network_identities, []) : {
-      protocol    = n.protocol
-      ports       = try(n.ports, null)
+      protocol = n.protocol
+      # The controller requires the ports key to be present even when empty, so
+      # a range-only classifier still has to send "".
+      ports       = try(n.ports, "")
+      lower_port  = try(n.lower_port, null)
+      upper_port  = try(n.upper_port, null)
       ipv4_subnet = try(n.ipv4_subnets, null)
     }
   ]
@@ -179,23 +184,23 @@ resource "catalystcenter_application" "application_qos_application" {
 }
 
 resource "catalystcenter_application_policy" "application_qos_policy" {
-  for_each = { for p in local.aqos_policies : p.name => p }
+  for_each = { for p in local.application_policies : p.name => p }
 
   policy_scope = each.value.name
 
   items = concat(
     [
-      for row in local.aqos_policy_relevance_rows[each.key] : {
+      for row in local.policy_relevance_rows[each.key] : {
         name                       = "${each.value.name}_${row.set_name}"
         policy_scope               = each.value.name
         priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
         delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
         advanced_policy_scope_name = each.value.name
-        site_ids                   = local.aqos_policy_site_ids[each.key]
+        site_ids                   = local.policy_site_ids[each.key]
         ssids                      = try(each.value.ssids, [])
         clause_type                = "BUSINESS_RELEVANCE"
         relevance_level            = row.relevance_level
-        application_set_id         = local.aqos_set_ids[row.set_name]
+        application_set_id         = local.application_set_ids[row.set_name]
       }
     ],
     [
@@ -205,9 +210,9 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
         priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
         delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
         advanced_policy_scope_name = each.value.name
-        site_ids                   = local.aqos_policy_site_ids[each.key]
+        site_ids                   = local.policy_site_ids[each.key]
         ssids                      = try(each.value.ssids, [])
-        queuing_profile_id         = local.aqos_profile_ids[try(each.value.queuing_profile, local.defaults.catalyst_center.application_qos.policies.queuing_profile)]
+        queuing_profile_id         = local.queuing_profile_ids[try(each.value.queuing_profile, local.defaults.catalyst_center.application_qos.policies.queuing_profile)]
       }
     ],
     can(each.value.global_policy_configuration) ? [
@@ -217,7 +222,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
         priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
         delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
         advanced_policy_scope_name = each.value.name
-        site_ids                   = local.aqos_policy_site_ids[each.key]
+        site_ids                   = local.policy_site_ids[each.key]
         ssids                      = try(each.value.ssids, [])
         clause_type                = "APPLICATION_POLICY_KNOBS"
         device_removal_behavior    = try(each.value.global_policy_configuration.device_removal_behavior, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.device_removal_behavior, null)
