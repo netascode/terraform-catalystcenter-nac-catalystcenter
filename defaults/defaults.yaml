@@ -163,3 +163,4 @@ defaults:
         queuing_profile: CVD_QUEUING_PROFILE
         priority: 100
         delete_policy_status: NONE
+        undeploy_action: DELETED

@@ -187,6 +187,12 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
   for_each = { for p in local.application_policies : p.name => p }
 
   policy_scope = each.value.name
+  undeploy_action = try(
+    each.value.undeploy_action,
+    local.defaults.catalyst_center.application_qos.policies.undeploy_action,
+    null
+  )
+
 
   items = concat(
     [
