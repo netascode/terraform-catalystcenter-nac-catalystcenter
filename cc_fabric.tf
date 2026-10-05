@@ -344,7 +344,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "global_l3_vn" {
     ]
   }
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, terraform_data.anchor_change_validation]
 }
 
 data "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
@@ -419,7 +419,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "anchored_site_l3_vn" {
     }
   }
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone, terraform_data.anchor_change_validation]
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
@@ -1286,43 +1286,47 @@ resource "catalystcenter_fabric_port_channel" "port_channel" {
   depends_on = [catalystcenter_fabric_device.edge_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
 }
 
-# Anchor-role change guard
-#considers three scenarios, each with its own message:
-#
-#   1. ANCHOR CHANGED - VN is anchored to site A, data model asks to update to site B
-#   2. ANCHOR ADDED   - VN exists un-anchored on multiple sites, data model adds an anchor
-#   3. ANCHOR REMOVED - VN is anchored, data model drops the anchor while the VN
-#                       is still associated with fabric sites
-#
-# The data source is read for EVERY L3 VN in the data model, not just the
-# anchored ones, because scenario 3 is undetectable otherwise: a VN whose anchor
-# is absent from the data model is not in local.anchored_vn_lookup, and a guard
-# keyed on that map would be destroyed rather than evaluated. Keys come from the
-# data model only, so for_each stays static and plan-time safe.
-#
-# A VN that does not exist on the controller reads back as all-null (the data
-# source does not error on not-found), so newly declared VNs are never blocked.
+# Anchor-role change guard, multistate only. Blocks at plan time:
+#   1. ANCHOR CHANGED - anchored VN moved to another site
+#   2. ANCHOR ADDED   - un-anchored VN on several fabric sites gains an anchor
+#   3. ANCHOR REMOVED - anchored VN on several fabric sites loses its anchor
+# Single-state is skipped: l3_vn updates in place and the provider rejects 1.
 
+# In multistate these turn into a destroy/create of global_l3_vn or
+# anchored_site_l3_vn, which deletes or resets the VN for the other states.
+# Site stages reuse data.l3_vn, so the data source below reads only locally
+# anchored VNs. A VN not yet on the controller reads as null and is not blocked.
+
+locals {
+  anchor_guard_single_state = !var.manage_global_settings && length(var.managed_sites) == 0
+  anchor_guard_site_stage   = !var.manage_global_settings && length(var.managed_sites) != 0
+
+  anchor_guard_vns = toset(local.anchor_guard_single_state ? [] : keys(local.global_l3_virtual_networks))
+}
 
 data "catalystcenter_fabric_l3_virtual_network" "anchor_guard" {
-  for_each = { for name, _ in local.global_l3_virtual_networks : name => name }
+  for_each = local.anchor_guard_site_stage ? toset(keys(local.anchored_global_l3_virtual_networks_anchor_site)) : local.anchor_guard_vns
 
   virtual_network_name = each.key
 }
 
 locals {
-  guard_fabric_site_uuids = merge(
-    local.fabric_site_id_list,
-    {
-      for site_name, site_id in local.data_source_site_list :
-      site_name => local.data_source_fabric_site_id_list[site_id]
-      if contains(keys(local.data_source_fabric_site_id_list), site_id)
-    }
-  )
+  guard_live_vn = {
+    for name in local.anchor_guard_vns :
+    name => try(data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name], data.catalystcenter_fabric_l3_virtual_network.l3_vn[name], null)
+  }
+
+  # Resolve the live anchor to a site name via data sources, not fabric_site
+  # ids, so the guard stays known at plan time when fabric sites are created.
+  guard_fabric_id_to_site_name = {
+    for site_name, site_id in local.data_source_site_list :
+    local.data_source_fabric_site_id_list[site_id] => site_name
+    if contains(keys(local.data_source_fabric_site_id_list), site_id)
+  }
 
   guard_live_anchor_id = {
-    for name, _ in local.global_l3_virtual_networks :
-    name => try(data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].anchored_site_id, null)
+    for name in local.anchor_guard_vns :
+    name => try(local.guard_live_vn[name].anchored_site_id, null)
   }
 
   # anchored_site_id is null (not "") for an un-anchored VN
@@ -1332,56 +1336,54 @@ locals {
   }
 
   guard_live_fabric_site_count = {
-    for name, _ in local.global_l3_virtual_networks :
-    name => length(compact(coalesce(try(data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].fabric_ids, []), [])))
+    for name in local.anchor_guard_vns :
+    name => length(compact(coalesce(try(local.guard_live_vn[name].fabric_ids, []), [])))
   }
 
   guard_live_on_fabric_sites = {
     for name, count in local.guard_live_fabric_site_count : name => count > 0
   }
 
-  # Both adding and removing an anchor require the VN to sit on the anchor site
-  # alone: the add path shrinks to the anchor before setting it, and the remove
-  # path cannot detach an anchor while anchoring child sites still hold the VN.
+  # Scenarios 2 and 3 only fire when the VN also spans anchoring sites beyond
+  # the anchor.
   guard_live_on_multiple_fabric_sites = {
     for name, count in local.guard_live_fabric_site_count : name => count > 1
   }
 
   guard_live_vn_exists = {
-    for name, _ in local.global_l3_virtual_networks :
-    name => try(data.catalystcenter_fabric_l3_virtual_network.anchor_guard[name].id, null) != null
+    for name in local.anchor_guard_vns :
+    name => try(local.guard_live_vn[name].id, null) != null
   }
 
   guard_desired_anchor_path = {
-    for name, _ in local.global_l3_virtual_networks :
+    for name in local.anchor_guard_vns :
     name => try(local.anchored_vn_lookup[name], null)
   }
 
-  guard_desired_anchor_id = {
-    for name, path in local.guard_desired_anchor_path :
-    name => path != null && contains(local.sites, path) ? try(local.guard_fabric_site_uuids[path], null) : null
-  }
-
-  # Restricting to fabric sites this state owns keeps a state that manages only an
-  # anchoring child site from reading its parent's anchor as a removal.
-  guard_anchor_locally_managed = {
+  guard_live_anchor_site = {
     for name, anchor_id in local.guard_live_anchor_id :
-    name => local.guard_live_is_anchored[name] && contains(toset(values(local.fabric_site_id_list)), anchor_id)
+    name => local.guard_live_is_anchored[name] ? try(local.guard_fabric_id_to_site_name[anchor_id], null) : null
   }
 
-  # The second clause covers the multistate case: a per-site state that owns the
-  # current anchor cannot resolve an anchor_site belonging to another state, so
-  # the move is invisible to the first clause and would otherwise demote the
-  # anchor site unguarded. Requiring the live anchor to be locally managed keeps
-  # a state that owns only an anchoring child site from matching here.
+  # Keeps child-site states from reading their parent's anchor as a move.
+  guard_anchor_locally_managed = {
+    for name, site in local.guard_live_anchor_site :
+    name => site != null && contains(local.sites, site)
+  }
+
+  # Site stages only. Clause 1: new anchor is local and differs from the live
+  # one. Clause 2: this state owns the live anchor but the new one is elsewhere.
   guard_anchor_changed = {
-    for name, _ in local.global_l3_virtual_networks : name => (
+    for name in local.anchor_guard_vns : name => (
+      local.anchor_guard_site_stage &&
       local.guard_live_is_anchored[name] &&
       local.guard_live_on_fabric_sites[name] &&
       (
         (
-          local.guard_desired_anchor_id[name] != null &&
-          local.guard_live_anchor_id[name] != local.guard_desired_anchor_id[name]
+          local.guard_desired_anchor_path[name] != null &&
+          contains(local.sites, local.guard_desired_anchor_path[name]) &&
+          local.guard_live_anchor_site[name] != null &&
+          local.guard_live_anchor_site[name] != local.guard_desired_anchor_path[name]
         ) ||
         (
           local.guard_anchor_locally_managed[name] &&
@@ -1393,7 +1395,7 @@ locals {
   }
 
   guard_anchor_added = {
-    for name, _ in local.global_l3_virtual_networks : name => (
+    for name in local.anchor_guard_vns : name => (
       !local.guard_live_is_anchored[name] &&
       local.guard_live_vn_exists[name] &&
       local.guard_live_on_multiple_fabric_sites[name] &&
@@ -1401,12 +1403,10 @@ locals {
     )
   }
 
-  # Scoped by the absence of a declared anchor rather than by local ownership: a
-  # child-site state cannot resolve a parent's anchor_site, so requiring the live
-  # anchor to be locally managed would silently skip this check in every state
-  # except the one owning the anchor site.
+  # Keyed on the missing anchor_site, not local ownership, so child-site states
+  # are checked too.
   guard_anchor_removed = {
-    for name, _ in local.global_l3_virtual_networks : name => (
+    for name in local.anchor_guard_vns : name => (
       local.guard_live_is_anchored[name] &&
       local.guard_live_on_multiple_fabric_sites[name] &&
       local.guard_desired_anchor_path[name] == null
@@ -1414,31 +1414,31 @@ locals {
   }
 
   anchor_guard_message = {
-    for name, _ in local.global_l3_virtual_networks : name => (
+    for name in local.anchor_guard_vns : name => (
       local.guard_anchor_changed[name] ?
       "Virtual Network '${name}' is already anchored to a fabric site and its anchor cannot be moved to a different site while the VN is still associated with fabric sites. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
       local.guard_anchor_added[name] ?
       "Virtual Network '${name}' already exists on Catalyst Center and is associated across multiple fabric sites without an anchor, and an anchor cannot be added to an existing Layer 3 Virtual Network that spans more than one fabric site. Remove the VN and its anycast gateways from ALL fabric sites it is currently associated with, apply, then re-add the VN with anchor_site set in a subsequent apply." :
       local.guard_anchor_removed[name] ?
-      "Virtual Network '${name}' is anchored and is still associated with one or more anchoring (child) fabric sites, so its anchor cannot be removed. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply." :
+      "Virtual Network '${name}' is anchored and is still associated with one or more anchoring (child) fabric sites, so its anchor cannot be removed. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply. If the anchor was configured outside Terraform, declare it with anchor_site in the data model instead." :
       ""
     )
   }
 
   anchor_guard_block = {
-    for name, _ in local.global_l3_virtual_networks :
+    for name in local.anchor_guard_vns :
     name => local.guard_anchor_changed[name] || local.guard_anchor_added[name] || local.guard_anchor_removed[name]
   }
 }
 
-resource "terraform_data" "anchor_change_guard" {
-  for_each = local.global_l3_virtual_networks
+resource "terraform_data" "anchor_change_validation" {
+  for_each = local.anchor_guard_vns
 
   input = each.key
 
   lifecycle {
     precondition {
-      # Blocked-ness is evaluated here (unknowns tolerated), never in for_each membership
+      # Blocked-ness is evaluated here, never in for_each membership
       condition     = !try(local.anchor_guard_block[each.key], false)
       error_message = try(local.anchor_guard_message[each.key], "")
     }
