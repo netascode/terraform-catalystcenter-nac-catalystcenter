@@ -1416,11 +1416,11 @@ locals {
   anchor_guard_message = {
     for name in local.anchor_guard_vns : name => (
       local.guard_anchor_changed[name] ?
-      "Virtual Network '${name}' is already anchored to a fabric site and its anchor cannot be moved to a different site while the VN is still associated with fabric sites. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
+      "Virtual Network '${name}' is anchored to a fabric site and its anchor cannot be moved directly to another site. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
       local.guard_anchor_added[name] ?
-      "Virtual Network '${name}' already exists on Catalyst Center and is associated across multiple fabric sites without an anchor, and an anchor cannot be added to an existing Layer 3 Virtual Network that spans more than one fabric site. Remove the VN and its anycast gateways from ALL fabric sites it is currently associated with, apply, then re-add the VN with anchor_site set in a subsequent apply." :
+      "Virtual Network '${name}' already exists without an anchor on multiple fabric sites. In a multistate deployment, adding anchor_site to it would delete and recreate the VN instead of updating it. Remove the VN and its anycast gateways from ALL fabric sites it is associated with, apply, then re-add it with anchor_site in a subsequent apply." :
       local.guard_anchor_removed[name] ?
-      "Virtual Network '${name}' is anchored and is still associated with one or more anchoring (child) fabric sites, so its anchor cannot be removed. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply. If the anchor was configured outside Terraform, declare it with anchor_site in the data model instead." :
+      "Virtual Network '${name}' is anchored and still associated with anchoring (child) fabric sites. In a multistate deployment, removing anchor_site now would delete or reset the VN instead of only removing the anchor. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
       ""
     )
   }
