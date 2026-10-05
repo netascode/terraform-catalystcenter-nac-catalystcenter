@@ -152,11 +152,10 @@ defaults:
         traffic_type: data
         session_time_out: 1800
     application_qos:
+      deploy_by_default_on_wired_devices: false
       applications:
         rank: 1
         engine_id: "6"
-        # Resolved to a category id per controller. 3com-amp3 is a built-in in
-        # the generic category the GUI assigns by default.
         category_reference_application: 3com-amp3
       queuing_profiles:
         bandwidth:

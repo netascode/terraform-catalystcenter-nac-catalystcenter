@@ -119,10 +119,15 @@ data "catalystcenter_application" "category_reference" {
 }
 
 resource "catalystcenter_qos_policy_setting" "application_qos_policy_setting" {
-  count = can(local.application_qos.deploy_by_default_on_wired_devices) ? 1 : 0
+  count = can(local.catalyst_center.application_qos) ? 1 : 0
 
-  name                               = "qos_policy_setting"
-  deploy_by_default_on_wired_devices = local.application_qos.deploy_by_default_on_wired_devices
+  name = "qos_policy_setting"
+  # coalesce, not try: an explicitly null value must still fall through to the default
+  deploy_by_default_on_wired_devices = coalesce(
+    try(local.application_qos.deploy_by_default_on_wired_devices, null),
+    try(local.defaults.catalyst_center.application_qos.deploy_by_default_on_wired_devices, null),
+    false
+  )
 }
 
 resource "catalystcenter_application_set" "application_qos_application_set" {
