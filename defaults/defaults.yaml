@@ -33,6 +33,7 @@ defaults:
       composite: false
       copying_config: true
       redeploy_template: NEVER
+      deployment_timeout: 300
     pnp:
       devices:
         type: Default
