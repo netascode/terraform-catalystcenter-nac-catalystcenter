@@ -6,7 +6,7 @@
 
 **Bug Fixes:**
 - Fix a device tag defined under `inventory.tags` (or `templates.tags`) without `system_tag` showing a perpetual `update in-place` on every plan; `system_tag` now defaults to `false` (settable per tag or once under `defaults.catalyst_center.inventory.tags.system_tag`), matching what Catalyst Center returns for user-defined tags
-- Fix anchor-role changes on L3 virtual networks that Catalyst Center rejects mid-apply or that delete the virtual network: a plan-time validation now blocks moving, adding or removing an anchor, and dropping the anchor site from the multistate stage that owns it, while the virtual network is in use (in single-state deployments, while it has anycast gateways). The error message lists the migration steps
+- Fix anchor-role changes on L3 virtual networks that Catalyst Center rejects mid-apply or that delete the virtual network: a plan-time validation now blocks moving, adding or removing an anchor, and dropping the anchor site from the multistate stage that owns it, while the virtual network is in use (in single-state deployments, while it has anycast gateways).
 
 ## 0.5.0
 
