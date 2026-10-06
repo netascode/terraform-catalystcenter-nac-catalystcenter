@@ -36,6 +36,7 @@ locals {
           resource_key       = local.template_name_counts[template.name] == 1 ? template.name : "${project.name}#${template.name}"
           template_file_name = contains(keys(local.templates_content), "${project.name}#${template.name}") ? "${project.name}#${template.name}" : template.name
           redeploy_template  = try(template.redeploy_template, local.defaults.catalyst_center.templates.redeploy_template, null)
+          deployment_timeout = try(template.deployment_timeout, local.defaults.catalyst_center.templates.deployment_timeout, null)
           template_type      = contains(try(project.onboarding_templates, []), template) ? "onboarding" : "dayn"
         }
       )
@@ -291,6 +292,7 @@ locals {
       template_type       = "dayn"
       redeploy_template   = try(local.defaults.catalyst_center.templates.redeploy_template, "NEVER")
       force_push_template = try(local.defaults.catalyst_center.templates.force_push_template, null)
+      deployment_timeout  = try(local.defaults.catalyst_center.templates.deployment_timeout, null)
     }
   }
 
@@ -536,6 +538,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
 
   template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
   redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  deployment_timeout  = try(local.template_lookup_extended[each.key].deployment_timeout, null)
   copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
@@ -579,6 +582,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
   }
 
   redeploy            = try(local.template_lookup[each.key].redeploy_template, "NEVER")
+  deployment_timeout  = try(local.template_lookup[each.key].deployment_timeout, null)
   template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
   main_template_id    = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
   force_push_template = try(local.template_lookup[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -662,6 +666,7 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
   }
 
   redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  deployment_timeout  = try(local.template_lookup_extended[each.key].deployment_timeout, null)
   template_id         = try([for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
   main_template_id    = data.catalystcenter_template.unmanaged[each.key].id
   force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
