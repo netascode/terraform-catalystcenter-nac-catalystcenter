@@ -1444,12 +1444,17 @@ locals {
     )
   }
 
+  # Removing the anchor also needs the VN on the anchor site alone (NCHS20464),
+  # unless the VN is dropped from every site: the provider then shrinks first.
   guard_single_state_anchor_removed = {
     for name in local.anchor_guard_vns : name => (
       local.anchor_guard_single_state &&
       local.guard_live_is_anchored[name] &&
       local.guard_desired_anchor_path[name] == null &&
-      length(local.guard_live_gateway_sites[name]) > 0
+      (
+        length(local.guard_live_gateway_sites[name]) > 0 ||
+        (local.guard_live_fabric_site_count[name] > 1 && length(try(local.l3_virtual_networks[name], [])) > 0)
+      )
     )
   }
 
@@ -1464,7 +1469,7 @@ locals {
       local.guard_single_state_anchor_added[name] ?
       "Virtual Network '${name}' has anycast gateways on ${join(", ", local.guard_live_gateway_sites[name])}, and Catalyst Center cannot anchor a virtual network that has anycast gateways. Remove all of its anycast gateways and apply, set anchor_site and apply, then re-add them." :
       local.guard_single_state_anchor_removed[name] ?
-      "Virtual Network '${name}' is anchored and has anycast gateways on ${join(", ", local.guard_live_gateway_sites[name])}, and Catalyst Center cannot remove the anchor of a virtual network that has anycast gateways. Remove all of its anycast gateways and apply, remove anchor_site and apply, then re-add them. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
+      "Virtual Network '${name}' is anchored, and Catalyst Center only removes an anchor when the virtual network has no anycast gateways and is on the anchor site alone. Remove its anycast gateways and remove it from every fabric site except the anchor, and apply, remove anchor_site and apply, then re-add them. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
       ""
     )
   }
