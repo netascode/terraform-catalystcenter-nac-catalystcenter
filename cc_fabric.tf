@@ -1289,7 +1289,7 @@ resource "catalystcenter_fabric_port_channel" "port_channel" {
 # Anchor-role change guard. Blocks at plan time:
 #   1. ANCHOR CHANGED - anchored VN moved to another site
 #   2. ANCHOR ADDED   - un-anchored VN on fabric sites gains an anchor
-#   3. ANCHOR REMOVED - anchored VN loses its anchor
+#   3. ANCHOR REMOVED - anchored VN loses its anchor (site stages also: its anchor site)
 # Single-state: only 2 and 3, and only while the VN has live anycast gateways.
 
 # In multistate these turn into a destroy/create of global_l3_vn or
@@ -1461,7 +1461,7 @@ locals {
   anchor_guard_message = {
     for name in local.anchor_guard_vns : name => (
       local.guard_anchor_changed[name] ?
-      "Virtual Network '${name}' is anchored to a fabric site and its anchor cannot be moved directly to another site. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
+      "Virtual Network '${name}' is anchored to a fabric site and its anchor cannot be moved directly to another site. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites and apply, remove the VN from the data model and apply, then re-add it with the new anchor_site." :
       local.guard_anchor_added[name] ?
       "Virtual Network '${name}' already exists without an anchor on fabric sites. In a multistate deployment, adding anchor_site to it would delete and recreate the VN instead of updating it. Remove the VN and its anycast gateways from ALL fabric sites it is associated with, apply, then re-add it with anchor_site in a subsequent apply." :
       local.guard_anchor_removed[name] ?
@@ -1483,6 +1483,33 @@ locals {
   }
 }
 
+# The anchor site this stage owned at the record's first apply. ignore_changes
+# keeps it known at plan once the site leaves local.sites, when config and live
+# data alone can no longer tell this stage from a child stage.
+resource "terraform_data" "anchor_ownership" {
+  for_each = local.anchor_guard_site_stage ? local.anchored_vn_lookup : {}
+
+  input = contains(local.sites, each.value) ? each.value : ""
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}
+
+locals {
+  guard_owned_anchor = {
+    for name in local.anchor_guard_vns : name => try(terraform_data.anchor_ownership[name].output, "")
+  }
+
+  guard_anchor_ownership_lost = {
+    for name, owned in local.guard_owned_anchor : name => (
+      owned != "" && !contains(local.sites, owned) &&
+      local.guard_live_anchor_site[name] == owned &&
+      length([for id in coalesce(try(local.guard_live_vn[name].fabric_ids, []), []) : id if try(local.guard_fabric_id_to_site_name[id], "") != owned]) > 0
+    )
+  }
+}
+
 resource "terraform_data" "anchor_change_validation" {
   for_each = local.anchor_guard_vns
 
@@ -1493,6 +1520,12 @@ resource "terraform_data" "anchor_change_validation" {
       # Blocked-ness is evaluated here, never in for_each membership
       condition     = !try(local.anchor_guard_block[each.key], false)
       error_message = try(local.anchor_guard_message[each.key], "")
+    }
+
+    # Separate, so a not-yet-applied ownership record defers only this check.
+    precondition {
+      condition     = !try(local.guard_anchor_ownership_lost[each.key], false)
+      error_message = "Virtual Network '${each.key}' is anchored at ${try(local.guard_owned_anchor[each.key], "")}, which this state owned but no longer manages, while other fabric sites still use the VN. Applying would destroy anchored_site_l3_vn and delete the VN. Keep the anchor site in managed_sites until the VN is removed from all anchoring (child) fabric sites, or move anchored_site_l3_vn and terraform_data.anchor_ownership to the new state with terraform state commands."
     }
   }
 }
