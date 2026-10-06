@@ -1288,32 +1288,20 @@ resource "catalystcenter_fabric_port_channel" "port_channel" {
 
 # Anchor-role change guard. Blocks at plan time:
 #   1. ANCHOR CHANGED - anchored VN moved to another site
-#   2. ANCHOR ADDED   - un-anchored VN on several fabric sites gains an anchor
-#   3. ANCHOR REMOVED - anchored VN on several fabric sites loses its anchor
-# Single-state: only 2 and 3, and only when live gateways would be recreated.
+#   2. ANCHOR ADDED   - un-anchored VN on fabric sites gains an anchor
+#   3. ANCHOR REMOVED - anchored VN loses its anchor
+# Single-state: only 2 and 3, and only while the VN has live anycast gateways.
 
 # In multistate these turn into a destroy/create of global_l3_vn or
 # anchored_site_l3_vn, which deletes or resets the VN for the other states.
-# In single-state l3_vn updates in place, but gateways move between the base
-# and anchoring sets. A VN not yet on the controller reads as null.
+# In single-state l3_vn updates in place, but Catalyst Center rejects anchor
+# changes on a VN with anycast gateways. A VN not yet on the controller reads as null.
 
 locals {
   anchor_guard_single_state = !var.manage_global_settings && length(var.managed_sites) == 0
   anchor_guard_site_stage   = !var.manage_global_settings && length(var.managed_sites) != 0
 
-  guard_gateway_sites = {
-    for name in keys(local.global_l3_virtual_networks) :
-    name => distinct([for gw in local.anycast_gateways : gw.fabric_site_name if try(gw.l3_virtual_network, null) == name])
-  }
-
-  # Single-state reads anchored VNs (scenario 2 checks live gateways) and
-  # un-anchored VNs with gateways in the data model (scenario 3).
-  guard_single_state_vns = [
-    for name, sites in local.guard_gateway_sites : name
-    if try(local.anchored_vn_lookup[name], null) != null || length(sites) > 0
-  ]
-
-  anchor_guard_vns = toset(local.anchor_guard_single_state ? local.guard_single_state_vns : keys(local.global_l3_virtual_networks))
+  anchor_guard_vns = toset(keys(local.global_l3_virtual_networks))
 }
 
 data "catalystcenter_fabric_l3_virtual_network" "anchor_guard" {
@@ -1323,7 +1311,7 @@ data "catalystcenter_fabric_l3_virtual_network" "anchor_guard" {
 }
 
 data "catalystcenter_anycast_gateways" "anchor_guard" {
-  for_each = toset(flatten(values(local.guard_add_anchor_live_fabric_ids)))
+  for_each = toset(flatten(values(local.guard_anchor_transition_fabric_ids)))
 
   id        = each.key
   fabric_id = each.key
@@ -1361,12 +1349,6 @@ locals {
 
   guard_live_on_fabric_sites = {
     for name, count in local.guard_live_fabric_site_count : name => count > 0
-  }
-
-  # Scenarios 2 and 3 only fire when the VN also spans anchoring sites beyond
-  # the anchor.
-  guard_live_on_multiple_fabric_sites = {
-    for name, count in local.guard_live_fabric_site_count : name => count > 1
   }
 
   guard_live_vn_exists = {
@@ -1413,12 +1395,14 @@ locals {
     )
   }
 
+  # Multistate: global_l3_vn / anchored_site_l3_vn change ownership at any site
+  # count. A VN on no fabric site is the supported path for adding an anchor.
   guard_anchor_added = {
     for name in local.anchor_guard_vns : name => (
       !local.anchor_guard_single_state &&
       !local.guard_live_is_anchored[name] &&
       local.guard_live_vn_exists[name] &&
-      local.guard_live_on_multiple_fabric_sites[name] &&
+      local.guard_live_on_fabric_sites[name] &&
       local.guard_desired_anchor_path[name] != null
     )
   }
@@ -1429,38 +1413,25 @@ locals {
     for name in local.anchor_guard_vns : name => (
       !local.anchor_guard_single_state &&
       local.guard_live_is_anchored[name] &&
-      local.guard_live_on_multiple_fabric_sites[name] &&
       local.guard_desired_anchor_path[name] == null
     )
   }
 
-  guard_live_site_names = {
-    for name in local.anchor_guard_vns :
-    name => compact([for id in coalesce(try(local.guard_live_vn[name].fabric_ids, []), []) : try(local.guard_fabric_id_to_site_name[id], "")])
-  }
-
-  # Single-state: gateways that would move between anycast_gateways and
-  # anycast_gateways_anchoring, i.e. be recreated. Adding an anchor checks the
-  # live gateways, because l3_vn shrinks the VN before the gateways change.
-  guard_add_anchor_live_fabric_ids = {
+  # Single-state: Catalyst Center rejects adding or removing an anchor while the
+  # VN has anycast gateways (NCSO20386). l3_vn is applied before the gateways,
+  # so the live gateways decide, read only while an anchor change is pending.
+  guard_anchor_transition_fabric_ids = {
     for name in local.anchor_guard_vns : name => [
       for id in coalesce(try(local.guard_live_vn[name].fabric_ids, []), []) : id
-      if local.anchor_guard_single_state && !local.guard_live_is_anchored[name] && local.guard_desired_anchor_path[name] != null &&
-      try(local.guard_fabric_id_to_site_name[id], null) != local.guard_desired_anchor_path[name]
+      if local.anchor_guard_single_state && local.guard_live_vn_exists[name] &&
+      local.guard_live_is_anchored[name] != (local.guard_desired_anchor_path[name] != null)
     ]
   }
 
-  guard_gateways_to_anchoring = {
-    for name, ids in local.guard_add_anchor_live_fabric_ids : name => [
+  guard_live_gateway_sites = {
+    for name, ids in local.guard_anchor_transition_fabric_ids : name => [
       for id in ids : try(local.guard_fabric_id_to_site_name[id], id)
-      if contains([for gw in try(data.catalystcenter_anycast_gateways.anchor_guard[id].anycast_gateways, []) : gw.virtual_network_name], name)
-    ]
-  }
-
-  guard_gateways_to_base = {
-    for name in local.anchor_guard_vns : name => [
-      for site in local.guard_gateway_sites[name] : site
-      if site != local.guard_live_anchor_site[name] && contains(local.guard_live_site_names[name], site)
+      if contains([for gw in coalesce(try(data.catalystcenter_anycast_gateways.anchor_guard[id].anycast_gateways, []), []) : gw.virtual_network_name], name)
     ]
   }
 
@@ -1468,9 +1439,8 @@ locals {
     for name in local.anchor_guard_vns : name => (
       local.anchor_guard_single_state &&
       !local.guard_live_is_anchored[name] &&
-      local.guard_live_vn_exists[name] &&
       local.guard_desired_anchor_path[name] != null &&
-      length(local.guard_gateways_to_anchoring[name]) > 0
+      length(local.guard_live_gateway_sites[name]) > 0
     )
   }
 
@@ -1478,9 +1448,8 @@ locals {
     for name in local.anchor_guard_vns : name => (
       local.anchor_guard_single_state &&
       local.guard_live_is_anchored[name] &&
-      local.guard_live_anchor_site[name] != null &&
       local.guard_desired_anchor_path[name] == null &&
-      length(local.guard_gateways_to_base[name]) > 0
+      length(local.guard_live_gateway_sites[name]) > 0
     )
   }
 
@@ -1489,13 +1458,13 @@ locals {
       local.guard_anchor_changed[name] ?
       "Virtual Network '${name}' is anchored to a fabric site and its anchor cannot be moved directly to another site. Remove the VN and its anycast gateways from ALL fabric sites (anchor + anchoring sites), apply, then set the new anchor_site in a subsequent apply." :
       local.guard_anchor_added[name] ?
-      "Virtual Network '${name}' already exists without an anchor on multiple fabric sites. In a multistate deployment, adding anchor_site to it would delete and recreate the VN instead of updating it. Remove the VN and its anycast gateways from ALL fabric sites it is associated with, apply, then re-add it with anchor_site in a subsequent apply." :
+      "Virtual Network '${name}' already exists without an anchor on fabric sites. In a multistate deployment, adding anchor_site to it would delete and recreate the VN instead of updating it. Remove the VN and its anycast gateways from ALL fabric sites it is associated with, apply, then re-add it with anchor_site in a subsequent apply." :
       local.guard_anchor_removed[name] ?
-      "Virtual Network '${name}' is anchored and still associated with anchoring (child) fabric sites. In a multistate deployment, removing anchor_site now would delete or reset the VN instead of only removing the anchor. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites first, apply, then remove anchor_site in a subsequent apply. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
+      "Virtual Network '${name}' is anchored. In a multistate deployment, removing anchor_site would delete or reset the VN instead of only removing the anchor. Remove the VN and its anycast gateways from ALL anchoring (child) fabric sites and apply, remove the VN from the data model and apply, then re-add it without anchor_site. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
       local.guard_single_state_anchor_added[name] ?
-      "Virtual Network '${name}' has anycast gateways on fabric sites other than the new anchor (${join(", ", local.guard_gateways_to_anchoring[name])}). Adding anchor_site would delete and recreate them as anchoring gateways. Remove those anycast gateways and apply, set anchor_site and apply, then re-add them." :
+      "Virtual Network '${name}' has anycast gateways on ${join(", ", local.guard_live_gateway_sites[name])}, and Catalyst Center cannot anchor a virtual network that has anycast gateways. Remove all of its anycast gateways and apply, set anchor_site and apply, then re-add them." :
       local.guard_single_state_anchor_removed[name] ?
-      "Virtual Network '${name}' is anchored and has anycast gateways on anchoring (child) fabric sites (${join(", ", local.guard_gateways_to_base[name])}). Removing anchor_site would delete and recreate them as regular gateways. Remove those anycast gateways and apply, remove anchor_site and apply, then re-add them. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
+      "Virtual Network '${name}' is anchored and has anycast gateways on ${join(", ", local.guard_live_gateway_sites[name])}, and Catalyst Center cannot remove the anchor of a virtual network that has anycast gateways. Remove all of its anycast gateways and apply, remove anchor_site and apply, then re-add them. If the anchor was configured outside Terraform, declare it with anchor_site instead." :
       ""
     )
   }
