@@ -1,5 +1,9 @@
 locals {
-  application_qos = try(local.catalyst_center.application_qos, {})
+  # Application QoS objects are global. In a multi-state deployment only the
+  # global/common state (manage_global_settings) manages them; site-only states
+  # skip them so two states never race to create the same objects.
+  manage_application_qos = var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)
+  application_qos        = local.manage_application_qos ? try(local.catalyst_center.application_qos, null) : null
 
   application_sets     = try(local.application_qos.application_sets, [])
   custom_applications  = try(local.application_qos.applications, [])
@@ -89,14 +93,24 @@ locals {
 
   # Sites created by this module are preferred. A policy may also target a site
   # that already exists on the controller, so fall back to the all-sites lookup.
-  policy_site_ids = {
+  # In a multi-state deployment the global state creates no sites, so a policy's
+  # sites must already exist; unresolved ones are reported by a precondition.
+  policy_unresolved_sites = {
     for p in local.application_policies : p.name => [
+      for s in try(p.sites, []) : s
+      if !contains(local.sites, s) && !contains(keys(local.data_source_site_list), s)
+    ]
+  }
+
+  policy_site_ids = {
+    for p in local.application_policies : p.name => compact([
       for s in try(p.sites, []) :
       try(
         var.use_bulk_api ? coalesce(local.site_id_list_bulk[s], local.data_source_created_sites_list[s]) : local.site_id_list[s],
-        local.data_source_site_list[s]
+        local.data_source_site_list[s],
+        null
       )
-    ]
+    ])
   }
 }
 
@@ -119,7 +133,7 @@ data "catalystcenter_application" "category_reference" {
 }
 
 resource "catalystcenter_qos_policy_setting" "application_qos_policy_setting" {
-  count = can(local.catalyst_center.application_qos) ? 1 : 0
+  count = local.manage_application_qos && can(local.catalyst_center.application_qos) ? 1 : 0
 
   name = "qos_policy_setting"
   # coalesce, not try: an explicitly null value must still fall through to the default
@@ -267,4 +281,11 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
     catalystcenter_floor.floor,
     data.catalystcenter_sites.created_sites,
   ]
+
+  lifecycle {
+    precondition {
+      condition     = length(local.policy_unresolved_sites[each.key]) == 0
+      error_message = "Application policy \"${each.key}\" references sites that do not exist: ${join(", ", local.policy_unresolved_sites[each.key])}. In a multi-state deployment Application QoS is managed by the global state, so apply the site states that create these sites first."
+    }
+  }
 }
