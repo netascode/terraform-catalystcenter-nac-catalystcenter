@@ -221,46 +221,39 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
     null
   )
 
+  # The deployment scope belongs to the policy; the provider writes it to every
+  # sibling. Keeping it off the items means changing a site is a one-line plan
+  # instead of a replacement of all ~30 set elements.
+  site_ids = local.policy_site_ids[each.key]
+  ssids    = try(each.value.ssids, [])
 
   items = concat(
     [
       for row in local.policy_relevance_rows[each.key] : {
-        name                       = "${each.value.name}_${row.set_name}"
-        policy_scope               = each.value.name
-        priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
-        delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
-        advanced_policy_scope_name = each.value.name
-        site_ids                   = local.policy_site_ids[each.key]
-        ssids                      = try(each.value.ssids, [])
-        clause_type                = "BUSINESS_RELEVANCE"
-        relevance_level            = row.relevance_level
-        application_set_id         = local.application_set_ids[row.set_name]
+        name                 = "${each.value.name}_${row.set_name}"
+        priority             = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
+        delete_policy_status = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
+        clause_type          = "BUSINESS_RELEVANCE"
+        relevance_level      = row.relevance_level
+        application_set_id   = local.application_set_ids[row.set_name]
       }
     ],
     [
       {
-        name                       = "${each.value.name}_queuing_customization"
-        policy_scope               = each.value.name
-        priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
-        delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
-        advanced_policy_scope_name = each.value.name
-        site_ids                   = local.policy_site_ids[each.key]
-        ssids                      = try(each.value.ssids, [])
-        queuing_profile_id         = local.queuing_profile_ids[try(each.value.queuing_profile, local.defaults.catalyst_center.application_qos.policies.queuing_profile)]
+        name                 = "${each.value.name}_queuing_customization"
+        priority             = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
+        delete_policy_status = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
+        queuing_profile_id   = local.queuing_profile_ids[try(each.value.queuing_profile, local.defaults.catalyst_center.application_qos.policies.queuing_profile)]
       }
     ],
     can(each.value.global_policy_configuration) ? [
       {
-        name                       = "${each.value.name}_global_policy_configuration"
-        policy_scope               = each.value.name
-        priority                   = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
-        delete_policy_status       = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
-        advanced_policy_scope_name = each.value.name
-        site_ids                   = local.policy_site_ids[each.key]
-        ssids                      = try(each.value.ssids, [])
-        clause_type                = "APPLICATION_POLICY_KNOBS"
-        device_removal_behavior    = try(each.value.global_policy_configuration.device_removal_behavior, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.device_removal_behavior, null)
-        host_tracking_enabled      = try(each.value.global_policy_configuration.host_tracking_enabled, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.host_tracking_enabled, null)
+        name                    = "${each.value.name}_global_policy_configuration"
+        priority                = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
+        delete_policy_status    = try(each.value.delete_policy_status, local.defaults.catalyst_center.application_qos.policies.delete_policy_status, null)
+        clause_type             = "APPLICATION_POLICY_KNOBS"
+        device_removal_behavior = try(each.value.global_policy_configuration.device_removal_behavior, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.device_removal_behavior, null)
+        host_tracking_enabled   = try(each.value.global_policy_configuration.host_tracking_enabled, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.host_tracking_enabled, null)
       }
     ] : [],
   )
