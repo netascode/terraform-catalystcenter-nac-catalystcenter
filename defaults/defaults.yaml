@@ -151,3 +151,17 @@ defaults:
         radio_policy: Triple band operation(2.4GHz, 5GHz and 6GHz)
         traffic_type: data
         session_time_out: 1800
+    application_qos:
+      deploy_by_default_on_wired_devices: false
+      applications:
+        rank: 1
+        engine_id: "6"
+        category_reference_application: 3com-amp3
+      queuing_profiles:
+        bandwidth:
+          is_common: true
+      policies:
+        queuing_profile: CVD_QUEUING_PROFILE
+        priority: 100
+        delete_policy_status: NONE
+        undeploy_action: DELETED
