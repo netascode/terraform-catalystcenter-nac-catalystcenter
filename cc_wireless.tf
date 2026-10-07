@@ -164,8 +164,8 @@ resource "catalystcenter_wireless_pre_auth_acl" "pre_auth_acl" {
     source_subnet_mask_or_prefix      = try(rule.source_prefix, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.source_prefix, 32)
     destination_address               = rule.destination_address
     destination_subnet_mask_or_prefix = try(rule.destination_prefix, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.destination_prefix, 32)
-    source_ports                      = try(rule.source_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.source_ports, "0-65535")
-    destination_ports                 = try(rule.destination_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.destination_ports, "0-65535")
+    source_ports                      = try(rule.source_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.source_ports, "1-65535")
+    destination_ports                 = try(rule.destination_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.destination_ports, "1-65535")
     protocol                          = try(rule.protocol, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.protocol, null)
   }]
 }
