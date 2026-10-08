@@ -36,7 +36,7 @@ module "catalystcenter" {
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
 | <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.5.25 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
@@ -45,7 +45,7 @@ module "catalystcenter" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_bulk_site_provisioning"></a> [bulk\_site\_provisioning](#input\_bulk\_site\_provisioning) | Site path for bulk device provisioning. When set with use\_bulk\_api=true, provisions all devices from this site and all child sites in a single bulk operation. Example: 'Global/Poland' will provision all devices under Poland hierarchy. | `string` | `null` | no |
 | <a name="input_manage_global_settings"></a> [manage\_global\_settings](#input\_manage\_global\_settings) | Flag indicating whether global settings should be managed, used in combination with managed\_sites. | `bool` | `false` | no |
 | <a name="input_manage_specific_sites_only"></a> [manage\_specific\_sites\_only](#input\_manage\_specific\_sites\_only) | If true, manage only the specified site listed in managed\_sites. If false, also manage all child sites under each managed site. | `bool` | `false` | no |
@@ -59,14 +59,14 @@ module "catalystcenter" {
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
 | <a name="output_model"></a> [model](#output\_model) | Full model. |
 | <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [catalystcenter_aaa_settings.aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_aaa_settings.global_aaa_servers](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/aaa_settings) | resource |
 | [catalystcenter_anchor_group.anchor_group](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anchor_group) | resource |

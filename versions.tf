@@ -3,7 +3,7 @@ terraform {
 
   # Must be bumped together with the module release tag.
   provider_meta "catalystcenter" {
-    module_name = "NAC/0.4.7"
+    module_name = "NAC/0.5.1"
   }
 
   required_providers {

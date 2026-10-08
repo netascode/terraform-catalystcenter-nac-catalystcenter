@@ -1,5 +1,8 @@
 ## (unreleased)
 
+**New Features**
+- Identify the module to Catalyst Center telemetry through a `provider_meta` block declaring the module name and release version (`NAC/<version>`), which the provider appends to the HTTP User-Agent of every API request, so module-driven traffic can be distinguished from bare provider usage. Requires provider `~> 0.6.4`
+
 **Bug Fixes:**
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 
