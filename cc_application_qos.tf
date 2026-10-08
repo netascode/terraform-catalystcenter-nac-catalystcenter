@@ -278,6 +278,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
     catalystcenter_application_set.application_qos_application_set,
     catalystcenter_application.application_qos_application,
     catalystcenter_application_policy_queuing_profile.application_qos_queuing_profile,
+    catalystcenter_wireless_ssid.ssid,
     catalystcenter_area.area_0,
     catalystcenter_building.building,
     catalystcenter_floor.floor,
