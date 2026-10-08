@@ -36,6 +36,7 @@ locals {
           resource_key       = local.template_name_counts[template.name] == 1 ? template.name : "${project.name}#${template.name}"
           template_file_name = contains(keys(local.templates_content), "${project.name}#${template.name}") ? "${project.name}#${template.name}" : template.name
           redeploy_template  = try(template.redeploy_template, local.defaults.catalyst_center.templates.redeploy_template, null)
+          deployment_timeout = try(template.deployment_timeout, local.defaults.catalyst_center.templates.deployment_timeout, null)
           template_type      = contains(try(project.onboarding_templates, []), template) ? "onboarding" : "dayn"
         }
       )
@@ -118,7 +119,7 @@ locals {
         "device_ip"   = try(device.device_ip, null)
         "fqdn_name"   = device.fqdn_name
       }
-    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN" || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE"))
   ])
 
   devices_to_tag = [
@@ -291,6 +292,7 @@ locals {
       template_type       = "dayn"
       redeploy_template   = try(local.defaults.catalyst_center.templates.redeploy_template, "NEVER")
       force_push_template = try(local.defaults.catalyst_center.templates.force_push_template, null)
+      deployment_timeout  = try(local.defaults.catalyst_center.templates.deployment_timeout, null)
     }
   }
 
@@ -303,9 +305,9 @@ resource "catalystcenter_tag" "tag" {
   for_each = { for name, tag in local.combined_tags : name => tag if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   name          = each.key
-  description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
-  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.templates.tags.sytem_tag, null)
-  dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.templates.tags.dynamic_rules, null)
+  description   = try(each.value.description, local.defaults.catalyst_center.inventory.tags.description, null)
+  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.inventory.tags.system_tag, false)
+  dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.inventory.tags.dynamic_rules, null)
 }
 
 data "catalystcenter_tag" "device_tag" {
@@ -391,6 +393,7 @@ resource "catalystcenter_template" "regular_template" {
 
   template_params = [for param in try(each.value.variables, []) : {
     parameter_name   = try(param.name, null)
+    binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
     data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
     default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
     description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
@@ -470,6 +473,7 @@ resource "catalystcenter_template_version" "regular_commit_version" {
     local.templates_content[each.value.template_file_name],
     jsonencode([for param in try(each.value.variables, []) : {
       parameter_name   = try(param.name, null)
+      binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
       data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
       default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
       description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
@@ -499,6 +503,7 @@ locals {
           local.templates_content[local.templates_map[tmpl].template_file_name],
           jsonencode([for param in try(local.templates_map[tmpl].variables, []) : {
             parameter_name   = try(param.name, null)
+            binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
             data_type        = try(param.data_type, local.defaults.catalyst_center.templates.template_params.data_type, null)
             default_value    = try(param.default_value, local.defaults.catalyst_center.templates.template_params.default_value, null)
             description      = try(param.additional_info, local.defaults.catalyst_center.templates.template_params.additional_info, null)
@@ -528,11 +533,12 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if try(local.template_lookup_extended[tmpl].composite, false) == false &&
     try(local.template_lookup_extended[tmpl].template_type, null) == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
   redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  deployment_timeout  = try(local.template_lookup_extended[each.key].deployment_timeout, null)
   copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
   force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
   is_composite        = false
@@ -561,7 +567,7 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
           )
         }
       ]
-    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions]
@@ -572,10 +578,11 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if try(local.template_lookup[tmpl].composite, false) == true &&
     local.template_lookup[tmpl].template_type == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   redeploy            = try(local.template_lookup[each.key].redeploy_template, "NEVER")
+  deployment_timeout  = try(local.template_lookup[each.key].deployment_timeout, null)
   template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
   main_template_id    = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
   force_push_template = try(local.template_lookup[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -612,7 +619,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
             }
           ]
         }
-      ] if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+      ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
     ])
     }
   ]
@@ -637,7 +644,7 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
           )
         }
       ]
-    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]
@@ -655,10 +662,11 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
   for_each = {
     for tmpl, devices in local.templates_by_device : tmpl => devices
     if contains(local.unmanaged_composite_keys, tmpl) &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION") || d.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(d.site, "NONE"))]) > 0
+    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
   redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  deployment_timeout  = try(local.template_lookup_extended[each.key].deployment_timeout, null)
   template_id         = try([for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
   main_template_id    = data.catalystcenter_template.unmanaged[each.key].id
   force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
@@ -695,7 +703,7 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
             }
           ]
         }
-      ] if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+      ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
     ])
     }
   ]
@@ -720,7 +728,7 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
           )
         }
       ]
-    } if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(local.sites, try(device.site, "NONE"))
+    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
   ]
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member]

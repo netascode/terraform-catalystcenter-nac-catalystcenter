@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.9.0"
+  required_version = ">= 1.15.0"
 
   # Must be bumped together with the module release tag.
   provider_meta "catalystcenter" {
@@ -9,11 +9,11 @@ terraform {
   required_providers {
     catalystcenter = {
       source  = "CiscoDevNet/catalystcenter"
-      version = "~> 0.5.25"
+      version = "~> 0.6.4"
     }
     utils = {
       source  = "netascode/utils"
-      version = ">= 1.0.0"
+      version = ">= 2.0.0"
     }
     local = {
       source  = "hashicorp/local"

@@ -30,8 +30,9 @@ locals {
     SUPER_HIGH  = "Super High"
   }
 
+  # Dedicated fabric WLC or embedded WLC (eWLC / FIAB).
   wireless_controllers = length({
-    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION") || device.state == "MARK_FOR_REPLACEMENT") && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))
   }) > 0
 
   short_hostname_to_fqdn = try({
@@ -179,15 +180,21 @@ resource "catalystcenter_ap_profile" "ap_profile" {
   remote_worker_enabled = try(each.value.remote_worker_enabled, local.defaults.catalyst_center.wireless.ap_profiles.remote_worker_enabled, null)
 
   # Management settings
-  auth_type                  = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ap_profiles.auth_type, null)
-  dot1x_username             = try(each.value.dot1x_username, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_username, null)
-  dot1x_password             = sensitive(try(each.value.dot1x_password, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password, null))
-  ssh_enabled                = try(each.value.ssh_enabled, local.defaults.catalyst_center.wireless.ap_profiles.ssh_enabled, null)
-  telnet_enabled             = try(each.value.telnet_enabled, local.defaults.catalyst_center.wireless.ap_profiles.telnet_enabled, null)
-  management_user_name       = try(each.value.management_user_name, local.defaults.catalyst_center.wireless.ap_profiles.management_user_name, null)
-  management_password        = sensitive(try(each.value.management_password, local.defaults.catalyst_center.wireless.ap_profiles.management_password, null))
-  management_enable_password = sensitive(try(each.value.management_enable_password, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password, null))
-  cdp_state                  = try(each.value.cdp_state, local.defaults.catalyst_center.wireless.ap_profiles.cdp_state, null)
+  auth_type                             = try(each.value.auth_type, local.defaults.catalyst_center.wireless.ap_profiles.auth_type, null)
+  dot1x_username                        = try(each.value.dot1x_username, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_username, null)
+  dot1x_password                        = try(each.value.dot1x_password_version, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password_version, null) == null ? sensitive(try(each.value.dot1x_password, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password, null)) : null
+  dot1x_password_wo                     = try(each.value.dot1x_password_version, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password_version, null) == null ? null : sensitive(try(each.value.dot1x_password, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password, null))
+  dot1x_password_wo_version             = try(each.value.dot1x_password_version, local.defaults.catalyst_center.wireless.ap_profiles.dot1x_password_version, null)
+  ssh_enabled                           = try(each.value.ssh_enabled, local.defaults.catalyst_center.wireless.ap_profiles.ssh_enabled, null)
+  telnet_enabled                        = try(each.value.telnet_enabled, local.defaults.catalyst_center.wireless.ap_profiles.telnet_enabled, null)
+  management_user_name                  = try(each.value.management_user_name, local.defaults.catalyst_center.wireless.ap_profiles.management_user_name, null)
+  management_password                   = try(each.value.management_password_version, local.defaults.catalyst_center.wireless.ap_profiles.management_password_version, null) == null ? sensitive(try(each.value.management_password, local.defaults.catalyst_center.wireless.ap_profiles.management_password, null)) : null
+  management_password_wo                = try(each.value.management_password_version, local.defaults.catalyst_center.wireless.ap_profiles.management_password_version, null) == null ? null : sensitive(try(each.value.management_password, local.defaults.catalyst_center.wireless.ap_profiles.management_password, null))
+  management_password_wo_version        = try(each.value.management_password_version, local.defaults.catalyst_center.wireless.ap_profiles.management_password_version, null)
+  management_enable_password            = try(each.value.management_enable_password_version, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password_version, null) == null ? sensitive(try(each.value.management_enable_password, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password, null)) : null
+  management_enable_password_wo         = try(each.value.management_enable_password_version, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password_version, null) == null ? null : sensitive(try(each.value.management_enable_password, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password, null))
+  management_enable_password_wo_version = try(each.value.management_enable_password_version, local.defaults.catalyst_center.wireless.ap_profiles.management_enable_password_version, null)
+  cdp_state                             = try(each.value.cdp_state, local.defaults.catalyst_center.wireless.ap_profiles.cdp_state, null)
 
   # AWIPS settings
   awips_enabled          = try(each.value.awips_enabled, local.defaults.catalyst_center.wireless.ap_profiles.awips_enabled, null)
@@ -296,7 +303,9 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   nas_options                                 = try(each.value.nas_options, local.defaults.catalyst_center.wireless.ssids.nas_options, null)
   neighbor_list                               = try(each.value.neighbor_list, local.defaults.catalyst_center.wireless.ssids.neighbor_list, null)
   open_ssid                                   = try(each.value.open_ssid, local.defaults.catalyst_center.wireless.ssids.open_ssid, null)
-  passphrase                                  = sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
+  passphrase                                  = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null)) : null
+  passphrase_wo                               = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? null : sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
+  passphrase_wo_version                       = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null)
   policy_profile_name                         = try(each.value.policy_profile_name, local.defaults.catalyst_center.wireless.ssids.policy_profile_name, null)
   posturing                                   = try(each.value.posturing, local.defaults.catalyst_center.wireless.ssids.posturing, null)
   profile_name                                = try(each.value.profile_name, local.defaults.catalyst_center.wireless.ssids.profile_name, null)
@@ -492,8 +501,8 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
   network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
+    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ]
 }
 
@@ -519,8 +528,8 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
   flex_profile_name   = try(each.value.flex_profile_name, local.defaults.catalyst_center.network_profiles.wireless.site_tags.flex_profile_name, null)
   site_ids = toset([
     for site in each.value.sites :
-    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
+    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
@@ -547,8 +556,8 @@ resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
   ap_zones            = try(toset(each.value.ap_zones), null)
   site_ids = toset([
     for site in each.value.sites :
-    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
+    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
