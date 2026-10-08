@@ -5,8 +5,8 @@ output "default_values" {
 }
 
 output "model" {
-  description = "Full model."
-  value       = local.model
+  description = "Full model with write-only Day-N template parameter values omitted."
+  value       = local.exported_model
 }
 
 output "sites" {
