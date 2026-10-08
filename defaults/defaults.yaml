@@ -157,9 +157,6 @@ defaults:
         rank: 1
         engine_id: "6"
         category_reference_application: 3com-amp3
-      queuing_profiles:
-        bandwidth:
-          is_common: true
       policies:
         queuing_profile: CVD_QUEUING_PROFILE
         priority: 100

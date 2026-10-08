@@ -5,10 +5,13 @@ locals {
   manage_application_qos = var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)
   application_qos        = local.manage_application_qos ? try(local.catalyst_center.application_qos, null) : null
 
-  application_sets     = try(local.application_qos.application_sets, [])
-  custom_applications  = try(local.application_qos.applications, [])
-  queuing_profiles     = try(local.application_qos.queuing_profiles, [])
-  application_policies = try(local.application_qos.policies, [])
+  application_sets    = try(local.application_qos.application_sets, [])
+  custom_applications = try(local.application_qos.applications, [])
+  queuing_profiles    = try(local.application_qos.queuing_profiles, [])
+  application_policies = concat(
+    try(local.application_qos.policies.wired, []),
+    try(local.application_qos.policies.wireless, []),
+  )
 
   # Application set names managed by this module, versus names only referenced by
   # a policy. The ~29 built-in sets fall in the second group and must be resolved
@@ -70,8 +73,8 @@ locals {
   )
 
   queuing_profile_ids = merge(
-    { for k, v in catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile : k => v.id },
-    { for k, v in data.catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile : k => v.id },
+    { for k, v in catalystcenter_application_policy_queuing_profile.application_qos_queuing_profile : k => v.id },
+    { for k, v in data.catalystcenter_application_policy_queuing_profile.application_qos_queuing_profile : k => v.id },
   )
 
   # The GUI shows three columns. The controller stores one sibling policy per
@@ -120,7 +123,7 @@ data "catalystcenter_application_set" "application_qos_application_set" {
   name = each.value
 }
 
-data "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_profile" {
+data "catalystcenter_application_policy_queuing_profile" "application_qos_queuing_profile" {
   for_each = local.lookup_queuing_profile_names
 
   name = each.value
@@ -136,7 +139,6 @@ resource "catalystcenter_qos_policy_setting" "application_qos_policy_setting" {
   count = local.manage_application_qos && can(local.catalyst_center.application_qos) ? 1 : 0
 
   name = "qos_policy_setting"
-  # coalesce, not try: an explicitly null value must still fall through to the default
   deploy_by_default_on_wired_devices = coalesce(
     try(local.application_qos.deploy_by_default_on_wired_devices, null),
     try(local.defaults.catalyst_center.application_qos.deploy_by_default_on_wired_devices, null),
@@ -151,7 +153,7 @@ resource "catalystcenter_application_set" "application_qos_application_set" {
   default_business_relevance = try(each.value.default_business_relevance, local.defaults.catalyst_center.application_qos.application_sets.default_business_relevance, null)
 }
 
-resource "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_profile" {
+resource "catalystcenter_application_policy_queuing_profile" "application_qos_queuing_profile" {
   for_each = { for q in local.queuing_profiles : q.name => q }
 
   name        = each.value.name
@@ -160,9 +162,9 @@ resource "catalystcenter_app_policy_queuing_profile" "application_qos_queuing_pr
   clauses = concat(
     can(each.value.bandwidth) ? [{
       type                                   = "BANDWIDTH"
-      is_common_between_all_interface_speeds = try(each.value.bandwidth.is_common, local.defaults.catalyst_center.application_qos.queuing_profiles.bandwidth.is_common, null)
+      is_common_between_all_interface_speeds = length(try(each.value.bandwidth, [])) == 1 && try(each.value.bandwidth[0].speed, null) == "ALL"
       interface_speed_bandwidth_clauses = [
-        for s in try(each.value.bandwidth.interface_speeds, []) : {
+        for s in try(each.value.bandwidth, []) : {
           interface_speed = s.speed
           tc_bandwidth_settings = [
             for b in try(s.bandwidth_percentages, []) : {
@@ -275,7 +277,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
   depends_on = [
     catalystcenter_application_set.application_qos_application_set,
     catalystcenter_application.application_qos_application,
-    catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile,
+    catalystcenter_application_policy_queuing_profile.application_qos_queuing_profile,
     catalystcenter_area.area_0,
     catalystcenter_building.building,
     catalystcenter_floor.floor,

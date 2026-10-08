@@ -78,9 +78,9 @@ module "catalystcenter" {
 | [catalystcenter_anycast_gateways.anycast_gateways_anchoring](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateways) | resource |
 | [catalystcenter_anycast_gateways.anycast_gateways_zone](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/anycast_gateways) | resource |
 | [catalystcenter_ap_profile.ap_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/ap_profile) | resource |
-| [catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/app_policy_queuing_profile) | resource |
 | [catalystcenter_application.application_qos_application](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/application) | resource |
 | [catalystcenter_application_policy.application_qos_policy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/application_policy) | resource |
+| [catalystcenter_application_policy_queuing_profile.application_qos_queuing_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/application_policy_queuing_profile) | resource |
 | [catalystcenter_application_set.application_qos_application_set](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/application_set) | resource |
 | [catalystcenter_apply_pending_fabric_events.fabric_pending_events](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/apply_pending_fabric_events) | resource |
 | [catalystcenter_area.area_0](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/area) | resource |
@@ -217,8 +217,8 @@ module "catalystcenter" {
 | [time_sleep.wait_for_managed_ap_locations](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) | resource |
 | [catalystcenter_anycast_gateways.anchor_guard](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
 | [catalystcenter_anycast_gateways.created_gateways](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/anycast_gateways) | data source |
-| [catalystcenter_app_policy_queuing_profile.application_qos_queuing_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/app_policy_queuing_profile) | data source |
 | [catalystcenter_application.category_reference](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/application) | data source |
+| [catalystcenter_application_policy_queuing_profile.application_qos_queuing_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/application_policy_queuing_profile) | data source |
 | [catalystcenter_application_set.application_qos_application_set](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/application_set) | data source |
 | [catalystcenter_assign_credentials.global_assign_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/assign_credentials) | data source |
 | [catalystcenter_credentials_cli.discovery](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/credentials_cli) | data source |
