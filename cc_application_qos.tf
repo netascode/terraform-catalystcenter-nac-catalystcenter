@@ -159,7 +159,7 @@ resource "catalystcenter_application_policy_queuing_profile" "application_qos_qu
   name        = each.value.name
   description = try(each.value.description, local.defaults.catalyst_center.application_qos.queuing_profiles.description, null)
 
-  clauses = concat(
+  clause = concat(
     can(each.value.bandwidth) ? [{
       type                                   = "BANDWIDTH"
       is_common_between_all_interface_speeds = length(try(each.value.bandwidth, [])) == 1 && try(each.value.bandwidth[0].speed, null) == "ALL"
