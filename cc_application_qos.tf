@@ -262,7 +262,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
         queuing_profile_id   = local.queuing_profile_ids[try(each.value.queuing_profile, local.defaults.catalyst_center.application_qos.policies.queuing_profile)]
       }
     ],
-    can(each.value.global_policy_configuration) ? [
+    [
       {
         name                    = "${each.value.name}_global_policy_configuration"
         priority                = tostring(try(each.value.priority, local.defaults.catalyst_center.application_qos.policies.priority, null))
@@ -271,7 +271,7 @@ resource "catalystcenter_application_policy" "application_qos_policy" {
         device_removal_behavior = try(each.value.global_policy_configuration.device_removal_behavior, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.device_removal_behavior, null)
         host_tracking_enabled   = try(each.value.global_policy_configuration.host_tracking_enabled, local.defaults.catalyst_center.application_qos.policies.global_policy_configuration.host_tracking_enabled, null)
       }
-    ] : [],
+    ],
   )
 
   depends_on = [

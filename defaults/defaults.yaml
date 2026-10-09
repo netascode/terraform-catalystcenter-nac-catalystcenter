@@ -162,3 +162,6 @@ defaults:
         priority: 100
         delete_policy_status: NONE
         undeploy_action: DELETED
+        global_policy_configuration:
+          device_removal_behavior: IGNORE
+          host_tracking_enabled: false
