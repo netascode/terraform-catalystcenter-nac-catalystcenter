@@ -14,17 +14,20 @@ locals {
   )
 
   # Application set names managed by this module, versus names only referenced by
-  # a policy. The ~29 built-in sets fall in the second group and must be resolved
+  # a policy or an application. The ~29 built-in sets fall in the second group and must be resolved
   # through a data source because they are not Terraform-managed.
   managed_application_set_names = toset([for s in local.application_sets : s.name])
 
-  referenced_application_set_names = toset(flatten([
-    for p in local.application_policies : concat(
-      try(p.application_sets.business_relevant, []),
-      try(p.application_sets.default, []),
-      try(p.application_sets.business_irrelevant, []),
-    )
-  ]))
+  referenced_application_set_names = toset(concat(
+    flatten([
+      for p in local.application_policies : concat(
+        try(p.application_sets.business_relevant, []),
+        try(p.application_sets.default, []),
+        try(p.application_sets.business_irrelevant, []),
+      )
+    ]),
+    [for a in local.custom_applications : a.application_set if try(a.application_set, null) != null],
+  ))
 
   lookup_application_set_names = setsubtract(local.referenced_application_set_names, local.managed_application_set_names)
 
