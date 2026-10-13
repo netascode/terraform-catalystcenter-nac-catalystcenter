@@ -44,23 +44,23 @@ locals {
 
   # Catalyst Center rejects a CatalystWLC claim that omits the static IP, subnet
   # mask or gateway with NCOB01330, after the device has already been added to
-  # PnP by catalystcenter_pnp_device. It does not check vlan_id and
-  # interface_name at all: the claim returns success and the Day-0 workflow then
-  # fails asynchronously with NCOB02093 "configuration generation error",
-  # because the management interface configuration cannot be generated without
-  # them. Both are documented as required for a Catalyst 9800.
+  # PnP by catalystcenter_pnp_device. It does not check interface_name at all:
+  # the claim returns success and the Day-0 workflow then fails asynchronously
+  # with NCOB02093 "configuration generation error", because the management
+  # interface configuration cannot be generated without it. vlan_id is left out
+  # of this check: both the claim and the Day-0 workflow complete without it,
+  # management then being untagged on interface_name.
   pnp_controllers_missing_wireless_management = [
     for name, device in local.pnp_wireless_controllers : name
     if contains(local.sites, try(device.site, "NONE")) && (
       try(device.wireless_management.ip_address, local.defaults.catalyst_center.inventory.devices.wireless_management.ip_address, null) == null ||
       try(device.wireless_management.subnet_mask, local.defaults.catalyst_center.inventory.devices.wireless_management.subnet_mask, null) == null ||
       try(device.wireless_management.gateway, local.defaults.catalyst_center.inventory.devices.wireless_management.gateway, null) == null ||
-      try(device.wireless_management.vlan_id, local.defaults.catalyst_center.inventory.devices.wireless_management.vlan_id, null) == null ||
       try(device.wireless_management.interface_name, local.defaults.catalyst_center.inventory.devices.wireless_management.interface_name, null) == null
     )
   ]
 
-  pnp_controllers_missing_wireless_management_error = length(local.pnp_controllers_missing_wireless_management) > 0 ? "❌ The following wireless controllers are onboarded through Plug and Play but have incomplete wireless management settings:\n\n${join("\n", [for name in local.pnp_controllers_missing_wireless_management : "  • ${name}"])}\n\nA wireless controller with state: PNP is claimed as CatalystWLC. Catalyst Center accepts that claim only with a static IP, subnet mask and gateway (NCOB01330), and generates its Day-0 configuration only with a VLAN ID and a management interface name (NCOB02093, raised by the workflow after the claim itself has succeeded).\n\nAction required: Add a wireless_management block with ip_address, subnet_mask, gateway, vlan_id and interface_name to each device above." : ""
+  pnp_controllers_missing_wireless_management_error = length(local.pnp_controllers_missing_wireless_management) > 0 ? "❌ The following wireless controllers are onboarded through Plug and Play but have incomplete wireless management settings:\n\n${join("\n", [for name in local.pnp_controllers_missing_wireless_management : "  • ${name}"])}\n\nA wireless controller with state: PNP is claimed as CatalystWLC. Catalyst Center accepts that claim only with a static IP, subnet mask and gateway (NCOB01330), and generates its Day-0 configuration only with a management interface name (NCOB02093, raised by the workflow after the claim itself has succeeded).\n\nAction required: Add a wireless_management block with ip_address, subnet_mask, gateway and interface_name to each device above." : ""
 }
 
 resource "terraform_data" "pnp_wireless_validation" {
