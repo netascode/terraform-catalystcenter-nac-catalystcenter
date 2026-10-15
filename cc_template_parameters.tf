@@ -16,16 +16,16 @@ locals {
         for member_name, variables in members : member_name => {
           params = {
             for item in variables : item.name => try(tolist(item.value), [item.value])
-            if !contains([for variable in variables : variable.name], "${item.name}_version") &&
-            !(endswith(item.name, "_version") && contains([for variable in variables : variable.name], trimsuffix(item.name, "_version")))
+            if !contains([for variable in variables : variable.name], "${item.name}_version_secure") &&
+            !(endswith(item.name, "_version_secure") && contains([for variable in variables : variable.name], trimsuffix(item.name, "_version_secure")))
           }
           params_wo = {
             for item in variables : item.name => try(tolist(item.value), [item.value])
-            if contains([for variable in variables : variable.name], "${item.name}_version")
+            if contains([for variable in variables : variable.name], "${item.name}_version_secure")
           }
           params_wo_versions = {
-            for item in variables : trimsuffix(item.name, "_version") => item.value
-            if endswith(item.name, "_version") && contains([for variable in variables : variable.name], trimsuffix(item.name, "_version"))
+            for item in variables : trimsuffix(item.name, "_version_secure") => item.value
+            if endswith(item.name, "_version_secure") && contains([for variable in variables : variable.name], trimsuffix(item.name, "_version_secure"))
           }
         }
       }
@@ -37,7 +37,7 @@ locals {
       for template_key, members in templates : [
         for member_name, parameters in members : [
           for name in keys(parameters.params_wo) : name
-          if endswith(name, "_version") && contains(keys(parameters.params_wo_versions), trimsuffix(name, "_version"))
+          if endswith(name, "_version_secure") && contains(keys(parameters.params_wo_versions), trimsuffix(name, "_version_secure"))
         ]
       ]
     ]
