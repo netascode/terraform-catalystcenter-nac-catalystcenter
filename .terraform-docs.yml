@@ -27,8 +27,6 @@ content: |-
   {{ include "./examples/site/main.tf" }}
   ```
 
-  {{ include "./examples/template-secrets/README.md" }}
-
   {{ .Requirements }}
   {{ .Inputs }}
   {{ .Outputs }}
