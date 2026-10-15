@@ -18,6 +18,10 @@ locals {
 resource "terraform_data" "validation" {
   lifecycle {
     precondition {
+      condition     = length(local.ambiguous_template_secret_versions) == 0
+      error_message = "A secret Day-N parameter cannot also be another parameter's version marker. Rename the conflicting parameter or remove the extra version companion."
+    }
+    precondition {
       condition     = length(var.yaml_directories) != 0 || length(var.yaml_files) != 0 || length(keys(var.model)) != 0
       error_message = "Either `yaml_directories`,`yaml_files` or a non-empty `model` value must be provided."
     }

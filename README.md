@@ -61,7 +61,7 @@ module "catalystcenter" {
 | Name | Description |
 | ---- | ----------- |
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
-| <a name="output_model"></a> [model](#output\_model) | Full model. |
+| <a name="output_model"></a> [model](#output\_model) | Full model with write-only Day-N template parameter values omitted. |
 | <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
 ## Resources
 
