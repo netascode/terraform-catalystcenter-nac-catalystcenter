@@ -1,4 +1,4 @@
-## 0.5.1 (unreleased)
+## 0.5.1
 
 **New Features:**
 - Add write-only Day-N template parameters with `_version_secure` rotation companions for regular and composite templates, omitting secret values from the model output
