@@ -561,7 +561,7 @@ locals {
         for np_site in try(np.sites, []) : [
           for ssid in try(np.ssid_details, []) : ssid.name
         ]
-        if startswith(site_key, np_site)
+        if site_key == np_site || startswith(site_key, "${np_site}/")
       ]
     ]))
   }

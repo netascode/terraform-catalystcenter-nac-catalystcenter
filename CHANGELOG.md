@@ -1,6 +1,7 @@
 ## (unreleased)
 
 **Bug Fixes:**
+- Fix `managed_sites` matching sibling sites that share a name prefix: an entry now matches only that site and its descendants, so `Global/Area/Site_A` no longer also manages `Global/Area/Site_AB` and everything below it. The same boundary now applies when grouping provisioned devices by `managed_sites` (previously a device under `Site_AB` was provisioned by the `Site_A` state, or the plan failed with `Invalid function argument` when both were listed) and when crediting SSIDs from wireless network profiles to sites
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
 
