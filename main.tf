@@ -53,6 +53,7 @@ locals {
       for association in try(local.raw_catalyst_center.template_device_association.templates, []) : {
         template_name     = association.name
         project_name      = association.project_name
+        unmanaged         = try(association.unmanaged, false)
         deploy_order      = try(association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
         redeploy_template = try(association.state, "ON_CHANGE")
         variables_file    = try(association.variables.type, "") == "csv" ? association.variables.name : null

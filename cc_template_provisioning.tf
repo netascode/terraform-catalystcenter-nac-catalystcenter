@@ -75,11 +75,18 @@ locals {
   # form (rather than always project#name) is what lets the provisioning-sourced
   # entries resolve in `local.template_lookup[tmpl]`; otherwise the deploy
   # resources' for_each filter misses and no deploy resource is created.
-  tp_template_blocks = concat(
-    [for t in try(local.catalyst_center.template_provisioning.dayn_templates, []) : merge(t, { _composite = false, _key = try(local.template_name_counts[t.template_name], 0) == 1 ? t.template_name : "${t.project_name}#${t.template_name}" })],
-    [for t in try(local.catalyst_center.template_provisioning.onboarding_templates, []) : merge(t, { _composite = false, _key = try(local.template_name_counts[t.template_name], 0) == 1 ? t.template_name : "${t.project_name}#${t.template_name}" })],
-    [for t in try(local.catalyst_center.template_provisioning.composite_templates, []) : merge(t, { _composite = true, _key = try(local.template_name_counts[t.template_name], 0) == 1 ? t.template_name : "${t.project_name}#${t.template_name}" })],
-  )
+  # Resolve managed keys by project AND name. A unique name in another project
+  # must never capture a reference to an existing controller template.
+  tp_managed_template_keys = { for t in local.templates : t.template_key => t.resource_key }
+  tp_template_blocks = [
+    for t in concat(
+      [for t in try(local.catalyst_center.template_provisioning.dayn_templates, []) : merge(t, { _composite = false })],
+      [for t in try(local.catalyst_center.template_provisioning.onboarding_templates, []) : merge(t, { _composite = false })],
+      [for t in try(local.catalyst_center.template_provisioning.composite_templates, []) : merge(t, { _composite = true })],
+      ) : merge(t, {
+        _key = try(t.unmanaged, false) ? "${t.project_name}#${t.template_name}" : lookup(local.tp_managed_template_keys, "${t.project_name}#${t.template_name}", "${t.project_name}#${t.template_name}")
+    })
+  ]
 
   # Per-(block, device) resolution of a DEVICE-level `variables_file:` into the
   # variable list, using the WIDE or TALL parser per block kind. Empty list when
