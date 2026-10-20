@@ -16,6 +16,12 @@ variable "templates_directories" {
   default     = []
 }
 
+variable "templates_var_directories" {
+  description = "List of paths to template variable (CSV) directories."
+  type        = list(string)
+  default     = []
+}
+
 variable "model" {
   description = "As an alternative to YAML files, a native Terraform data structure can be provided as well."
   type        = map(any)
