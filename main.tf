@@ -49,7 +49,7 @@ locals {
 
   # Convert template-device associations into template provisioning entries.
   normalized_template_provisioning = {
-    dayn_templates = [
+    for kind, association_type in { dayn_templates = "DAYN", composite_templates = "COMPOSITE", onboarding_templates = "ONBOARDING" } : kind => [
       for association in try(local.raw_catalyst_center.template_device_association.templates, []) : {
         template_name     = association.name
         project_name      = association.project_name
@@ -62,10 +62,10 @@ locals {
             redeploy_template = try(device.state, association.state, "ON_CHANGE")
             deploy_order      = try(device.deploy_order, association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
             variables_file    = try(device.variables.type, "") == "csv" ? device.variables.name : null
-            variables         = try(device.variables.type, "") == "local" ? try(device.variables.values, []) : []
+            variables         = try(device.variables.type, "") == "local" ? try(device.variables.values, []) : (try(device.variables.type, "") == "" && try(association.variables.type, "") == "local" ? try(association.variables.values, []) : [])
           }
         ]
-      }
+      } if try(association.type, "DAYN") == association_type
     ]
   }
 
@@ -203,8 +203,8 @@ locals {
     { network_profiles = try(local.model.catalyst_center.design.network_profiles, {}) },
     # sites.global.network_settings -> top-level network_settings
     { network_settings = local.normalized_network_settings },
-    # cli_templates -> top-level templates
-    { templates = try(local.model.catalyst_center.cli_templates, {}) },
+    # Public template definitions; retain the earlier spelling for direct callers.
+    { templates = try(local.model.catalyst_center.cli_templates, local.model.catalyst_center.templates, {}) },
     # cli_templates.feature_templates + top-level feature_templates -> top-level feature_templates
     {
       feature_templates = {
@@ -228,12 +228,12 @@ locals {
     {
       template_provisioning = merge(
         try(local.raw_catalyst_center.template_provisioning, {}),
-        try(local.raw_catalyst_center.template_device_association.templates[0], null) != null ? {
-          dayn_templates = concat(
-            try(local.raw_catalyst_center.template_provisioning.dayn_templates, []),
-            local.normalized_template_provisioning.dayn_templates,
+        {
+          for kind in ["dayn_templates", "composite_templates", "onboarding_templates"] : kind => concat(
+            try(local.raw_catalyst_center.template_provisioning[kind], []),
+            local.normalized_template_provisioning[kind],
           )
-        } : {},
+        },
       )
     },
     {

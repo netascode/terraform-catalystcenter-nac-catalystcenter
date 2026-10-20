@@ -1,4 +1,5 @@
 ---
+# Canonical paths plus aliases for dm-refactor-1 module internal default lookups.
 defaults:
   catalyst_center:
     authentication_templates:
@@ -18,21 +19,8 @@ defaults:
           fra_status: false
           fra_freeze: false
           fra_interval: 3
-          # fra_sensitivity applies only when radio_band is 2.4GHz_5GHz
+          # Applies only to radio_band 2.4GHz_5GHz.
           fra_sensitivity: MEDIUM
-    network_profiles:
-      wireless:
-        ssid_details:
-          interface_name: management
-        site_tags:
-          flex_profile_name: default-flex-profile
-    templates:
-      force_push_template: true
-      description: ""
-      language: JINJA
-      composite: false
-      copying_config: true
-      redeploy_template: NEVER
     pnp:
       devices:
         type: Default
@@ -41,6 +29,8 @@ defaults:
     inventory:
       devices:
         role_source: MANUAL
+        access_point:
+          manage_hostname: false
     sites:
       floors:
         height: 3
@@ -48,31 +38,36 @@ defaults:
         rf_model: Cubes And Walled Offices
         width: 30
         units_of_measure: feet
+      global:
+        network_settings:
+          device_credentials: &id002
+            https_write_credentials:
+              port: 443
+            https_read_credentials:
+              port: 443
+            snmpv3_credentials:
+              auth_type: SHA
+              privacy_type: AES128
+          ip_pools: &id001
+            type: Generic
+            ip_address_space: IPv4
+            ip_pools_reservations:
+              type: Generic
+              ipv4:
+                prefix: true
+              ipv6:
+                address_space: false
+          telemetry: &id003
+            wired_data_collection: true
+            enable_netflow_collector_on_devices: false
+            wireless_telemetry: false
+            catalyst_center_as_snmp_server: true
+            catalyst_center_as_syslog_server: true
+            catalyst_center_as_network_collector: true
     network_settings:
-      ip_pools:
-        type: Generic
-        ip_address_space: IPv4
-        ip_pools_reservations:
-          type: Generic
-          ipv4:
-            prefix: true
-          ipv6:
-            address_space: false
-      device_credentials:
-        https_write_credentials:
-          port: 443
-        https_read_credentials:
-          port: 443
-        snmpv3_credentials:
-          auth_type: SHA
-          privacy_type: AES128
-      telemetry:
-        wired_data_collection: true
-        enable_netflow_collector_on_devices: false
-        wireless_telemetry: false
-        catalyst_center_as_snmp_server: true
-        catalyst_center_as_syslog_server: true
-        catalyst_center_as_network_collector: true
+      ip_pools: *id001
+      device_credentials: *id002
+      telemetry: *id003
     system_settings:
       external_authentication:
         enabled: false
@@ -106,8 +101,8 @@ defaults:
           rules:
             source_prefix: 32
             destination_prefix: 32
-            source_ports: "0-65535"
-            destination_ports: "0-65535"
+            source_ports: 0-65535
+            destination_ports: 0-65535
       ap_profiles:
         remote_worker_enabled: false
         auth_type: NO-AUTH
@@ -143,3 +138,19 @@ defaults:
         radio_policy: Triple band operation(2.4GHz, 5GHz and 6GHz)
         traffic_type: data
         session_time_out: 1800
+    design:
+      network_profiles: &id004
+        wireless:
+          ssid_details:
+            interface_name: management
+          site_tags:
+            flex_profile_name: default-flex-profile
+    cli_templates: &id005
+      force_push_template: true
+      description: ''
+      language: JINJA
+      composite: false
+      copying_config: true
+      redeploy_template: NEVER
+    network_profiles: *id004
+    templates: *id005

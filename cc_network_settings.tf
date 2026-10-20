@@ -16,12 +16,12 @@ locals {
   sites_to_creds_map = merge(
     {
       "Global" = {
-        cli          = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.cli_credentials, null)
-        snmpv3       = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv3_credentials, null)
-        snmpv2_read  = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv2_read_credentials, null)
-        snmpv2_write = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv2_write_credentials, null)
-        https_read   = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_read_credentials, null)
-        https_write  = try(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_write_credentials, null)
+        cli          = try(local.raw_catalyst_center.sites.global.cli_credentials, tostring(local.raw_catalyst_center.sites.global.network_settings.device_credentials.cli_credentials), null)
+        snmpv3       = try(local.raw_catalyst_center.sites.global.snmpv3_credentials, tostring(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv3_credentials), null)
+        snmpv2_read  = try(local.raw_catalyst_center.sites.global.snmpv2_read_credentials, tostring(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv2_read_credentials), null)
+        snmpv2_write = try(local.raw_catalyst_center.sites.global.snmpv2_write_credentials, tostring(local.raw_catalyst_center.sites.global.network_settings.device_credentials.snmpv2_write_credentials), null)
+        https_read   = try(local.raw_catalyst_center.sites.global.https_read_credentials, tostring(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_read_credentials), null)
+        https_write  = try(local.raw_catalyst_center.sites.global.https_write_credentials, tostring(local.raw_catalyst_center.sites.global.network_settings.device_credentials.https_write_credentials), null)
       }
     },
     { for area in local._all_area_levels : area._self => area.credentials },
@@ -244,8 +244,21 @@ locals {
   network_settings = { for settings in try(tolist(local.global_network_settings.network), local.catalyst_center.network_settings.network, []) : settings.name => settings }
   aaa_settings     = { for settings in try(tolist(local.global_network_settings.aaa_servers), local.catalyst_center.network_settings.aaa_servers, []) : settings.name => settings }
 
+  # A site's inline lists each contain its applied setting. Normalize these to
+  # the internal objects, while keeping direct callers' earlier reference form.
+  site_applied_settings = {
+    for site, settings in local.sites_to_settings_map : site => merge(
+      settings,
+      {
+        network   = try(one(settings.network), settings.network, null)
+        telemetry = try(one(settings.telemetry), settings.telemetry, null)
+      },
+      try(one(settings.aaa_servers), {}),
+    ) if settings != null
+  }
+
   site_aaa_settings = {
-    for k, v in try(local.sites_to_settings_map, {}) : k => {
+    for k, v in local.site_applied_settings : k => {
       network_aaa             = try(local.aaa_settings[tostring(v.aaa_servers)].network_aaa, v.network_aaa, null)
       client_and_endpoint_aaa = try(local.aaa_settings[tostring(v.aaa_servers)].client_and_endpoint_aaa, v.client_and_endpoint_aaa, null)
     }
@@ -254,7 +267,7 @@ locals {
   telemetry_settings = { for settings in try(tolist(local.global_network_settings.telemetry), local.catalyst_center.network_settings.telemetry, []) : settings.name => settings }
 
   site_network_settings = {
-    for k, v in try(local.sites_to_settings_map, {}) : k => {
+    for k, v in local.site_applied_settings : k => {
       # `network` accepts three forms (issue #523 embed-or-reference):
       #   1. string reference  -> local.network_settings[<name>]
       #   2. inline object      -> v.network.<field>
@@ -276,7 +289,7 @@ locals {
   # value is excluded from per-site resolution (can(tolist()) is true only for
   # lists/tuples, false for strings and objects).
   site_telemetry_settings = {
-    for k, v in try(local.sites_to_settings_map, {}) : k => try(local.telemetry_settings[v.telemetry], v.telemetry, null)
+    for k, v in local.site_applied_settings : k => try(local.telemetry_settings[v.telemetry], v.telemetry, null)
     if v != null && try(v.telemetry, null) != null && !can(tolist(v.telemetry))
   }
 }
