@@ -36,13 +36,13 @@ data "catalystcenter_network_profile" "switching_network_profile" {
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_network_profile" {
-  for_each = { for np in try(local.catalyst_center.network_profiles.switching, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
+  for_each = { for np in try(local.catalyst_center.network_profiles.switching, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.profile_assignment_sites, site)]) }
 
   network_profile_id = try(catalystcenter_network_profile.switching_network_profile[each.key].id, data.catalystcenter_network_profile.switching_network_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? coalesce(local.site_id_list_bulk[site], local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    } if contains(local.sites, site)
+      id = local.profile_assignment_site_ids[site]
+    } if try(local.profile_assignment_site_ids[site], null) != null
   ]
 
   depends_on = [catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_areas.bulk_areas, catalystcenter_buildings.bulk_buildings, catalystcenter_floors.bulk_floors, data.catalystcenter_sites.created_sites]

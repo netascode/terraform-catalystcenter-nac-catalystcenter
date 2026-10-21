@@ -26,8 +26,9 @@ locals {
     })
   ]
 
+  # Dedicated fabric WLC or embedded WLC (eWLC / FIAB).
   wireless_controllers = length({
-    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))
   }) > 0
 
   short_hostname_to_fqdn = try({
@@ -445,13 +446,13 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
-  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
+  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.profile_assignment_sites, site)]) }
 
   network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+      id = local.profile_assignment_site_ids[site]
+    } if try(local.profile_assignment_site_ids[site], null) != null
   ]
 }
 
@@ -468,7 +469,7 @@ locals {
 resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
   for_each = {
     for key, tag in local.wireless_profile_site_tags : key => tag
-    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)])
+    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.profile_assignment_sites, site)])
   }
 
   wireless_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id)
@@ -477,8 +478,8 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
   flex_profile_name   = try(each.value.flex_profile_name, local.defaults.catalyst_center.network_profiles.wireless.site_tags.flex_profile_name, null)
   site_ids = toset([
     for site in each.value.sites :
-    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+    local.profile_assignment_site_ids[site]
+    if try(local.profile_assignment_site_ids[site], null) != null
   ])
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
@@ -497,7 +498,7 @@ locals {
 resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
   for_each = {
     for key, tag in local.wireless_profile_policy_tags : key => tag
-    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)])
+    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.profile_assignment_sites, site)])
   }
 
   wireless_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id, data.catalystcenter_wireless_profile.wireless_profile[each.value.wireless_profile_name].id)
@@ -505,8 +506,8 @@ resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
   ap_zones            = try(toset(each.value.ap_zones), null)
   site_ids = toset([
     for site in each.value.sites :
-    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+    local.profile_assignment_site_ids[site]
+    if try(local.profile_assignment_site_ids[site], null) != null
   ])
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
