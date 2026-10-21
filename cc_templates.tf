@@ -332,7 +332,7 @@ resource "catalystcenter_tag" "tag" {
 
   name          = each.key
   description   = try(each.value.description, local.defaults.catalyst_center.templates.tags.description, null)
-  system_tag    = try(each.value.system_tag, local.defaults.catalyst_center.templates.tags.sytem_tag, null)
+  system_tag    = coalesce(try(each.value.system_tag, null), try(local.defaults.catalyst_center.templates.tags.system_tag, local.defaults.catalyst_center.templates.tags.sytem_tag, null), false)
   dynamic_rules = try(each.value.dynamic_rules, local.defaults.catalyst_center.templates.tags.dynamic_rules, null)
 }
 
