@@ -27,6 +27,8 @@ defaults:
         protocol: SSH2
         image_skip: true
     inventory:
+      tags:
+        system_tag: false
       devices:
         role_source: MANUAL
         access_point:
@@ -41,6 +43,7 @@ defaults:
       global:
         network_settings:
           device_credentials: &id002
+            preserve_unmanaged_global: true
             https_write_credentials:
               port: 443
             https_read_credentials:
@@ -101,8 +104,8 @@ defaults:
           rules:
             source_prefix: 32
             destination_prefix: 32
-            source_ports: 0-65535
-            destination_ports: 0-65535
+            source_ports: "1-65535"
+            destination_ports: "1-65535"
       ap_profiles:
         remote_worker_enabled: false
         auth_type: NO-AUTH
@@ -152,5 +155,6 @@ defaults:
       composite: false
       copying_config: true
       redeploy_template: NEVER
+      deployment_timeout: 300
     network_profiles: *id004
     templates: *id005

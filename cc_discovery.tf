@@ -37,15 +37,10 @@ locals {
     try({ for name, credential in data.catalystcenter_credentials_https_read.discovery : name => credential.id }, {}),
     try({ for name, credential in data.catalystcenter_credentials_https_write.discovery : name => credential.id }, {}),
     try({ for name, cred in catalystcenter_credentials_cli.cli_credentials : name => cred.id }, {}),
-    # SNMP v2 Read credentials
     try({ for name, cred in catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials : name => cred.id }, {}),
-    # SNMP v2 Write credentials
     try({ for name, cred in catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials : name => cred.id }, {}),
-    # SNMP v3 credentials
     try({ for name, cred in catalystcenter_credentials_snmpv3.snmpv3_credentials : name => cred.id }, {}),
-    # HTTPS Read credentials
     try({ for name, cred in catalystcenter_credentials_https_read.https_read_credentials : name => cred.id }, {}),
-    # HTTPS Write credentials
     try({ for name, cred in catalystcenter_credentials_https_write.https_write_credentials : name => cred.id }, {})
   )
 }

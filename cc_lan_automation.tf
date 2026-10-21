@@ -44,8 +44,9 @@ resource "catalystcenter_lan_automation" "lanauto_edge" {
   }]
   multicast_enabled               = try(each.value.multicast_enabled, local.defaults.catalyst_center.lan_automation.devices.multicast_enabled, null)
   redistribute_isis_to_bgp        = try(each.value.redistribute_isis_to_bgp, each.value.advertise_lan_automation_routes_into_bgp, local.defaults.catalyst_center.lan_automation.devices.redistribute_isis_to_bgp, null)
-  isis_domain_password_wo         = try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password, null)
-  isis_domain_password_wo_version = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, 1)
+  isis_domain_password            = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, null) == null ? sensitive(try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password, null)) : null
+  isis_domain_password_wo         = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, null) == null ? null : sensitive(try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password, null))
+  isis_domain_password_wo_version = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, null)
   host_name_prefix                = try(each.value.host_name_prefix, local.defaults.catalyst_center.lan_automation.devices.host_name_prefix, null)
   discovery_level                 = try(each.value.discovery_level, local.defaults.catalyst_center.lan_automation.devices.discovery_level, null)
   discovery_devices               = try(each.value.discovery_devices, local.defaults.catalyst_center.lan_automation.devices.discovery_devices, null)

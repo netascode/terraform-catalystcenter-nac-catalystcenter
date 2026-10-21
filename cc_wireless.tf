@@ -26,8 +26,9 @@ locals {
     })
   ]
 
+  # Dedicated fabric WLC or embedded WLC (eWLC / FIAB).
   wireless_controllers = length({
-    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE")
+    for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && (contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") || contains(try(device.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE"))
   }) > 0
 
   short_hostname_to_fqdn = try({
@@ -114,9 +115,11 @@ resource "catalystcenter_wireless_pre_auth_acl" "pre_auth_acl" {
     source_subnet_mask_or_prefix      = try(rule.source_prefix, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.source_prefix, 32)
     destination_address               = rule.destination_address
     destination_subnet_mask_or_prefix = try(rule.destination_prefix, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.destination_prefix, 32)
-    source_ports                      = try(rule.source_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.source_ports, "0-65535")
-    destination_ports                 = try(rule.destination_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.destination_ports, "0-65535")
-    protocol                          = try(rule.protocol, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.protocol, null)
+    # Catalyst Center requires ports for TCP/UDP and rejects port 0, but for all other
+    # protocols it ignores them and normalizes both to "0-65535" - hence left unset there.
+    source_ports      = contains(["TCP", "UDP"], upper(try(rule.protocol, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.protocol, ""))) ? try(rule.source_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.source_ports, "1-65535") : null
+    destination_ports = contains(["TCP", "UDP"], upper(try(rule.protocol, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.protocol, ""))) ? try(rule.destination_ports, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.destination_ports, "1-65535") : null
+    protocol          = try(rule.protocol, local.defaults.catalyst_center.wireless.security_settings.pre_auth_acls.rules.protocol, null)
   }]
 }
 
@@ -253,8 +256,9 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   nas_options                                 = try(each.value.nas_options, local.defaults.catalyst_center.wireless.ssids.nas_options, null)
   neighbor_list                               = try(each.value.neighbor_list, local.defaults.catalyst_center.wireless.ssids.neighbor_list, null)
   open_ssid                                   = try(each.value.open_ssid, local.defaults.catalyst_center.wireless.ssids.open_ssid, null)
-  passphrase_wo                               = try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null)
-  passphrase_wo_version                       = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, 1)
+  passphrase                                  = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null)) : null
+  passphrase_wo                               = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? null : sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
+  passphrase_wo_version                       = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null)
   policy_profile_name                         = try(each.value.policy_profile_name, local.defaults.catalyst_center.wireless.ssids.policy_profile_name, null)
   posturing                                   = try(each.value.posturing, local.defaults.catalyst_center.wireless.ssids.posturing, null)
   profile_name                                = try(each.value.profile_name, local.defaults.catalyst_center.wireless.ssids.profile_name, null)
@@ -450,8 +454,8 @@ resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireles
   network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
+    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ]
 }
 
@@ -477,8 +481,8 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
   flex_profile_name   = try(each.value.flex_profile_name, local.defaults.catalyst_center.network_profiles.wireless.site_tags.flex_profile_name, null)
   site_ids = toset([
     for site in each.value.sites :
-    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
+    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
@@ -505,8 +509,8 @@ resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
   ap_zones            = try(toset(each.value.ap_zones), null)
   site_ids = toset([
     for site in each.value.sites :
-    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : local.site_id_list[site]
-    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : try(local.site_id_list[site], null) != null)
+    var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
+    if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
   depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
