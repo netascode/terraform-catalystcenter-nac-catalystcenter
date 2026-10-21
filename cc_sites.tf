@@ -439,4 +439,16 @@ locals {
       "${f.parent_name_hierarchy}/${f.name}" => f.id
     } : {}
   )
+
+  # Network profile / site tag / policy tag assignments. local.sites never contains Global,
+  # which belongs to the state that owns global settings; pre-existing sites that this state
+  # does not create resolve through the controller site list.
+  profile_assignment_sites = distinct(concat(local.sites, var.manage_global_settings || length(var.managed_sites) == 0 ? ["Global"] : []))
+  profile_assignment_site_ids = {
+    for site in local.profile_assignment_sites : site => (
+      site == "Global" ? data.catalystcenter_site.global.id :
+      var.use_bulk_api ? try(coalesce(try(local.site_id_list_bulk[site], null), try(local.data_source_created_sites_list[site], null)), null) :
+      try(coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null)), null)
+    )
+  }
 }
