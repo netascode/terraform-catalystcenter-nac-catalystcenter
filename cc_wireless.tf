@@ -553,8 +553,9 @@ locals {
   global_ssids_by_name = { for s in try(local.catalyst_center.wireless.ssids, []) : s.name => s }
 
   # site -> set(ssid_name) actually delivered there by a wireless network profile assigned to
-  # the site or any ancestor. A profile assigned at Global/Poland credits Global/Poland and all
-  # its descendants (startswith on the full path, matching the descender used in cc_sites.tf).
+  # the site or any ancestor. A profile assigned at Global/Poland credits Global/Poland and its
+  # descendants, but not siblings sharing a name prefix such as Global/Poland2 (same
+  # full-segment match as cc_sites.tf).
   profile_ssid_enablement = {
     for site_key in local.sites : site_key => toset(flatten([
       for np in try(local.catalyst_center.network_profiles.wireless, []) : [

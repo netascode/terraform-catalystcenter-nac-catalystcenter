@@ -1,7 +1,7 @@
 ## (unreleased)
 
 **Bug Fixes:**
-- Fix `managed_sites` matching sibling sites that share a name prefix: an entry now matches only that site and its descendants, so `Global/Area/Site_A` no longer also manages `Global/Area/Site_AB` and everything below it. The same boundary now applies when grouping provisioned devices by `managed_sites` (previously a device under `Site_AB` was provisioned by the `Site_A` state, or the plan failed with `Invalid function argument` when both were listed) and when crediting SSIDs from wireless network profiles to sites
+- Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping, device provisioning grouping and SSID enablement
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
 
@@ -9,6 +9,7 @@
 - Add support for deploying built-in or pre-existing CLI templates that are not declared under `cli_templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
 
 **Breaking Changes:**
+- `managed_sites` now matches on full path segments. A state whose `managed_sites` entry is a name prefix of a sibling site previously also managed that sibling; after upgrading, its plan destroys the sibling's sites, site settings and device provisioning. Check the plan for destroys before applying, and remove those resources from the old state with `terraform state rm` (then `terraform import` them into the correct state if no other state manages them)
 - Rework the RMA (Return Material Authorization) device replacement workflow into a 3-step process driven by a new `inventory.devices[].rma` block (`action: MARK_FOR_REPLACEMENT` then `action: REPLACE` with `replacement_serial_number`, then remove the block). The device `state` now stays `PROVISION` throughout a replacement, so the `MARK_FOR_REPLACEMENT` device `state` value is removed. Migrate any device using `state: MARK_FOR_REPLACEMENT` to `state: PROVISION` with the corresponding `rma` block
 
 ## 0.4.6
