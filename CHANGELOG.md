@@ -1,7 +1,11 @@
 ## 0.5.2 (unreleased)
 
 **Bug Fixes:**
+- Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping and device provisioning grouping
 - Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
+
+**Breaking Changes:**
+- `managed_sites` now matches on full path segments. A state whose `managed_sites` entry is a name prefix of a sibling site previously also managed that sibling; after upgrading, its plan destroys the sibling's sites, site settings and device provisioning. Check the plan for destroys before applying, and remove those resources from the old state with `terraform state rm` (then `terraform import` them into the correct state if no other state manages them)
 
 ## 0.5.1
 
