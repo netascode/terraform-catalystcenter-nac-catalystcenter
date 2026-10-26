@@ -1,3 +1,8 @@
+## 0.5.2 (unreleased)
+
+**Bug Fixes:**
+- Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
+
 ## 0.5.1
 
 **New Features:**
