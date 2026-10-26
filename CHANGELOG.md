@@ -1,6 +1,7 @@
 ## (unreleased)
 
 **Bug Fixes:**
+- Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
 - Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping, device provisioning grouping and SSID enablement
 - Fix a create-time race condition (`NCHS20215`) when a fabric-zone anycast gateway is created for an anchored virtual network on a non-anchor (inheriting) site; the zone anycast gateway resources now depend on their corresponding anchoring site-level anycast gateway resources so the fabric-site gateway is always created first
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
