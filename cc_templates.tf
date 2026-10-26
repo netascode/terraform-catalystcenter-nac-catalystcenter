@@ -117,7 +117,7 @@ locals {
         "tag_name"    = tag,
         "device_name" = device.name
         "device_ip"   = try(device.device_ip, null)
-        "fqdn_name"   = device.fqdn_name
+        "fqdn_name"   = try(device.fqdn_name, null)
       }
     ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE"))
   ])
