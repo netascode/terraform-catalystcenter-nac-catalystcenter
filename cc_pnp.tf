@@ -13,6 +13,14 @@ locals {
     if device.state == "PNP"
   }
 
+  pnp_onboarding_template_names = {
+    for name, device in local.pnp_devices : name => try(
+      local.provisioning_onboarding_templates_by_device[name].template_key,
+      device.onboarding_template.name,
+      null,
+    )
+  }
+
   # A Catalyst 9800 registers in PnP as deviceType "Catalyst WLC" and is claimed
   # as CatalystWLC; any other claim type is rejected with NCOB01296. An embedded
   # controller is a Catalyst 9000 switch and claims as Default. Every non-embedded
@@ -88,15 +96,20 @@ resource "catalystcenter_pnp_device" "pnp_device" {
 resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if device.state == "PNP" && contains(local.sites, try(device.site, "NONE")) }
 
-  device_id                  = catalystcenter_pnp_device.pnp_device[each.key].id
-  site_id                    = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
-  type                       = local.pnp_device_types[each.key]
-  hostname                   = try(each.value.name, each.value.fqdn_name, local.defaults.catalyst_center.pnp.devices.hostname, null)
-  rf_profile                 = try(each.value.rf_profile, local.defaults.catalyst_center.pnp.devices.rf_profile, null)
-  image_id                   = try(each.value.image_id, local.image_name_to_id[each.value.image_name], local.defaults.catalyst_center.pnp.devices.image_id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
-  image_skip                 = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, null)
-  config_id                  = try(catalystcenter_template.regular_template[each.value.onboarding_template.name].id, catalystcenter_template.regular_template[local.template_name_to_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[each.value.onboarding_template.name].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[local.resource_key_to_template_key[local.template_name_to_key[each.value.onboarding_template.name]]].id, data.catalystcenter_template.unmanaged[each.value.onboarding_template.name].id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
-  config_parameters          = try(each.value.onboarding_template.variables, local.defaults.catalyst_center.onboarding_templates.variables, null)
+  device_id  = catalystcenter_pnp_device.pnp_device[each.key].id
+  site_id    = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
+  type       = local.pnp_device_types[each.key]
+  hostname   = try(each.value.name, each.value.fqdn_name, local.defaults.catalyst_center.pnp.devices.hostname, null)
+  rf_profile = try(each.value.rf_profile, local.defaults.catalyst_center.pnp.devices.rf_profile, null)
+  image_id   = try(each.value.image_id, local.image_name_to_id[each.value.image_name], local.defaults.catalyst_center.pnp.devices.image_id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
+  image_skip = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, null)
+  config_id  = try(catalystcenter_template.regular_template[local.pnp_onboarding_template_names[each.key]].id, catalystcenter_template.regular_template[local.template_name_to_key[local.pnp_onboarding_template_names[each.key]]].id, data.catalystcenter_template.template[local.pnp_onboarding_template_names[each.key]].id, data.catalystcenter_template.template[local.resource_key_to_template_key[local.pnp_onboarding_template_names[each.key]]].id, data.catalystcenter_template.template[local.resource_key_to_template_key[local.template_name_to_key[local.pnp_onboarding_template_names[each.key]]]].id, data.catalystcenter_template.unmanaged[local.pnp_onboarding_template_names[each.key]].id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
+  config_parameters = contains(keys(local.provisioning_onboarding_templates_by_device), each.key) ? [
+    for variable in local.provisioning_onboarding_templates_by_device[each.key].variables : {
+      name  = variable.name
+      value = one(variable.value)
+    }
+  ] : try(each.value.onboarding_template.variables, local.defaults.catalyst_center.onboarding_templates.variables, null)
   top_of_stack_serial_number = try(each.value.stack.top_of_stack_serial_number, null)
   cabling_scheme             = try(each.value.stack.cabling_scheme, local.defaults.catalyst_center.pnp.devices.cabling_scheme, null)
   static_ip                  = try(each.value.wireless_management.ip_address, local.defaults.catalyst_center.inventory.devices.wireless_management.ip_address, null)
@@ -105,7 +118,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   vlan_id                    = try(tostring(each.value.wireless_management.vlan_id), tostring(local.defaults.catalyst_center.inventory.devices.wireless_management.vlan_id), null)
   ip_interface_name          = try(each.value.wireless_management.interface_name, local.defaults.catalyst_center.inventory.devices.wireless_management.interface_name, null)
 
-  depends_on = [catalystcenter_network_profile.switching_network_profile]
+  depends_on = [catalystcenter_network_profile.switching_network_profile, catalystcenter_template_version.regular_commit_version]
 }
 
 resource "catalystcenter_pnp_config_preview" "config_preview" {

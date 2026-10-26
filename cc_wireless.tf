@@ -448,14 +448,23 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
   depends_on = [catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_interface.interface, catalystcenter_wireless_rf_profile.rf_profile, catalystcenter_dot11be_profile.dot11be_profile, catalystcenter_power_profile.power_profile, catalystcenter_anchor_group.anchor_group, catalystcenter_wireless_cleanair_configuration.cleanair, catalystcenter_wireless_rrm_fra_configuration.rrm_fra]
 }
 
+locals {
+  # The new site's root lives outside the flattened area/building/floor list.
+  # Admit it for profile assignments in global runs without widening other
+  # features' managed-site selection.
+  wireless_profile_assignment_sites = setunion(toset(local.sites), toset(
+    var.manage_global_settings || length(var.managed_sites) == 0 ? ["Global"] : []
+  ))
+}
+
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
-  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
+  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.wireless_profile_assignment_sites, site)]) }
 
   network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
-    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
+      id = site == "Global" ? data.catalystcenter_site.global.id : (var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null)))
+    } if contains(local.wireless_profile_assignment_sites, site) && (site == "Global" || (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null))
   ]
 }
 
@@ -485,7 +494,11 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
     if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
-  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
+  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile, time_sleep.wireless_profile_tag_assignment]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.wireless_profile_tag_assignment[each.key]]
+  }
 }
 
 locals {
@@ -513,7 +526,35 @@ resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
     if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
-  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
+  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, time_sleep.wireless_profile_tag_assignment]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.wireless_profile_tag_assignment[each.key]]
+  }
+}
+
+# Removing an ancestor assignment deletes its site/policy tags on the controller.
+# Schedule recreation in the same apply; site order alone must not trigger it.
+resource "terraform_data" "wireless_profile_tag_assignment" {
+  for_each = {
+    for key, tag in merge(local.wireless_profile_site_tags, local.wireless_profile_policy_tags) : key => tag
+    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)])
+  }
+
+  triggers_replace = sort([
+    for site in try(catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile[each.value.wireless_profile_name].items, []) : site.id
+  ])
+}
+
+# Assignment task completion precedes the controller's cascaded tag cleanup.
+# Allow that cleanup to settle before recreating tags for the retained sites.
+resource "time_sleep" "wireless_profile_tag_assignment" {
+  for_each = terraform_data.wireless_profile_tag_assignment
+
+  create_duration = "60s"
+  triggers = {
+    assignment = each.value.id
+  }
 }
 
 resource "catalystcenter_wireless_interface" "interface" {
@@ -524,11 +565,11 @@ resource "catalystcenter_wireless_interface" "interface" {
 }
 
 # ============================================================================
-# Leg-2 (site-level SSID enablement) VALIDATION Ă˘â‚¬â€ť Issue #526 three-way SSID model
+# Leg-2 (site-level SSID enablement) VALIDATION — Issue #526 three-way SSID model
 #
 # The wireless SSID model is split across three files:
 #   1. Global definition  -> wireless.ssids[]                     (drives catalystcenter_wireless_ssid, above)
-#   2. Site enablement     -> sitesĂ˘â‚¬Â¦network_settings.wireless.ssids[] (validated here Ă˘â‚¬â€ť drives NO resource)
+#   2. Site enablement     -> sites…network_settings.wireless.ssids[] (validated here — drives NO resource)
 #   3. Fabric VLAN mapping -> fabric.fabric_sites[].wireless_ssids[]  (drives catalystcenter_fabric_vlan_to_ssid)
 #
 # The provider's catalystcenter_wireless_ssid is Global-only and there is no per-site SSID
@@ -539,7 +580,7 @@ resource "catalystcenter_wireless_interface" "interface" {
 # ============================================================================
 locals {
   # Every site.wireless.ssids[] entry surfaced by #523's flattened site tree, keyed by full
-  # hierarchy path. site_key is the "Parent/Ă˘â‚¬Â¦/Name" string used everywhere else in the module.
+  # hierarchy path. site_key is the "Parent/…/Name" string used everywhere else in the module.
   site_enabled_ssids = flatten([
     for site_key, settings in try(local.sites_to_settings_map, {}) : [
       for entry in try(settings.wireless.ssids, []) : {
@@ -557,15 +598,16 @@ locals {
   global_ssids_by_name = { for s in try(local.catalyst_center.wireless.ssids, []) : s.name => s }
 
   # site -> set(ssid_name) actually delivered there by a wireless network profile assigned to
-  # the site or any ancestor. A profile assigned at Global/Poland credits Global/Poland and all
-  # its descendants (startswith on the full path, matching the descender used in cc_sites.tf).
+  # the site or any ancestor. A profile assigned at Global/Poland credits Global/Poland and its
+  # descendants, but not siblings sharing a name prefix such as Global/Poland2 (same
+  # full-segment match as cc_sites.tf).
   profile_ssid_enablement = {
     for site_key in local.sites : site_key => toset(flatten([
       for np in try(local.catalyst_center.network_profiles.wireless, []) : [
         for np_site in try(np.sites, []) : [
           for ssid in try(np.ssid_details, []) : ssid.name
         ]
-        if startswith(site_key, np_site)
+        if site_key == np_site || startswith(site_key, "${np_site}/")
       ]
     ]))
   }
@@ -577,15 +619,15 @@ locals {
   # (a) undefined-global: a site enables an SSID with no matching global definition (leg 1).
   wireless_ssid_errors_undefined = [
     for e in local.site_enabled_ssids_in_scope :
-    "  Ă˘â‚¬Ë Site '${e.site}' enables SSID '${e.ssid_name}', which is not defined in wireless.ssids (global definitions)."
+    "  • Site '${e.site}' enables SSID '${e.ssid_name}', which is not defined in wireless.ssids (global definitions)."
     if !contains(local.global_ssid_names, e.ssid_name)
   ]
 
   # (b) not-enabled-by-profile: the SSID is globally defined but no wireless network profile
-  # assigned to the site (or an ancestor) lists it Ă˘â‚¬â€ť the site-level enablement is inert.
+  # assigned to the site (or an ancestor) lists it — the site-level enablement is inert.
   wireless_ssid_errors_no_profile = [
     for e in local.site_enabled_ssids_in_scope :
-    "  Ă˘â‚¬Ë Site '${e.site}' enables SSID '${e.ssid_name}', but no wireless network profile assigned to this site (or an ancestor) delivers it Ă˘â‚¬â€ť the enablement is inert. Add it to a network_profiles.wireless[].ssid_details and assign that profile to the site."
+    "  • Site '${e.site}' enables SSID '${e.ssid_name}', but no wireless network profile assigned to this site (or an ancestor) delivers it — the enablement is inert. Add it to a network_profiles.wireless[].ssid_details and assign that profile to the site."
     if contains(local.global_ssid_names, e.ssid_name) && !contains(try(local.profile_ssid_enablement[e.site], []), e.ssid_name)
   ]
 
@@ -595,7 +637,7 @@ locals {
   wireless_ssid_errors_contradiction = flatten([
     for e in local.site_enabled_ssids_in_scope : [
       for attr in ["wlan_type", "auth_type"] :
-      "  Ă˘â‚¬Ë Site '${e.site}' sets ${attr}='${try(e.entry[attr], "")}' for SSID '${e.ssid_name}', contradicting the global definition (${attr}='${try(local.global_ssids_by_name[e.ssid_name][attr], "")}')."
+      "  • Site '${e.site}' sets ${attr}='${try(e.entry[attr], "")}' for SSID '${e.ssid_name}', contradicting the global definition (${attr}='${try(local.global_ssids_by_name[e.ssid_name][attr], "")}')."
       if contains(local.global_ssid_names, e.ssid_name) && try(e.entry[attr], null) != null && try(local.global_ssids_by_name[e.ssid_name][attr], null) != null && try(e.entry[attr], null) != try(local.global_ssids_by_name[e.ssid_name][attr], null)
     ]
   ])
@@ -606,7 +648,7 @@ locals {
     local.wireless_ssid_errors_contradiction,
   )
 
-  wireless_ssid_validation_error = length(local.wireless_ssid_validation_errors) > 0 ? "Ă˘ĹĄĹš Site-level wireless SSID enablement (network_settings.wireless.ssids) is inconsistent with the global definitions and/or wireless network profiles:\n\n${join("\n", local.wireless_ssid_validation_errors)}\n\nAction required: ensure each site-enabled SSID is defined in wireless.ssids, is delivered by a wireless network profile assigned to that site, and does not contradict the global wlan_type/auth_type." : ""
+  wireless_ssid_validation_error = length(local.wireless_ssid_validation_errors) > 0 ? "❌ Site-level wireless SSID enablement (network_settings.wireless.ssids) is inconsistent with the global definitions and/or wireless network profiles:\n\n${join("\n", local.wireless_ssid_validation_errors)}\n\nAction required: ensure each site-enabled SSID is defined in wireless.ssids, is delivered by a wireless network profile assigned to that site, and does not contradict the global wlan_type/auth_type." : ""
 }
 
 resource "terraform_data" "wireless_site_ssid_validation" {

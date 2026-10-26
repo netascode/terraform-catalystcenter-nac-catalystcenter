@@ -73,7 +73,7 @@ locals {
       local.grouping_mode == "bulk" ? var.bulk_site_provisioning :
       local.grouping_mode == "managed" ? one([
         for ms in var.managed_sites :
-        ms if startswith(d.site, ms)
+        ms if d.site == ms || startswith(d.site, "${ms}/")
       ]) :
       d.site
     ]) :
@@ -84,7 +84,7 @@ locals {
       local.grouping_mode == "managed" ?
       anytrue([
         for ms in var.managed_sites :
-        startswith(d.site, ms) && ms == site
+        (d.site == ms || startswith(d.site, "${ms}/")) && ms == site
       ]) :
       d.site == site
     ]

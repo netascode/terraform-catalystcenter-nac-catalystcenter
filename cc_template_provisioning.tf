@@ -186,4 +186,24 @@ locals {
     }
     if contains(keys(local.tp_inventory_by_name), device_name)
   }
+
+  # PnP claims consume one onboarding template per device. Reuse the same
+  # project-qualified resolution and inline/CSV precedence as Day-N templates.
+  # Duplicate device keys deliberately fail rather than silently choosing a
+  # different Day-Zero configuration according to association order.
+  provisioning_onboarding_templates_by_device = {
+    for entry in flatten([
+      for block in try(local.catalyst_center.template_provisioning.onboarding_templates, []) : [
+        for device in try(block.devices, []) : {
+          device_name = device.name
+          template_key = try(block.unmanaged, false) ? "${block.project_name}#${block.template_name}" : lookup(
+            local.tp_managed_template_keys, "${block.project_name}#${block.template_name}", "${block.project_name}#${block.template_name}"
+          )
+        } if contains(keys(local.tp_inventory_by_name), device.name)
+      ]
+      ]) : entry.device_name => {
+      template_key = entry.template_key
+      variables    = local.provisioning_dayn_templates_map_by_device[entry.device_name][entry.template_key].variables
+    }
+  }
 }

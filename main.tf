@@ -63,7 +63,21 @@ locals {
             redeploy_template = try(device.state, association.state, "ON_CHANGE")
             deploy_order      = try(device.deploy_order, association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
             variables_file    = try(device.variables.type, "") == "csv" ? device.variables.name : null
-            variables         = try(device.variables.type, "") == "local" ? try(device.variables.values, []) : (try(device.variables.type, "") == "" && try(association.variables.type, "") == "local" ? try(association.variables.values, []) : [])
+            # Normalize before selecting a source: scalar/list values otherwise
+            # make Terraform unable to unify the conditional's tuple types.
+            variables = try(device.variables.type, "") == "local" ? [
+              for variable in try(device.variables.values, []) : {
+                name          = variable.name
+                value         = try(tolist(variable.value), [variable.value])
+                template_name = try(variable.template_name, "")
+              }
+              ] : (try(device.variables.type, "") == "" && try(association.variables.type, "") == "local" ? [
+                for variable in try(association.variables.values, []) : {
+                  name          = variable.name
+                  value         = try(tolist(variable.value), [variable.value])
+                  template_name = try(variable.template_name, "")
+                }
+            ] : [])
           }
         ]
       } if try(association.type, "DAYN") == association_type

@@ -135,7 +135,7 @@ locals {
         "tag_name"    = tag,
         "device_name" = device.name
         "device_ip"   = try(device.device_ip, null)
-        "fqdn_name"   = device.fqdn_name
+        "fqdn_name"   = try(device.fqdn_name, null)
       }
     ] if try(device.tags, null) != null && (strcontains(device.state, "PROVISION") || device.state == "ASSIGN") && contains(local.sites, try(device.site, "NONE"))
   ])
@@ -508,6 +508,7 @@ resource "catalystcenter_template_version" "regular_commit_version" {
   template_id = catalystcenter_template.regular_template[each.key].id
   comments = try(md5(join("|", [
     local.templates_content[each.value.template_file_name],
+    jsonencode(try(each.value.device_types, local.defaults.catalyst_center.templates.device_types, null)),
     jsonencode([for param in try(each.value.variables, []) : {
       parameter_name   = try(param.name, null)
       binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
@@ -538,6 +539,7 @@ locals {
         join(",", [for item in value.containing_templates : item.id]),
         join(",", [for tmpl in local.composite_templates_map[key] : md5(join("|", [
           local.templates_content[local.templates_map[tmpl].template_file_name],
+          jsonencode(try(local.templates_map[tmpl].device_types, local.defaults.catalyst_center.templates.device_types, null)),
           jsonencode([for param in try(local.templates_map[tmpl].variables, []) : {
             parameter_name   = try(param.name, null)
             binding          = try(param.binding, local.defaults.catalyst_center.templates.template_params.binding, null)
