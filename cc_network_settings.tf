@@ -627,8 +627,14 @@ resource "catalystcenter_ip_pool_reservation" "pool_reservation" {
 
   site_id = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value], local.data_source_created_sites_list[each.value]) : coalesce(lookup(local.site_id_list, each.value, null), local.data_source_created_sites_list[each.value]), null)
 
-  name      = local.ip_pool_reservations[each.key].name
-  pool_type = try(local.ip_pool_reservations[each.key].type, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type, null)
+  name = local.ip_pool_reservations[each.key].name
+  # The data model uses lowercase names for these API title-case enum values.
+  pool_type = try(
+    { management = "Management", service = "Service" }[try(local.ip_pool_reservations[each.key].type, local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type)],
+    local.ip_pool_reservations[each.key].type,
+    local.defaults.catalyst_center.network_settings.ip_pools.ip_pools_reservations.type,
+    null,
+  )
 
   # Flat reservations resolving to an IPv4 pool feed the ipv4_* args from their
   # top-level attributes; legacy nested reservations feed them from `ipv4:`.

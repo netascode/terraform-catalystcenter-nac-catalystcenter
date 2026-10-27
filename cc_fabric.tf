@@ -507,10 +507,62 @@ resource "catalystcenter_anycast_gateway" "anycast_gateway_anchoring" {
   depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_l3_virtual_network.l3_vn, catalystcenter_fabric_l3_virtual_network.anchored_site_l3_vn, catalystcenter_virtual_network_to_fabric_site.l3_vn_to_fabric_site, catalystcenter_anycast_gateway.anycast_gateway, catalystcenter_anycast_gateways.anycast_gateways]
 }
 
+# Catalyst Center propagates mutable gateway settings from a fabric site to its
+# zones and rejects PUTs for zone gateways (NCHS20230). Read existing zone values
+# during planning so changing the parent does not also schedule a zone update.
+# New memberships still use the parent's desired settings for their POST.
+data "catalystcenter_anycast_gateways" "zone_gateways" {
+  for_each = {
+    for zone_name, entry in local.anycast_gateways_by_fabric_zone : zone_name => entry
+    if length(entry.gateways) > 0 && contains(local.sites, entry.parent_site_name)
+  }
+
+  id        = catalystcenter_fabric_zone.fabric_zone[each.key].id
+  fabric_id = catalystcenter_fabric_zone.fabric_zone[each.key].id
+}
+
+locals {
+  observed_zone_gateway_settings = {
+    for zone_name, zone in data.catalystcenter_anycast_gateways.zone_gateways : zone_name => {
+      for gw in zone.anycast_gateways : gw.ip_pool_name => {
+        additional_ip_pools                       = gw.additional_ip_pools
+        vlan_name                                 = gw.vlan_name
+        vlan_id                                   = gw.vlan_id
+        traffic_type                              = gw.traffic_type
+        ip_directed_broadcast                     = gw.ip_directed_broadcast
+        layer2_flooding                           = gw.l2_flooding_enabled
+        wireless_flooding_enabled                 = gw.wireless_flooding_enabled
+        multiple_ip_to_mac_addresses              = gw.multiple_ip_to_mac_addresses
+        wireless_pool                             = gw.wireless_pool
+        pool_type                                 = gw.pool_type
+        security_group_name                       = gw.security_group_name
+        supplicant_based_extended_node_onboarding = gw.supplicant_based_extended_node_onboarding
+        tcp_mss_adjustment                        = gw.tcp_mss_adjustment
+        group_based_policy_enforcement_enabled    = gw.group_based_policy_enforcement_enabled
+      }
+    }
+  }
+
+  # Keep membership and replacement attributes driven by the model. In
+  # particular, do not ignore the bulk set: that would conceal pool removals.
+  managed_zone_gateways = {
+    for zone_name, entry in local.anycast_gateways_by_fabric_zone : zone_name => merge(entry, {
+      gateways = [
+        for gw in entry.gateways : merge(gw, {
+          for attribute, value in try(local.observed_zone_gateway_settings[zone_name][gw.ip_pool_name], {}) : attribute => value
+          if try(gw[attribute], local.defaults.catalyst_center.fabric.fabric_sites.anycast_gateways[attribute], null) != null
+          }, {
+          ip_pool_name = gw.ip_pool_name
+        })
+      ]
+    })
+  }
+}
+
 resource "catalystcenter_anycast_gateway" "anycast_gateway_zone" {
   for_each = {
     for entry in flatten([
-      for zone_name, entry in try(local.anycast_gateways_by_fabric_zone, {}) : [
+      for zone_name, entry in local.managed_zone_gateways : [
         for gw in entry.gateways : {
           key              = "${zone_name}#_#${gw.ip_pool_name}"
           zone_name        = zone_name
@@ -614,7 +666,7 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways_anchoring" {
 
 resource "catalystcenter_anycast_gateways" "anycast_gateways_zone" {
   for_each = {
-    for zone_name, entry in try(local.anycast_gateways_by_fabric_zone, {}) :
+    for zone_name, entry in local.managed_zone_gateways :
     zone_name => entry
     if length(entry.gateways) > 0 &&
     contains(local.sites, entry.parent_site_name) &&

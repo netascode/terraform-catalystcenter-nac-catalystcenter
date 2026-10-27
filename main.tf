@@ -59,10 +59,12 @@ locals {
         variables_file    = try(association.variables.type, "") == "csv" ? association.variables.name : null
         devices = [
           for device in try(association.devices, []) : {
-            name              = device.name
-            redeploy_template = try(device.state, association.state, "ON_CHANGE")
-            deploy_order      = try(device.deploy_order, association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
-            variables_file    = try(device.variables.type, "") == "csv" ? device.variables.name : null
+            name                = device.name
+            redeploy_template   = try(device.state, association.state, "ON_CHANGE")
+            deploy_order        = try(device.deploy_order, association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
+            copying_config      = try(device.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+            force_push_template = try(device.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+            variables_file      = try(device.variables.type, "") == "csv" ? device.variables.name : null
             # Normalize before selecting a source: scalar/list values otherwise
             # make Terraform unable to unify the conditional's tuple types.
             variables = try(device.variables.type, "") == "local" ? [
