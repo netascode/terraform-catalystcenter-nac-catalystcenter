@@ -144,9 +144,9 @@ locals {
     && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
   ]
 
-  missing_devices_error = length(local.missing_devices) > 0 ? "Ă˘ĹĄĹš The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  Ă˘â‚¬Ë ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
+  missing_devices_error = length(local.missing_devices) > 0 ? "❌ The following devices are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_devices : "  • ${d.name} (IP: ${try(d.device_ip, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAction required: Ensure all devices are discovered in Catalyst Center before running Terraform." : ""
 
-  # Devices Terraform will actually provision Ă˘â‚¬â€ť same scope as the AP-location /
+  # Devices Terraform will actually provision — same scope as the AP-location /
   # controller resources, so the guard fires only when the destructive delete is
   # possible.
   provisioned_wireless_candidate_devices = [
@@ -169,7 +169,7 @@ locals {
   ]
 
   # Rule: a FABRIC device (has any fabric_roles) WITH managed AP locations must
-  # carry EXACTLY ONE wireless-controller role Ă˘â‚¬â€ť EMBEDDED_WIRELESS_CONTROLLER_NODE
+  # carry EXACTLY ONE wireless-controller role — EMBEDDED_WIRELESS_CONTROLLER_NODE
   # or WIRELESS_CONTROLLER_NODE, never both and never neither.
   # `has_embedded == has_wlc` is true when the device carries both roles or
   # neither, both of which are invalid for a fabric device managing APs.
@@ -181,7 +181,7 @@ locals {
     if d.has_ap_locs && d.is_fabric && (d.has_embedded == d.has_wlc)
   ]
 
-  wireless_invalid_controller_role_error = length(local.wireless_devices_with_invalid_controller_role) > 0 ? "Ă˘ĹĄĹš The following fabric devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_devices_with_invalid_controller_role : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA fabric device (one with fabric_roles) that has primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role (or remove the managed AP locations), so each fabric wireless device is exactly one kind of controller. Non-fabric wireless controllers must have no fabric_roles at all." : ""
+  wireless_invalid_controller_role_error = length(local.wireless_devices_with_invalid_controller_role) > 0 ? "❌ The following fabric devices have managed AP locations but do not carry exactly one wireless-controller role:\n\n${join("\n", [for d in local.wireless_devices_with_invalid_controller_role : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA fabric device (one with fabric_roles) that has primary_managed_ap_locations or secondary_managed_ap_locations MUST contain exactly one of EMBEDDED_WIRELESS_CONTROLLER_NODE or WIRELESS_CONTROLLER_NODE (never both, never neither).\n\nAction required: Add the appropriate wireless-controller role (or remove the managed AP locations), so each fabric wireless device is exactly one kind of controller. Non-fabric wireless controllers must have no fabric_roles at all." : ""
 
   # Rule: a wireless controller (declared by an EMBEDDED_WIRELESS_CONTROLLER_NODE
   # or WIRELESS_CONTROLLER_NODE fabric role, or by type: WirelessController) must
@@ -261,7 +261,7 @@ resource "terraform_data" "bulk_site_provisioning_validation" {
     precondition {
       condition     = contains(local.sites, var.bulk_site_provisioning)
       error_message = <<-EOT
-        Ă˘ĹĄĹš The bulk_site_provisioning site '${var.bulk_site_provisioning}' is not defined in your YAML configuration.
+        ❌ The bulk_site_provisioning site '${var.bulk_site_provisioning}' is not defined in your YAML configuration.
 
         Available sites in your configuration:
         ${join("\n  ", sort(local.sites))}

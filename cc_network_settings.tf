@@ -292,7 +292,7 @@ locals {
 
   # Telemetry, same two forms: `telemetry: <name>` reference (a string) or an
   # inline block (an object). The global definitions live under
-  # global.network_settings as a *list* (`telemetry:` is a list of named defs) Ă˘â‚¬â€ť
+  # global.network_settings as a *list* (`telemetry:` is a list of named defs) —
   # that is a definition source, not a site-applied value, so a list-typed
   # value is excluded from per-site resolution (can(tolist()) is true only for
   # lists/tuples, false for strings and objects).
