@@ -892,7 +892,18 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
-  for_each = local.wireless_controllers ? { for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => site if contains(local.sites, site.name) && length(try(site.wireless_ssids, [])) != 0 && (var.use_bulk_api || length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 || length(keys(catalystcenter_fabric_ewlc.ewlc_device)) > 0) } : {}
+  # Fabric sites differ in shape (zones, multicast, ...), so project each to its SSID list and keep the
+  # condition in the filter: a `cond ? {for ...} : {}` over whole sites fails with inconsistent result types.
+  for_each = {
+    for site in try(local.catalyst_center.fabric.fabric_sites, []) : site.name => {
+      wireless_ssids = [for ssid in site.wireless_ssids : {
+        name                = ssid.name
+        vlan_name           = ssid.vlan_name
+        security_group_name = try(ssid.security_group_name, null)
+      }]
+    }
+    if local.wireless_controllers && contains(local.sites, site.name) && length(try(site.wireless_ssids, [])) != 0 && (var.use_bulk_api || length(keys(catalystcenter_fabric_device.wireless_controller)) > 0 || length(keys(catalystcenter_fabric_ewlc.ewlc_device)) > 0)
+  }
 
   fabric_id = catalystcenter_fabric_site.fabric_site[each.key].id
   mappings = flatten([
