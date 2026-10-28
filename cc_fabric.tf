@@ -524,7 +524,7 @@ data "catalystcenter_anycast_gateways" "zone_gateways" {
 locals {
   observed_zone_gateway_settings = {
     for zone_name, zone in data.catalystcenter_anycast_gateways.zone_gateways : zone_name => {
-      for gw in zone.anycast_gateways : gw.ip_pool_name => {
+      for gw in coalesce(zone.anycast_gateways, []) : gw.ip_pool_name => {
         additional_ip_pools                       = gw.additional_ip_pools
         vlan_name                                 = gw.vlan_name
         vlan_id                                   = gw.vlan_id
@@ -560,14 +560,15 @@ locals {
 }
 
 resource "catalystcenter_anycast_gateway" "anycast_gateway_zone" {
+  # Keys come from the model; observed zone values (unknown for a new zone) only fill the values.
   for_each = {
     for entry in flatten([
-      for zone_name, entry in local.managed_zone_gateways : [
-        for gw in entry.gateways : {
+      for zone_name, entry in local.anycast_gateways_by_fabric_zone : [
+        for index, gw in entry.gateways : {
           key              = "${zone_name}#_#${gw.ip_pool_name}"
           zone_name        = zone_name
           parent_site_name = entry.parent_site_name
-          gw               = gw
+          gw               = local.managed_zone_gateways[zone_name].gateways[index]
         }
       ]
     ]) : entry.key => entry
@@ -666,8 +667,8 @@ resource "catalystcenter_anycast_gateways" "anycast_gateways_anchoring" {
 
 resource "catalystcenter_anycast_gateways" "anycast_gateways_zone" {
   for_each = {
-    for zone_name, entry in local.managed_zone_gateways :
-    zone_name => entry
+    for zone_name, entry in local.anycast_gateways_by_fabric_zone :
+    zone_name => local.managed_zone_gateways[zone_name]
     if length(entry.gateways) > 0 &&
     contains(local.sites, entry.parent_site_name) &&
     var.use_bulk_api
