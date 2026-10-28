@@ -33,6 +33,7 @@ defaults:
       composite: false
       copying_config: true
       redeploy_template: NEVER
+      deployment_timeout: 300
     pnp:
       devices:
         type: Default
@@ -113,8 +114,8 @@ defaults:
           rules:
             source_prefix: 32
             destination_prefix: 32
-            source_ports: "0-65535"
-            destination_ports: "0-65535"
+            source_ports: "1-65535"
+            destination_ports: "1-65535"
       ap_profiles:
         remote_worker_enabled: false
         auth_type: NO-AUTH

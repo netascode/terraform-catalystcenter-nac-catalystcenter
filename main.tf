@@ -15,7 +15,7 @@ locals {
       if length(var.managed_sites) == 0 && !var.manage_global_settings ||
       anytrue([
         for prefix in var.managed_sites :
-        startswith(try("${site.parent_name}/${site.name}", "Global"), prefix)
+        try("${site.parent_name}/${site.name}", "Global") == prefix || startswith(try("${site.parent_name}/${site.name}", "Global"), "${prefix}/")
       ])
     ],
     [
@@ -23,7 +23,7 @@ locals {
       if length(var.managed_sites) == 0 && !var.manage_global_settings ||
       anytrue([
         for prefix in var.managed_sites :
-        startswith(try("${building.parent_name}/${building.name}", "Global"), prefix)
+        try("${building.parent_name}/${building.name}", "Global") == prefix || startswith(try("${building.parent_name}/${building.name}", "Global"), "${prefix}/")
       ])
     ],
     [
@@ -31,7 +31,7 @@ locals {
       if length(var.managed_sites) == 0 && !var.manage_global_settings ||
       anytrue([
         for prefix in var.managed_sites :
-        startswith(try("${floor.parent_name}/${floor.name}", "Global"), prefix)
+        try("${floor.parent_name}/${floor.name}", "Global") == prefix || startswith(try("${floor.parent_name}/${floor.name}", "Global"), "${prefix}/")
       ])
     ]
   )
