@@ -75,11 +75,18 @@ locals {
   # form (rather than always project#name) is what lets the provisioning-sourced
   # entries resolve in `local.template_lookup[tmpl]`; otherwise the deploy
   # resources' for_each filter misses and no deploy resource is created.
-  tp_template_blocks = concat(
-    [for t in try(local.catalyst_center.template_provisioning.dayn_templates, []) : merge(t, { _composite = false, _key = try(local.template_name_counts[t.template_name], 0) == 1 ? t.template_name : "${t.project_name}#${t.template_name}" })],
-    [for t in try(local.catalyst_center.template_provisioning.onboarding_templates, []) : merge(t, { _composite = false, _key = try(local.template_name_counts[t.template_name], 0) == 1 ? t.template_name : "${t.project_name}#${t.template_name}" })],
-    [for t in try(local.catalyst_center.template_provisioning.composite_templates, []) : merge(t, { _composite = true, _key = try(local.template_name_counts[t.template_name], 0) == 1 ? t.template_name : "${t.project_name}#${t.template_name}" })],
-  )
+  # Resolve managed keys by project AND name. A unique name in another project
+  # must never capture a reference to an existing controller template.
+  tp_managed_template_keys = { for t in local.templates : t.template_key => t.resource_key }
+  tp_template_blocks = [
+    for t in concat(
+      [for t in try(local.catalyst_center.template_provisioning.dayn_templates, []) : merge(t, { _composite = false })],
+      [for t in try(local.catalyst_center.template_provisioning.onboarding_templates, []) : merge(t, { _composite = false })],
+      [for t in try(local.catalyst_center.template_provisioning.composite_templates, []) : merge(t, { _composite = true })],
+      ) : merge(t, {
+        _key = try(t.unmanaged, false) ? "${t.project_name}#${t.template_name}" : lookup(local.tp_managed_template_keys, "${t.project_name}#${t.template_name}", "${t.project_name}#${t.template_name}")
+    })
+  ]
 
   # Per-(block, device) resolution of a DEVICE-level `variables_file:` into the
   # variable list, using the WIDE or TALL parser per block kind. Empty list when
@@ -178,5 +185,25 @@ locals {
       if anytrue([for d in try(block.devices, []) : d.name == device_name])
     }
     if contains(keys(local.tp_inventory_by_name), device_name)
+  }
+
+  # PnP claims consume one onboarding template per device. Reuse the same
+  # project-qualified resolution and inline/CSV precedence as Day-N templates.
+  # Duplicate device keys deliberately fail rather than silently choosing a
+  # different Day-Zero configuration according to association order.
+  provisioning_onboarding_templates_by_device = {
+    for entry in flatten([
+      for block in try(local.catalyst_center.template_provisioning.onboarding_templates, []) : [
+        for device in try(block.devices, []) : {
+          device_name = device.name
+          template_key = try(block.unmanaged, false) ? "${block.project_name}#${block.template_name}" : lookup(
+            local.tp_managed_template_keys, "${block.project_name}#${block.template_name}", "${block.project_name}#${block.template_name}"
+          )
+        } if contains(keys(local.tp_inventory_by_name), device.name)
+      ]
+      ]) : entry.device_name => {
+      template_key = entry.template_key
+      variables    = local.provisioning_dayn_templates_map_by_device[entry.device_name][entry.template_key].variables
+    }
   }
 }

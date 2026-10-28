@@ -9,7 +9,7 @@ locals {
   }
 
   # Access points get their hostname from Catalyst Center at claim time and use
-  # an ephemeral management IP Ă˘â‚¬â€ť which is why AP platforms are excluded from
+  # an ephemeral management IP — which is why AP platforms are excluded from
   # device_ip_to_id above. Serial number is their only stable, pre-known identifier.
   device_serial_to_id = {
     for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
@@ -194,7 +194,7 @@ locals {
     if(d.has_embedded || d.has_wlc || d.has_type_wc) && !d.has_ap_locs && !d.has_anchor_locs
   ]
 
-  wireless_controller_missing_ap_locations_error = length(local.wireless_controller_missing_ap_locations) > 0 ? "Ă˘ĹĄĹš The following devices are wireless controllers but have no managed AP locations:\n\n${join("\n", [for d in local.wireless_controller_missing_ap_locations : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA wireless controller Ă˘â‚¬â€ť a device with EMBEDDED_WIRELESS_CONTROLLER_NODE, WIRELESS_CONTROLLER_NODE, or type: WirelessController Ă˘â‚¬â€ť MUST define at least one managed AP location. Use primary_managed_ap_locations and/or secondary_managed_ap_locations for standalone / fabric / embedded controllers, or anchor_managed_ap_locations for a non-fabric Guest Anchor WLC.\n\nAction required: Add the appropriate managed AP locations, or remove the wireless-controller role / type if the device is not a controller." : ""
+  wireless_controller_missing_ap_locations_error = length(local.wireless_controller_missing_ap_locations) > 0 ? "❌ The following devices are wireless controllers but have no managed AP locations:\n\n${join("\n", [for d in local.wireless_controller_missing_ap_locations : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA wireless controller — a device with EMBEDDED_WIRELESS_CONTROLLER_NODE, WIRELESS_CONTROLLER_NODE, or type: WirelessController — MUST define at least one managed AP location. Use primary_managed_ap_locations and/or secondary_managed_ap_locations for standalone / fabric / embedded controllers, or anchor_managed_ap_locations for a non-fabric Guest Anchor WLC.\n\nAction required: Add the appropriate managed AP locations, or remove the wireless-controller role / type if the device is not a controller." : ""
 
   # Rule: anchor managed AP locations describe a NON-FABRIC Guest Anchor WLC.
   # The anchor WLC terminates tunneled guest traffic in a DMZ segment; it is not
@@ -208,7 +208,7 @@ locals {
     if d.has_anchor_locs && d.is_fabric
   ]
 
-  fabric_anchor_ap_locations_error = length(local.fabric_devices_with_anchor_ap_locations) > 0 ? "Ă˘ĹĄĹš The following devices define anchor managed AP locations but carry fabric roles:\n\n${join("\n", [for d in local.fabric_devices_with_anchor_ap_locations : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nanchor_managed_ap_locations applies only to non-fabric Guest Anchor Wireless Controllers. Such a device must not be assigned to a fabric_site and must carry no fabric_roles.\n\nAction required: Remove the fabric_roles (and fabric_site) from the anchor WLC, or use primary_managed_ap_locations / secondary_managed_ap_locations if the device is a fabric wireless controller." : ""
+  fabric_anchor_ap_locations_error = length(local.fabric_devices_with_anchor_ap_locations) > 0 ? "❌ The following devices define anchor managed AP locations but carry fabric roles:\n\n${join("\n", [for d in local.fabric_devices_with_anchor_ap_locations : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nanchor_managed_ap_locations applies only to non-fabric Guest Anchor Wireless Controllers. Such a device must not be assigned to a fabric_site and must carry no fabric_roles.\n\nAction required: Remove the fabric_roles (and fabric_site) from the anchor WLC, or use primary_managed_ap_locations / secondary_managed_ap_locations if the device is a fabric wireless controller." : ""
 
   # Rule: a device that IS a wireless controller declared via type must set it.
   # That covers a non-fabric device with managed AP locations (standalone / anchor
@@ -216,14 +216,14 @@ locals {
   # key that provisions them via catalystcenter_wireless_device_provision. Embedded
   # controllers are exempt (provisioned by catalystcenter_fabric_ewlc, keyed on the
   # EMBEDDED_WIRELESS_CONTROLLER_NODE role). A fabric device that has AP locations
-  # but no wireless-controller role is NOT flagged here Ă˘â‚¬â€ť that contradictory config
+  # but no wireless-controller role is NOT flagged here — that contradictory config
   # is reported by wireless_devices_with_invalid_controller_role instead.
   wireless_controller_missing_type = [
     for d in local.wireless_device_facts : d
     if((((d.has_ap_locs || d.has_anchor_locs) && !d.is_fabric) || d.has_wlc) && !d.has_embedded && !d.has_type_wc)
   ]
 
-  wireless_controller_missing_type_error = length(local.wireless_controller_missing_type) > 0 ? "Ă˘ĹĄĹš The following devices look like wireless controllers but are missing type: WirelessController:\n\n${join("\n", [for d in local.wireless_controller_missing_type : "  Ă˘â‚¬Ë ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA non-fabric or fabric wireless controller that defines *managed_ap_locations in its device data model, MUST also have type: WirelessController (exact spelling) specified in its device data model. Embedded Wireless Controllers do not require the type attribute.\n\nAction required: Add type: WirelessController to each device above, or remove its managed AP locations / wireless-controller fabric role if it is not a wireless controller." : ""
+  wireless_controller_missing_type_error = length(local.wireless_controller_missing_type) > 0 ? "❌ The following devices look like wireless controllers but are missing type: WirelessController:\n\n${join("\n", [for d in local.wireless_controller_missing_type : "  • ${d.name} (roles: ${join(", ", d.roles)})"])}\n\nA non-fabric or fabric wireless controller that defines *managed_ap_locations in its device data model, MUST also have type: WirelessController (exact spelling) specified in its device data model. Embedded Wireless Controllers do not require the type attribute.\n\nAction required: Add type: WirelessController to each device above, or remove its managed AP locations / wireless-controller fabric role if it is not a wireless controller." : ""
 }
 
 check "device_discovery_validation" {
@@ -436,4 +436,3 @@ resource "time_sleep" "provision_device_wait" {
 
   depends_on = [catalystcenter_provision_device.provision_device, catalystcenter_provision_devices.provision_devices, catalystcenter_wireless_device_provision.wireless_controller]
 }
-

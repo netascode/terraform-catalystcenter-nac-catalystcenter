@@ -38,14 +38,17 @@ resource "catalystcenter_lan_automation" "lanauto_edge" {
   primary_device_interface_names        = try(each.value.primary_device_interface_names, local.defaults.catalyst_center.lan_automation.devices.primary_device_interface_names, null)
   ip_pools = [for pool in try(each.value.ip_pools, []) : {
     "ip_pool_name" : try(pool.ip_pool_name, pool.name, null)
-    # Ported DM supplies provider enums directly (MAIN_POOL / PHYSICAL_LINK_POOL); legacy DM
-    # used PRINCIPAL_IP_ADDRESS_POOL / LINK_OVERLAPPING_IP_POOL which we translate as fallback.
-    "ip_pool_role" : try(pool.ip_pool_role, pool.role == "PRINCIPAL_IP_ADDRESS_POOL" ? "MAIN_POOL" : pool.role == "LINK_OVERLAPPING_IP_POOL" ? "PHYSICAL_LINK_POOL" : pool.role, null)
+    # Normalize schema aliases from either field while preserving provider enums.
+    "ip_pool_role" : try(lookup({
+      PRINCIPAL_IP_ADDRESS_POOL = "MAIN_POOL"
+      LINK_OVERLAPPING_IP_POOL  = "PHYSICAL_LINK_POOL"
+    }, try(pool.ip_pool_role, pool.role), try(pool.ip_pool_role, pool.role)), null)
   }]
   multicast_enabled               = try(each.value.multicast_enabled, local.defaults.catalyst_center.lan_automation.devices.multicast_enabled, null)
   redistribute_isis_to_bgp        = try(each.value.redistribute_isis_to_bgp, each.value.advertise_lan_automation_routes_into_bgp, local.defaults.catalyst_center.lan_automation.devices.redistribute_isis_to_bgp, null)
-  isis_domain_password_wo         = try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password, null)
-  isis_domain_password_wo_version = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, 1)
+  isis_domain_password            = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, null) == null ? sensitive(try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password, null)) : null
+  isis_domain_password_wo         = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, null) == null ? null : sensitive(try(each.value.isis_domain_password, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password, null))
+  isis_domain_password_wo_version = try(each.value.isis_domain_password_version, local.defaults.catalyst_center.lan_automation.devices.isis_domain_password_version, null)
   host_name_prefix                = try(each.value.host_name_prefix, local.defaults.catalyst_center.lan_automation.devices.host_name_prefix, null)
   discovery_level                 = try(each.value.discovery_level, local.defaults.catalyst_center.lan_automation.devices.discovery_level, null)
   discovery_devices               = try(each.value.discovery_devices, local.defaults.catalyst_center.lan_automation.devices.discovery_devices, null)

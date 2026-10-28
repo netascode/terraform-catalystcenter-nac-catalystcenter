@@ -1,3 +1,14 @@
+# Access points — inventory resolution, site assignment, provisioning and
+# configuration.
+#
+# Access points are separated from cc_device_provision.tf because they resolve
+# and provision differently from switches and routers: they are identified by
+# serial number rather than management IP, they carry an ethernet MAC that the
+# Configure Access Points API keys on, and they are provisioned per site rather
+# than per device. Wireless controller resources stay in cc_device_provision.tf
+# — `assign_managed_ap_locations` configures the controller, not the access
+# point.
+
 locals {
   # The Configure Access Points API selects APs by their ETHERNET MAC. This is
   # not `mac_address`, which on an AP is the base radio MAC and is rejected with
@@ -7,7 +18,7 @@ locals {
   # Both maps are grouped with `...` before being keyed. Catalyst Center does not
   # guarantee a unique hostname, and can briefly hold two entries for one serial
   # number, so a `for` expression keying either directly aborts the entire plan
-  # with "Duplicate object key" â€” for every user of the module, not only those
+  # with "Duplicate object key" — for every user of the module, not only those
   # configuring access points. An access point and its RMA replacement sit in
   # inventory under the same hostname until the old unit is removed.
   #
@@ -43,7 +54,7 @@ locals {
     serial => macs[0] if length(distinct(macs)) == 1
   }
 
-  # Applying a configuration does not require a serial number â€” the ethernet MAC
+  # Applying a configuration does not require a serial number — the ethernet MAC
   # resolves from the Catalyst Center hostname just as well, which keeps AP
   # configuration consistent with the serial / name / FQDN ladder already used
   # for site assignment and provisioning. Only `manage_hostname` genuinely needs
@@ -81,7 +92,7 @@ locals {
     && lookup(local.device_ip_to_id, try(device.device_ip, ""), null) == null
   ]
 
-  missing_access_points_error = length(local.missing_access_points) > 0 ? "âťŚ The following access points are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_access_points : "  â€˘ ${d.name} (Serial: ${try(d.serial_number, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAn access point is resolved by `serial_number` first, then `name` / `fqdn_name`. Resolution by `device_ip` does not apply to Catalyst 9100-series (C91xx) or Cisco Wireless (CW91xx) access points, whose management IPs are ephemeral and deliberately excluded from IP-based lookup. Because Catalyst Center also assigns AP hostnames at claim time, `serial_number` is the recommended identifier.\n\nAction required: Add `serial_number` to these access points in the data model, or ensure they are claimed and present in Catalyst Center inventory before running Terraform." : ""
+  missing_access_points_error = length(local.missing_access_points) > 0 ? "❌ The following access points are not found in Catalyst Center inventory:\n\n${join("\n", [for d in local.missing_access_points : "  • ${d.name} (Serial: ${try(d.serial_number, "N/A")}, FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nAn access point is resolved by `serial_number` first, then `name` / `fqdn_name`. Resolution by `device_ip` does not apply to Catalyst 9100-series (C91xx) or Cisco Wireless (CW91xx) access points, whose management IPs are ephemeral and deliberately excluded from IP-based lookup. Because Catalyst Center also assigns AP hostnames at claim time, `serial_number` is the recommended identifier.\n\nAction required: Add `serial_number` to these access points in the data model, or ensure they are claimed and present in Catalyst Center inventory before running Terraform." : ""
 }
 
 check "access_point_discovery_validation" {
@@ -164,7 +175,7 @@ resource "catalystcenter_provision_access_points" "access_points" {
 # `access_point` carries a reference and a rename flag, nothing else. Every
 # setting is declared once under `wireless.access_point_configurations`, because
 # in the Configure Access Points API only `mac_address`, `ap_name` and
-# `ap_name_new` are per-AP â€” every other setting, including the whole
+# `ap_name_new` are per-AP — every other setting, including the whole
 # `radio_configurations` list, is top-level and applies to every AP in `ap_list`.
 # A per-device override is therefore not per-device at all: it silently forks
 # that access point into an API call of its own, which is intent the data model
@@ -175,7 +186,7 @@ resource "catalystcenter_provision_access_points" "access_points" {
 # shared by every configuration can still be declared once. `radios` overrides at
 # list level rather than element level.
 #
-# GROUPING is therefore trivial â€” one resource instance per named configuration,
+# GROUPING is therefore trivial — one resource instance per named configuration,
 # plus one rename-only instance keyed `(hostname only)` for access points that
 # manage a hostname without referencing a configuration. Two access points on the
 # same configuration are identical by construction, so no payload hashing is
@@ -190,7 +201,7 @@ resource "catalystcenter_provision_access_points" "access_points" {
 # IDEMPOTENCY: `ap_list` must never be derived from a value this resource itself
 # mutates, or a successful apply changes its own arguments and costs a second
 # apply to settle. So `ap_name_new` is always the desired data-model name, never
-# the result of comparing against the live hostname, and `ap_name` stays null â€”
+# the result of comparing against the live hostname, and `ap_name` stays null —
 # the API keys on `mac_address`. Renaming an AP to the name it already holds is a
 # no-op, which is what makes sending it unconditionally safe.
 #
@@ -217,7 +228,7 @@ locals {
   # configuration. Parenthesised so it cannot collide with a configuration name.
   ap_hostname_only_key = "(hostname only)"
 
-  # Access points keyed by their data-model name â€” required by the schema and
+  # Access points keyed by their data-model name — required by the schema and
   # already treated as unique module-wide by `local.all_devices`. Unlike
   # `serial_number` it is always present, so it is the key the whole
   # configuration pipeline runs on.
@@ -265,7 +276,7 @@ locals {
     radios                       = []
   }
 
-  # Stage 1 â€” resolve each named configuration once. With N configurations and M
+  # Stage 1 — resolve each named configuration once. With N configurations and M
   # access points this runs N times, not M: a setting is a property of the
   # configuration, never of the device that references it.
   ap_config_resolved = merge(
@@ -290,7 +301,7 @@ locals {
     { (local.ap_hostname_only_key) = local.ap_config_none }
   )
 
-  # Stage 2 â€” API payload per configuration. The configure_* flags are derived
+  # Stage 2 — API payload per configuration. The configure_* flags are derived
   # from value presence, never taken from the data model: they are an API
   # transport artefact, not user intent.
   ap_config_settings = {
@@ -330,7 +341,7 @@ locals {
       radio_configurations = [
         for radio in r.radios : {
           # Catalyst Center rejects a radio band sent alongside an AUTO or
-          # MONITOR role (NCWL10967) â€” the band selects which band an XOR radio
+          # MONITOR role (NCWL10967) — the band selects which band an XOR radio
           # serves and is only meaningful for SERVING. radio_type still
           # identifies which radio is being configured.
           radio_band = contains(["AUTO", "MONITOR"], try(radio.role, "")) ? null : lookup(local.ap_radio_band_map, tostring(radio.band), null)
@@ -365,7 +376,7 @@ locals {
     }
   }
 
-  # Stage 3 â€” attach access points to configurations in a single pass, then keep
+  # Stage 3 — attach access points to configurations in a single pass, then keep
   # only the groups that actually have members.
   ap_config_members = merge(
     {
@@ -411,7 +422,7 @@ locals {
     if !strcontains(try(d.state, ""), "PROVISION")
   ]
 
-  ap_block_not_provisioned_error = length(local.ap_block_not_provisioned) > 0 ? "âš ď¸Ź The following access points declare an `access_point` block that is not applied yet:\n\n${join("\n", [for name in local.ap_block_not_provisioned : "  â€˘ ${name} (state: ${try(local.ap_declared[name].state, "N/A")})"])}\n\nAccess point configuration and hostname reconciliation run only once the access point reaches a `PROVISION` state, because both depend on it having been provisioned to its site.\n\nNo action is required if this is intentional â€” the block takes effect when the state changes. Otherwise set `state: PROVISION`." : ""
+  ap_block_not_provisioned_error = length(local.ap_block_not_provisioned) > 0 ? "⚠️ The following access points declare an `access_point` block that is not applied yet:\n\n${join("\n", [for name in local.ap_block_not_provisioned : "  • ${name} (state: ${try(local.ap_declared[name].state, "N/A")})"])}\n\nAccess point configuration and hostname reconciliation run only once the access point reaches a `PROVISION` state, because both depend on it having been provisioned to its site.\n\nNo action is required if this is intentional — the block takes effect when the state changes. Otherwise set `state: PROVISION`." : ""
 
   # An identifier resolving to more than one ethernet MAC is not resolved at all,
   # so these access points are skipped rather than configured by guess.
@@ -422,7 +433,7 @@ locals {
     || length(distinct(lookup(local.device_hostname_ap_eth_macs, try(d.fqdn_name, ""), []))) > 1
   ]
 
-  ap_ambiguous_identifier_error = length(local.ap_ambiguous_identifier) > 0 ? "âš ď¸Ź The following access points cannot be configured because their identifier matches more than one ethernet MAC address in Catalyst Center inventory:\n\n${join("\n", [for name in local.ap_ambiguous_identifier : "  â€˘ ${name}"])}\n\nCatalyst Center does not guarantee a unique hostname, and can briefly hold two entries for one serial number â€” an access point and its RMA replacement both appear until the old unit is removed. The module does not guess which one to configure, because pushing a configuration to the wrong physical access point is worse than skipping it.\n\nAction required: Remove the stale inventory entry, or give the access point a `serial_number` that resolves to exactly one device." : ""
+  ap_ambiguous_identifier_error = length(local.ap_ambiguous_identifier) > 0 ? "⚠️ The following access points cannot be configured because their identifier matches more than one ethernet MAC address in Catalyst Center inventory:\n\n${join("\n", [for name in local.ap_ambiguous_identifier : "  • ${name}"])}\n\nCatalyst Center does not guarantee a unique hostname, and can briefly hold two entries for one serial number — an access point and its RMA replacement both appear until the old unit is removed. The module does not guess which one to configure, because pushing a configuration to the wrong physical access point is worse than skipping it.\n\nAction required: Remove the stale inventory entry, or give the access point a `serial_number` that resolves to exactly one device." : ""
 
   ap_unknown_config_refs = [
     for name, d in local.ap_declared : d
@@ -430,12 +441,12 @@ locals {
     && lookup(local.ap_named_configs, try(d.access_point.configuration, ""), null) == null
   ]
 
-  ap_unknown_config_refs_error = length(local.ap_unknown_config_refs) > 0 ? "âťŚ The following access points reference an `access_point.configuration` that is not defined:\n\n${join("\n", [for d in local.ap_unknown_config_refs : "  â€˘ ${d.name} -> `${d.access_point.configuration}`"])}\n\nNamed configurations are declared under `catalyst_center.wireless.access_point_configurations`.\n\nAction required: Define the missing configuration, or correct the reference on the device." : ""
+  ap_unknown_config_refs_error = length(local.ap_unknown_config_refs) > 0 ? "❌ The following access points reference an `access_point.configuration` that is not defined:\n\n${join("\n", [for d in local.ap_unknown_config_refs : "  • ${d.name} -> `${d.access_point.configuration}`"])}\n\nNamed configurations are declared under `catalyst_center.wireless.access_point_configurations`.\n\nAction required: Define the missing configuration, or correct the reference on the device." : ""
 
   # `manage_hostname` is the one part of the access point block that genuinely
   # needs a serial number. The access point is found by its old hostname before
   # the rename and by its new hostname afterwards, so a name-based lookup stops
-  # resolving the moment it succeeds â€” which would silently strand the device on
+  # resolving the moment it succeeds — which would silently strand the device on
   # the next apply. Applying settings has no such problem, because nothing the
   # module sends changes the identifier it looked the access point up by.
   ap_hostname_without_serial = [
@@ -444,7 +455,7 @@ locals {
     && try(d.serial_number, null) == null
   ]
 
-  ap_hostname_without_serial_error = length(local.ap_hostname_without_serial) > 0 ? "âťŚ The following access points set `access_point.manage_hostname: true` but have no `serial_number`:\n\n${join("\n", [for d in local.ap_hostname_without_serial : "  â€˘ ${d.name} (FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nRenaming an access point changes the hostname it would be found by, so a rename can only be driven from an identifier the rename does not alter. `serial_number` is that identifier; `name` and `fqdn_name` are not.\n\nApplying `access_point.configuration` does not have this restriction and works with `name` / `fqdn_name` alone.\n\nAction required: Add `serial_number` to these access points, or set `access_point.manage_hostname: false`." : ""
+  ap_hostname_without_serial_error = length(local.ap_hostname_without_serial) > 0 ? "❌ The following access points set `access_point.manage_hostname: true` but have no `serial_number`:\n\n${join("\n", [for d in local.ap_hostname_without_serial : "  • ${d.name} (FQDN: ${try(d.fqdn_name, "N/A")}, Site: ${d.site})"])}\n\nRenaming an access point changes the hostname it would be found by, so a rename can only be driven from an identifier the rename does not alter. `serial_number` is that identifier; `name` and `fqdn_name` are not.\n\nApplying `access_point.configuration` does not have this restriction and works with `name` / `fqdn_name` alone.\n\nAction required: Add `serial_number` to these access points, or set `access_point.manage_hostname: false`." : ""
 
   # Configuration-scoped validation. These iterate the configurations rather than
   # the access points, so an error names the configuration once instead of
@@ -454,7 +465,7 @@ locals {
     if r.location != null && r.is_assigned_site_as_location == true
   ]
 
-  ap_config_location_conflict_error = length(local.ap_config_location_conflict) > 0 ? "âťŚ The following access point configurations set both `location` and `is_assigned_site_as_location: true`:\n\n${join("\n", [for name in local.ap_config_location_conflict : "  â€˘ ${name} (location: \"${local.ap_config_resolved[name].location}\")"])}\n\nThese are two mutually exclusive sources for the same access point location attribute, and the Configure Access Points API does not define which one wins.\n\nNote that the access point location is a free-text label written onto the device; it is not the Catalyst Center site assignment, which is managed separately from `site`.\n\nAction required: Keep `is_assigned_site_as_location: true` to derive the label from the assigned site (recommended, since the site is already the source of truth), or remove it and set `location` explicitly." : ""
+  ap_config_location_conflict_error = length(local.ap_config_location_conflict) > 0 ? "❌ The following access point configurations set both `location` and `is_assigned_site_as_location: true`:\n\n${join("\n", [for name in local.ap_config_location_conflict : "  • ${name} (location: \"${local.ap_config_resolved[name].location}\")"])}\n\nThese are two mutually exclusive sources for the same access point location attribute, and the Configure Access Points API does not define which one wins.\n\nNote that the access point location is a free-text label written onto the device; it is not the Catalyst Center site assignment, which is managed separately from `site`.\n\nAction required: Keep `is_assigned_site_as_location: true` to derive the label from the assigned site (recommended, since the site is already the source of truth), or remove it and set `location` explicitly." : ""
 
   ap_config_role_rf_conflict = [
     for name, r in local.ap_config_resolved : name
@@ -471,7 +482,7 @@ locals {
     ])
   ]
 
-  ap_config_role_rf_conflict_error = length(local.ap_config_role_rf_conflict) > 0 ? "âťŚ The following access point configurations set channel or power parameters on a radio whose `role` is not `SERVING`:\n\n${join("\n", [for name in local.ap_config_role_rf_conflict : "  â€˘ ${name}"])}\n\nCatalyst Center rejects this with `NCWL10977: Radio Role Assignment ... is not compatible with Channel Width / Power Assignment configuration. This configuration is only supported with Serving Radio Role Assignment.`\n\nOmitting `role` does not mean \"no role\" â€” it leaves the radio on its current role, which is typically `AUTO` and therefore still rejected. Any radio carrying `channel_number`, `channel_assignment_mode`, `channel_width`, `power_level` or `power_assignment_mode` must set `role: SERVING` explicitly in the same request.\n\nAction required: Add `role: SERVING` to those radios, or remove the channel and power parameters and let RRM manage them." : ""
+  ap_config_role_rf_conflict_error = length(local.ap_config_role_rf_conflict) > 0 ? "❌ The following access point configurations set channel or power parameters on a radio whose `role` is not `SERVING`:\n\n${join("\n", [for name in local.ap_config_role_rf_conflict : "  • ${name}"])}\n\nCatalyst Center rejects this with `NCWL10977: Radio Role Assignment ... is not compatible with Channel Width / Power Assignment configuration. This configuration is only supported with Serving Radio Role Assignment.`\n\nOmitting `role` does not mean \"no role\" — it leaves the radio on its current role, which is typically `AUTO` and therefore still rejected. Any radio carrying `channel_number`, `channel_assignment_mode`, `channel_width`, `power_level` or `power_assignment_mode` must set `role: SERVING` explicitly in the same request.\n\nAction required: Add `role: SERVING` to those radios, or remove the channel and power parameters and let RRM manage them." : ""
 
   ap_config_rf_mode_conflict = [
     for name, r in local.ap_config_resolved : name
@@ -488,7 +499,7 @@ locals {
     ])
   ]
 
-  ap_config_rf_mode_conflict_error = length(local.ap_config_rf_mode_conflict) > 0 ? "âťŚ The following access point configurations set an explicit channel, channel width or power level without the matching assignment mode set to `CUSTOM`:\n\n${join("\n", [for name in local.ap_config_rf_mode_conflict : "  â€˘ ${name}"])}\n\nCatalyst Center rejects this with `NCWL10959: Channel Width can be configured only when Channel Assignment is in Custom mode.` Under `GLOBAL` â€” which is also the behaviour when the mode is omitted â€” the controller's RRM algorithm owns the value, so an explicit one cannot be applied.\n\nAction required: Add `channel_assignment_mode: CUSTOM` alongside `channel_number` / `channel_width`, and `power_assignment_mode: CUSTOM` alongside `power_level`. Otherwise remove the explicit values and let RRM manage the radio." : ""
+  ap_config_rf_mode_conflict_error = length(local.ap_config_rf_mode_conflict) > 0 ? "❌ The following access point configurations set an explicit channel, channel width or power level without the matching assignment mode set to `CUSTOM`:\n\n${join("\n", [for name in local.ap_config_rf_mode_conflict : "  • ${name}"])}\n\nCatalyst Center rejects this with `NCWL10959: Channel Width can be configured only when Channel Assignment is in Custom mode.` Under `GLOBAL` — which is also the behaviour when the mode is omitted — the controller's RRM algorithm owns the value, so an explicit one cannot be applied.\n\nAction required: Add `channel_assignment_mode: CUSTOM` alongside `channel_number` / `channel_width`, and `power_assignment_mode: CUSTOM` alongside `power_level`. Otherwise remove the explicit values and let RRM manage the radio." : ""
 
   ap_config_width_on_24ghz = [
     for name, r in local.ap_config_resolved : name
@@ -498,7 +509,7 @@ locals {
     ])
   ]
 
-  ap_config_width_on_24ghz_error = length(local.ap_config_width_on_24ghz) > 0 ? "âťŚ The following access point configurations set `channel_width` on a 2.4 GHz radio:\n\n${join("\n", [for name in local.ap_config_width_on_24ghz : "  â€˘ ${name}"])}\n\nCatalyst Center rejects this with `NCWL10970: Channel Bandwidth is supported for A (5 GHz), 6GHz and XOR (Dual-Band) radios only.` The 2.4 GHz band operates at 20 MHz only; channel bonding is not supported there.\n\nAction required: Remove `channel_width` from the 2.4 GHz radio. `channel_number`, `power_level` and their `CUSTOM` assignment modes remain valid on that band." : ""
+  ap_config_width_on_24ghz_error = length(local.ap_config_width_on_24ghz) > 0 ? "❌ The following access point configurations set `channel_width` on a 2.4 GHz radio:\n\n${join("\n", [for name in local.ap_config_width_on_24ghz : "  • ${name}"])}\n\nCatalyst Center rejects this with `NCWL10970: Channel Bandwidth is supported for A (5 GHz), 6GHz and XOR (Dual-Band) radios only.` The 2.4 GHz band operates at 20 MHz only; channel bonding is not supported there.\n\nAction required: Remove `channel_width` from the 2.4 GHz radio. `channel_number`, `power_level` and their `CUSTOM` assignment modes remain valid on that band." : ""
 
   # Warning-only below this line ---------------------------------------------
 
@@ -512,7 +523,7 @@ locals {
     ])
   ]
 
-  ap_config_invalid_antenna_gain_error = length(local.ap_config_invalid_antenna_gain) > 0 ? "âťŚ The following access point configurations set `antenna_gain` without `antenna_pattern_name: other`:\n\n${join("\n", [for name in local.ap_config_invalid_antenna_gain : "  â€˘ ${name}"])}\n\nCatalyst Center only applies `antenna_gain` when `antenna_pattern_name` is set to `other`; otherwise the gain is derived from the named antenna pattern and the supplied value is silently ignored.\n\nAction required: Set `antenna_pattern_name: other` on those radios, or remove `antenna_gain`." : ""
+  ap_config_invalid_antenna_gain_error = length(local.ap_config_invalid_antenna_gain) > 0 ? "❌ The following access point configurations set `antenna_gain` without `antenna_pattern_name: other`:\n\n${join("\n", [for name in local.ap_config_invalid_antenna_gain : "  • ${name}"])}\n\nCatalyst Center only applies `antenna_gain` when `antenna_pattern_name` is set to `other`; otherwise the gain is derived from the named antenna pattern and the supplied value is silently ignored.\n\nAction required: Set `antenna_pattern_name: other` on those radios, or remove `antenna_gain`." : ""
 
   ap_config_invalid_cable_loss = [
     for name, r in local.ap_config_resolved : name
@@ -522,12 +533,12 @@ locals {
     ])
   ]
 
-  ap_config_invalid_cable_loss_error = length(local.ap_config_invalid_cable_loss) > 0 ? "âťŚ The following access point configurations set `cable_loss` without `antenna_cable_name: other`:\n\n${join("\n", [for name in local.ap_config_invalid_cable_loss : "  â€˘ ${name}"])}\n\nCatalyst Center only applies `cable_loss` when `antenna_cable_name` is set to `other`.\n\nAction required: Set `antenna_cable_name: other` on those radios, or remove `cable_loss`." : ""
+  ap_config_invalid_cable_loss_error = length(local.ap_config_invalid_cable_loss) > 0 ? "❌ The following access point configurations set `cable_loss` without `antenna_cable_name: other`:\n\n${join("\n", [for name in local.ap_config_invalid_cable_loss : "  • ${name}"])}\n\nCatalyst Center only applies `cable_loss` when `antenna_cable_name` is set to `other`.\n\nAction required: Set `antenna_cable_name: other` on those radios, or remove `cable_loss`." : ""
 
   # An access point with no ethernet MAC is skipped rather than blocking the
   # apply. Serial-number resolution exists so an AP rollout can be described from
   # the bill of materials before the access points are claimed, and an ethernet
-  # MAC only appears once an access point is in inventory â€” hard-failing here
+  # MAC only appears once an access point is in inventory — hard-failing here
   # would reject exactly the partially-claimed rollout that workflow enables. The
   # `for_each` and `ap_list` filters below drop these access points, so the rest
   # of the group is configured normally.
@@ -537,7 +548,7 @@ locals {
     ]
   ]))
 
-  ap_config_missing_mac_error = length(local.ap_config_missing_mac) > 0 ? "âš ď¸Ź The following access points are skipped because Catalyst Center returned no ethernet MAC address for them:\n\n${join("\n", [for name in local.ap_config_missing_mac : "  â€˘ ${name} (Serial: ${try(local.ap_devices[name].serial_number, "N/A")})"])}\n\nThe Configure Access Points intent API selects access points by their ethernet MAC address (`apEthernetMacAddress` in inventory) and accepts no other identifier. Note this is not the device `macAddress`, which on an access point is the base radio MAC. An ethernet MAC is only present once the access point has been claimed and is in inventory.\n\nEvery other access point in the same configuration is applied normally. Re-run once these access points are claimed to configure them too." : ""
+  ap_config_missing_mac_error = length(local.ap_config_missing_mac) > 0 ? "⚠️ The following access points are skipped because Catalyst Center returned no ethernet MAC address for them:\n\n${join("\n", [for name in local.ap_config_missing_mac : "  • ${name} (Serial: ${try(local.ap_devices[name].serial_number, "N/A")})"])}\n\nThe Configure Access Points intent API selects access points by their ethernet MAC address (`apEthernetMacAddress` in inventory) and accepts no other identifier. Note this is not the device `macAddress`, which on an access point is the base radio MAC. An ethernet MAC is only present once the access point has been claimed and is in inventory.\n\nEvery other access point in the same configuration is applied normally. Re-run once these access points are claimed to configure them too." : ""
 }
 
 resource "terraform_data" "ap_configuration_validation" {
@@ -651,6 +662,3 @@ resource "catalystcenter_access_point_configuration" "ap_config" {
 
   depends_on = [catalystcenter_provision_access_points.access_points]
 }
-
-
-

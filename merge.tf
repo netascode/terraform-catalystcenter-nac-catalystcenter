@@ -18,8 +18,19 @@ locals {
 resource "terraform_data" "validation" {
   lifecycle {
     precondition {
+      condition     = length(local.ambiguous_template_secret_versions) == 0
+      error_message = "A secret Day-N parameter cannot also be another parameter's version marker. Rename the conflicting parameter or remove the extra version companion."
+    }
+    precondition {
       condition     = length(var.yaml_directories) != 0 || length(var.yaml_files) != 0 || length(keys(var.model)) != 0
       error_message = "Either `yaml_directories`,`yaml_files` or a non-empty `model` value must be provided."
+    }
+    precondition {
+      condition = alltrue([
+        for template in local.tp_template_blocks : !try(template.unmanaged, false) ||
+        !contains(keys(local.tp_managed_template_keys), "${template.project_name}#${template.template_name}")
+      ])
+      error_message = "A template association with unmanaged: true must not also have a definition under cli_templates.projects. Remove its definition to use the existing controller template, or omit unmanaged to manage it."
     }
   }
 }

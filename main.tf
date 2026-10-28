@@ -53,16 +53,33 @@ locals {
       for association in try(local.raw_catalyst_center.template_device_association.templates, []) : {
         template_name     = association.name
         project_name      = association.project_name
+        unmanaged         = try(association.unmanaged, false)
         deploy_order      = try(association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
         redeploy_template = try(association.state, "ON_CHANGE")
         variables_file    = try(association.variables.type, "") == "csv" ? association.variables.name : null
         devices = [
           for device in try(association.devices, []) : {
-            name              = device.name
-            redeploy_template = try(device.state, association.state, "ON_CHANGE")
-            deploy_order      = try(device.deploy_order, association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
-            variables_file    = try(device.variables.type, "") == "csv" ? device.variables.name : null
-            variables         = try(device.variables.type, "") == "local" ? try(device.variables.values, []) : (try(device.variables.type, "") == "" && try(association.variables.type, "") == "local" ? try(association.variables.values, []) : [])
+            name                = device.name
+            redeploy_template   = try(device.state, association.state, "ON_CHANGE")
+            deploy_order        = try(device.deploy_order, association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
+            copying_config      = try(device.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+            force_push_template = try(device.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+            variables_file      = try(device.variables.type, "") == "csv" ? device.variables.name : null
+            # Normalize before selecting a source: scalar/list values otherwise
+            # make Terraform unable to unify the conditional's tuple types.
+            variables = try(device.variables.type, "") == "local" ? [
+              for variable in try(device.variables.values, []) : {
+                name          = variable.name
+                value         = try(tolist(variable.value), [variable.value])
+                template_name = try(variable.template_name, "")
+              }
+              ] : (try(device.variables.type, "") == "" && try(association.variables.type, "") == "local" ? [
+                for variable in try(association.variables.values, []) : {
+                  name          = variable.name
+                  value         = try(tolist(variable.value), [variable.value])
+                  template_name = try(variable.template_name, "")
+                }
+            ] : [])
           }
         ]
       } if try(association.type, "DAYN") == association_type
