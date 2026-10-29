@@ -30,12 +30,13 @@ locals {
   # endpoint knows are passed through, anything else falls back to the default.
   pnp_claim_types = ["Default", "StackSwitch", "AccessPoint", "Sensor", "MobilityExpress"]
 
-  # An SVL device carries its serials under svl.members[] and has no top-level
-  # serial_number, so the StackSwitch check must tolerate its absence.
+  # SVL devices are excluded: they carry their serials under svl.members[] and
+  # have no top-level serial_number, and they are claimed with a fixed device
+  # type by catalystcenter_pnp_network_device_claim rather than from this map.
   pnp_device_types = {
-    for name, device in local.pnp_devices : name => (
+    for name, device in local.pnp_standard_devices : name => (
       contains(keys(local.pnp_wireless_controllers), name) ? "CatalystWLC" : (
-        length(split(",", try(device.serial_number, ""))) > 1 ? "StackSwitch" : (
+        length(split(",", device.serial_number)) > 1 ? "StackSwitch" : (
           contains(local.pnp_claim_types, try(device.type, local.defaults.catalyst_center.pnp.devices.type, "")) ?
           try(device.type, local.defaults.catalyst_center.pnp.devices.type, null) :
           try(local.defaults.catalyst_center.pnp.devices.type, null)
@@ -87,8 +88,56 @@ locals {
     }
   ]...)
 
+  pnp_svl_member_serials = merge([
+    for name, device in local.pnp_svl_devices : {
+      for member in device.svl.members : "${name}::${member.serial_number}" => {
+        device_name   = name
+        serial_number = member.serial_number
+        role          = member.role
+      }
+    }
+  ]...)
+
+  # A serial absent from Plug and Play returns HTTP 200 with an empty array
+  # rather than 404, so the data source reads successfully and leaves every
+  # attribute null. A null id is therefore "not in the PnP database".
+  #
+  # Once the claim converges, Catalyst Center deletes the STANDBY member's Plug
+  # and Play record and folds both serials into a single inventory device whose
+  # serial_number is the comma-separated pair, so a member that has already been
+  # onboarded is no longer in Plug and Play and must be matched there instead.
+  # Without that second test this check fails every plan after a successful
+  # onboarding.
+  pnp_svl_onboarded_serials = toset(flatten([
+    for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
+    [for serial_number in split(",", coalesce(device.serial_number, "")) : trimspace(serial_number)]
+  ]))
+
+  pnp_svl_members_missing_from_pnp = [
+    for key, member in local.pnp_svl_member_serials : "${member.device_name} (${member.role}: ${member.serial_number})"
+    if data.catalystcenter_pnp_device.svl_member[key].id == null
+    && !contains(local.pnp_svl_onboarded_serials, member.serial_number)
+  ]
+
+  pnp_svl_members_missing_from_pnp_error = length(local.pnp_svl_members_missing_from_pnp) > 0 ? "❌ The following StackWise Virtual member switches are not present in the Catalyst Center Plug and Play database, and have not already been onboarded:\n\n${join("\n", [for member in local.pnp_svl_members_missing_from_pnp : "  • ${member}"])}\n\nAn SVL pair is claimed as a single logical device, so both member switches must already have contacted Catalyst Center and be listed under Plug and Play before the claim can succeed. Only the ACTIVE member is registered by this module; the STANDBY member is never registered and must appear on its own.\n\nAction required: Power on and cable each switch above so it registers with Plug and Play, and verify the serial number matches svl.members[].serial_number exactly (serials are case sensitive)." : ""
+
   pnp_svl_active_registration_key_by_name = {
     for name, device in local.pnp_svl_devices : name => "${name}::${[for m in device.svl.members : m.serial_number if m.role == "ACTIVE"][0]}"
+  }
+}
+
+data "catalystcenter_pnp_device" "svl_member" {
+  for_each = local.pnp_svl_member_serials
+
+  serial_number = each.value.serial_number
+}
+
+resource "terraform_data" "pnp_svl_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.pnp_svl_members_missing_from_pnp) == 0
+      error_message = local.pnp_svl_members_missing_from_pnp_error
+    }
   }
 }
 
@@ -166,10 +215,12 @@ resource "catalystcenter_pnp_device" "pnp_svl_member" {
 resource "catalystcenter_pnp_network_device_claim" "claim_svl" {
   for_each = local.pnp_svl_devices
 
-  device_id           = catalystcenter_pnp_device.pnp_svl_member[local.pnp_svl_active_registration_key_by_name[each.key]].id
-  device_type         = "SVL"
-  site_id             = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
-  hostname            = try(each.value.name, each.value.fqdn_name, local.defaults.catalyst_center.pnp.devices.hostname, null)
+  device_id   = catalystcenter_pnp_device.pnp_svl_member[local.pnp_svl_active_registration_key_by_name[each.key]].id
+  device_type = "SVL"
+  site_id     = var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.value.site], local.data_source_created_sites_list[each.value.site]) : local.site_id_list[each.value.site]
+  hostname    = try(each.value.name, each.value.fqdn_name, local.defaults.catalyst_center.pnp.devices.hostname, null)
+  # Unlike the standard claim, this resource has no image_skip attribute, so
+  # image_skip only selects whether image_id is sent at all.
   image_id            = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, true) ? null : try(each.value.image_id, local.image_name_to_id[each.value.image_name], local.defaults.catalyst_center.pnp.devices.image_id, null)
   template_id         = try(catalystcenter_template.regular_template[each.value.onboarding_template.name].id, catalystcenter_template.regular_template[local.template_name_to_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[each.value.onboarding_template.name].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[local.resource_key_to_template_key[local.template_name_to_key[each.value.onboarding_template.name]]].id, data.catalystcenter_template.unmanaged[each.value.onboarding_template.name].id, null)
   template_parameters = try(each.value.onboarding_template.variables, local.defaults.catalyst_center.onboarding_templates.variables, null)
