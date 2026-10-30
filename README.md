@@ -38,7 +38,7 @@ module "catalystcenter" {
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.15.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.6.5 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.6.6 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 2.0.0 |
@@ -166,7 +166,9 @@ module "catalystcenter" {
 | [catalystcenter_planned_access_point_position.planned_ap](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/planned_access_point_position) | resource |
 | [catalystcenter_pnp_config_preview.config_preview](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_config_preview) | resource |
 | [catalystcenter_pnp_device.pnp_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device) | resource |
+| [catalystcenter_pnp_device.pnp_svl_member](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device) | resource |
 | [catalystcenter_pnp_device_claim_site.claim_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_device_claim_site) | resource |
+| [catalystcenter_pnp_network_device_claim.claim_svl](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/pnp_network_device_claim) | resource |
 | [catalystcenter_power_profile.power_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/power_profile) | resource |
 | [catalystcenter_project.project](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/project) | resource |
 | [catalystcenter_provision_access_points.access_points](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/provision_access_points) | resource |
@@ -206,6 +208,7 @@ module "catalystcenter" {
 | [terraform_data.ap_configuration_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.bulk_site_provisioning_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.managed_sites_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.pnp_svl_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.pnp_wireless_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.wireless_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
@@ -236,6 +239,7 @@ module "catalystcenter" {
 | [catalystcenter_ip_pools.all_ip_pools](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/ip_pools) | data source |
 | [catalystcenter_network_devices.all_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_devices) | data source |
 | [catalystcenter_network_profile.switching_network_profile](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/network_profile) | data source |
+| [catalystcenter_pnp_device.svl_member](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/pnp_device) | data source |
 | [catalystcenter_project.onboarding](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_project.project](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |
 | [catalystcenter_project.unmanaged](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/data-sources/project) | data source |

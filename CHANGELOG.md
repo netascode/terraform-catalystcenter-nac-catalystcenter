@@ -1,5 +1,8 @@
 ## 0.5.2 (unreleased)
 
+**New Features:**
+- Add StackWise Virtual (SVL) day-0 onboarding via `inventory.devices[].svl` on `state: PNP` devices, including member, SVL link and optional DAD link configuration. Requires provider `~> 0.6.6` and Catalyst Center 3.2.3 or later
+
 **Bug Fixes:**
 - Fix a fabric device whose only role is `CONTROL_PLANE_NODE` being silently skipped when `use_bulk_api` is `false`; it is now added to its fabric site via the new `catalystcenter_fabric_device.control_plane_device` resource
 - Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping and device provisioning grouping
