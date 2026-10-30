@@ -108,9 +108,15 @@ locals {
   # onboarded is no longer in Plug and Play and must be matched there instead.
   # Without that second test this check fails every plan after a successful
   # onboarding.
+  # Inventory entries without a usable serial number are skipped rather than
+  # defaulted: coalesce() rejects an empty string as a fallback candidate, so
+  # coalesce(serial_number, "") fails the whole plan on the first such entry,
+  # anywhere in the inventory. Matches device_serial_to_id in
+  # cc_device_provision.tf.
   pnp_svl_onboarded_serials = toset(flatten([
     for device in coalesce(data.catalystcenter_network_devices.all_devices.devices, []) :
-    [for serial_number in split(",", coalesce(device.serial_number, "")) : trimspace(serial_number)]
+    [for serial_number in split(",", device.serial_number) : trimspace(serial_number)]
+    if try(device.serial_number, null) != null && try(device.serial_number, "") != ""
   ]))
 
   pnp_svl_members_missing_from_pnp = [
