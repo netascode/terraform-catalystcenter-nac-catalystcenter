@@ -393,7 +393,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "l3_vn" {
   # Destroy-order constraint: Catalyst Center rejects removing a fabric CP/External
   # Border device while a VN is still anchored at that site (NCSO20486). Depending on
   # the fabric_device resources forces the anchored VN to be destroyed before them.
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.control_plane_device, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone]
 }
 
 # Anchored global L3 VNs are created at the stage that OWNS the anchor site (multistate
@@ -419,7 +419,7 @@ resource "catalystcenter_fabric_l3_virtual_network" "anchored_site_l3_vn" {
     }
   }
 
-  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone, terraform_data.anchor_change_validation]
+  depends_on = [catalystcenter_ip_pool_reservation.pool_reservation, catalystcenter_fabric_site.fabric_site, catalystcenter_fabric_zone.fabric_zone, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.control_plane_device, catalystcenter_fabric_device.wireless_controller, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone, terraform_data.anchor_change_validation]
 }
 
 resource "catalystcenter_fabric_l2_virtual_network" "l2_vn" {
@@ -791,6 +791,22 @@ resource "catalystcenter_fabric_device" "border_device" {
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
 }
 
+resource "catalystcenter_fabric_device" "control_plane_device" {
+  for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && contains(try(device.fabric_roles, []), "CONTROL_PLANE_NODE") && !contains(try(device.fabric_roles, []), "BORDER_NODE") && !contains(try(device.fabric_roles, []), "EDGE_NODE") && !contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(device.fabric_site, "NONE")) && var.use_bulk_api == false }
+
+  network_device_id = coalesce(
+    try(lookup(local.device_name_to_id, each.value.name, null), null),
+    try(lookup(local.device_name_to_id, each.value.fqdn_name, null), null),
+    try(lookup(local.device_ip_to_id, each.value.device_ip, null), null)
+  )
+  fabric_id = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
+  device_roles = [
+    for fabric_role in each.value.fabric_roles : fabric_role if fabric_role != "EMBEDDED_WIRELESS_CONTROLLER_NODE"
+  ]
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device]
+}
+
 resource "catalystcenter_fabric_device" "wireless_controller" {
   for_each = { for device in try(local.catalyst_center.inventory.devices, []) : device.name => device if(strcontains(device.state, "PROVISION")) && contains(try(device.fabric_roles, []), "WIRELESS_CONTROLLER_NODE") && (contains(local.sites, try(device.fabric_site, "NONE")) || contains(local.sites, try(device.fabric_zone, "NONE"))) && var.use_bulk_api == false }
 
@@ -802,7 +818,7 @@ resource "catalystcenter_fabric_device" "wireless_controller" {
   fabric_id    = try(catalystcenter_fabric_site.fabric_site[each.value.fabric_site].id, null)
   device_roles = try(each.value.fabric_roles, local.defaults.catalyst_center.inventory.devices.fabric_roles, null)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_wireless_device_provision.wireless_controller, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.control_plane_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_fabric_devices.fabric_devices_zone]
 }
 
 resource "catalystcenter_fabric_device" "edge_device" {
@@ -823,7 +839,7 @@ resource "catalystcenter_fabric_device" "edge_device" {
     ignore_changes = [device_roles]
   }
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_devices.fabric_devices]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.control_plane_device, catalystcenter_fabric_devices.fabric_devices]
 }
 
 resource "catalystcenter_fabric_ewlc" "ewlc_device" {
@@ -839,7 +855,7 @@ resource "catalystcenter_fabric_ewlc" "ewlc_device" {
   enable_rolling_ap_upgrade = try(each.value.enable_rolling_ap_upgrade, local.defaults.catalyst_center.inventory.devices.enable_rolling_ap_upgrade, false)
   ap_reboot_percentage      = try(each.value.ap_reboot_percentage, local.defaults.catalyst_center.inventory.devices.ap_reboot_percentage, 25)
 
-  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_assign_managed_ap_locations.managed_ap_locations]
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, catalystcenter_fabric_device.border_device, catalystcenter_fabric_device.control_plane_device, catalystcenter_fabric_device.edge_device, catalystcenter_fabric_devices.fabric_devices, catalystcenter_assign_managed_ap_locations.managed_ap_locations]
 }
 
 resource "catalystcenter_fabric_vlan_to_ssid" "vlan_to_ssid" {
