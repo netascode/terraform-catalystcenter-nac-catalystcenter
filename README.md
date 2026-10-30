@@ -141,6 +141,7 @@ module "catalystcenter" {
 | [catalystcenter_external_authentication_aaa_attribute.external_authentication](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/external_authentication_aaa_attribute) | resource |
 | [catalystcenter_extranet_policy.extranet_policy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/extranet_policy) | resource |
 | [catalystcenter_fabric_device.border_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
+| [catalystcenter_fabric_device.control_plane_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.edge_device](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_device.wireless_controller](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_device) | resource |
 | [catalystcenter_fabric_devices.fabric_devices](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/fabric_devices) | resource |
