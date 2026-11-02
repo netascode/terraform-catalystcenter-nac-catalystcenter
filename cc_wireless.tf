@@ -498,13 +498,13 @@ resource "catalystcenter_wireless_profile" "wireless_profile" {
 }
 
 resource "catalystcenter_network_profile_for_sites_assignments" "site_to_wireless_network_profile" {
-  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.sites, site)]) }
+  for_each = { for np in try(local.catalyst_center.network_profiles.wireless, []) : np.name => np if length(try(np.sites, [])) > 0 && anytrue([for site in np.sites : contains(local.network_profile_assignment_sites, site)]) }
 
   network_profile_id = try(catalystcenter_wireless_profile.wireless_profile[each.key].id, data.catalystcenter_wireless_profile.wireless_profile[each.key].id)
   items = [
     for site in each.value.sites : {
-      id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null))
-    } if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
+      id = site == "Global" ? data.catalystcenter_site.global.id : (var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[site], null), local.data_source_created_sites_list[site]) : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null)))
+    } if contains(local.network_profile_assignment_sites, site) && (site == "Global" || (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null))
   ]
 }
 
