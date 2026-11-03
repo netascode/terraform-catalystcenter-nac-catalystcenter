@@ -3,6 +3,7 @@
 **Bug Fixes:**
 - Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
 - Fix a fabric device whose only role is `CONTROL_PLANE_NODE` being silently skipped when `use_bulk_api` is `false`; it is now added to its fabric site via the new `catalystcenter_fabric_device.control_plane_device` resource
+- Fix an `SDA_LISP_PUB_SUB_TRANSIT` never being created in multi-state deployments when its control plane devices are provisioned by a site state; the global state only sees its own inventory, so the transit is now created by the site state (`managed_sites`) that provisions all of its control plane devices, and looked up by name in every other state
 - Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping, device provisioning grouping and SSID enablement
 
 **Breaking Changes:**
