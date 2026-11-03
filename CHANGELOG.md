@@ -5,12 +5,15 @@
 
 **Bug Fixes:**
 - Fix a fabric device whose only role is `CONTROL_PLANE_NODE` being silently skipped when `use_bulk_api` is `false`; it is now added to its fabric site via the new `catalystcenter_fabric_device.control_plane_device` resource
+- Fix `Global` in `network_profiles.switching[].sites` and `network_profiles.wireless[].sites` being silently ignored, or failing the plan with `Invalid index` for switching profiles when an area has no `parent_name`; the profile is now assigned to the Global site by the state that manages global settings
+- Fix areas nested five or more levels below `Global` (`area_4`..`area_9`) missing from the non-bulk site ID lookup: a switching network profile assigned to such an area failed the plan with `Invalid index`, and site-level network settings on such an area (credentials, NTP, DHCP, DNS, timezone, banner, telemetry, AAA) failed the first plan with a missing `site_id`
 - Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping and device provisioning grouping
 - Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
 - Fix `Inconsistent conditional result types` plan error when two or more fabric sites with `wireless_ssids` are not defined with the same set of attributes; their VLAN-to-SSID mappings are now planned
 
 **Breaking Changes:**
 - `managed_sites` now matches on full path segments. A state whose `managed_sites` entry is a name prefix of a sibling site previously also managed that sibling; after upgrading, its plan destroys the sibling's sites, site settings and device provisioning. Check the plan for destroys before applying, and remove those resources from the old state with `terraform state rm` (then `terraform import` them into the correct state if no other state manages them)
+- A switching or wireless network profile with `Global` in `sites` was previously not assigned to the Global site. After upgrading, the plan of the state that manages global settings adds Global to the profile's `catalystcenter_network_profile_for_sites_assignments` (an in-place update, or a new resource in a multistate global state). Catalyst Center applies a profile assigned to Global to every site that has no profile of the same type of its own: a switching profile's templates are used when devices at those sites are provisioned, and a wireless profile's SSIDs are delivered there. Sites with their own profile keep it. Check the plan before applying, and remove `Global` from `sites` where the profile must not apply site-wide
 
 ## 0.5.1
 
