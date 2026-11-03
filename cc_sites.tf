@@ -238,6 +238,12 @@ locals {
     { for k, v in catalystcenter_area.area_1 : k => v.id },
     { for k, v in catalystcenter_area.area_2 : k => v.id },
     { for k, v in catalystcenter_area.area_3 : k => v.id },
+    { for k, v in catalystcenter_area.area_4 : k => v.id },
+    { for k, v in catalystcenter_area.area_5 : k => v.id },
+    { for k, v in catalystcenter_area.area_6 : k => v.id },
+    { for k, v in catalystcenter_area.area_7 : k => v.id },
+    { for k, v in catalystcenter_area.area_8 : k => v.id },
+    { for k, v in catalystcenter_area.area_9 : k => v.id },
     { for k, v in catalystcenter_building.building : k => v.id },
     { for k, v in catalystcenter_floor.floor : k => v.id }
   )
