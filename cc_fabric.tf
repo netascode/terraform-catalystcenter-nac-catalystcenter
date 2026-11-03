@@ -252,7 +252,7 @@ resource "catalystcenter_fabric_site" "fabric_site" {
   site_id                     = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.key], null), try(local.data_source_created_sites_list[each.key], null)) : coalesce(try(local.site_id_list[each.key], null), try(local.data_source_site_list[each.key], null), try(local.data_source_created_sites_list[each.key], null))
   pub_sub_enabled             = try(each.value.pub_sub_enabled, local.defaults.catalyst_center.fabric.fabric_sites.pub_sub_enabled, null)
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites, terraform_data.before_fabric_template_deployments]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_area.area_10, catalystcenter_telemetry_settings.telemetry_settings, catalystcenter_aaa_settings.aaa_servers, data.catalystcenter_sites.created_sites, terraform_data.before_fabric_template_deployments]
 }
 
 resource "catalystcenter_apply_pending_fabric_events" "fabric_pending_events" {
