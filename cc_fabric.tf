@@ -216,12 +216,23 @@ locals {
       if try(device.fqdn_name, null) != null && try(device.device_ip, null) != null
     }
   ), {})
+
+  # Site state that provisions every control-plane device of an SDA transit owns that transit: the global
+  # state only sees its own inventory, so in multi-state layouts it can never confirm a CP provisioned elsewhere.
+  site_owned_sda_transits = !var.manage_global_settings && length(var.managed_sites) != 0 ? [
+    for transit in try(local.catalyst_center.fabric.transits, []) : transit.name
+    if try(transit.type, local.defaults.catalyst_center.fabric.transits.type, "") == "SDA_LISP_PUB_SUB_TRANSIT" && length(try(transit.control_plane_devices, [])) > 0 && alltrue([
+      for device in try(transit.control_plane_devices, []) :
+      anytrue([for prov in local.all_provisioned_devices : prov.name == device && prov.state == "PROVISION" && contains(local.sites, try(prov.site, "NONE"))])
+    ])
+  ] : []
 }
 
 data "catalystcenter_transit_network" "transit" {
   # `create_per_site` is only honored for IP_BASED_TRANSIT (see resource below); only those
   # flagged transits are excluded from the lookup, everything else is still read by name.
-  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? toset([for transit in try(local.catalyst_center.fabric.transits, []) : transit.name if !(try(transit.create_per_site, false) && try(transit.type, local.defaults.catalyst_center.fabric.transits.type, "") == "IP_BASED_TRANSIT")]) : toset([])
+  # SDA transits owned by this site state (see local.site_owned_sda_transits) are created, not looked up.
+  for_each = var.manage_global_settings == false && length(var.managed_sites) != 0 ? toset([for transit in try(local.catalyst_center.fabric.transits, []) : transit.name if !(try(transit.create_per_site, false) && try(transit.type, local.defaults.catalyst_center.fabric.transits.type, "") == "IP_BASED_TRANSIT") && !contains(local.site_owned_sda_transits, transit.name)]) : toset([])
 
   name = each.key
 }
@@ -232,7 +243,8 @@ resource "catalystcenter_transit_network" "transit" {
       for device in try(transit.control_plane_devices, []) :
       contains(local.provisioned_sda_transit_cp_devices, device)
     ])) || (!var.manage_global_settings && length(var.managed_sites) == 0) ||
-    (!var.manage_global_settings && length(var.managed_sites) != 0 && try(transit.create_per_site, false) && try(transit.type, local.defaults.catalyst_center.fabric.transits.type, "") == "IP_BASED_TRANSIT")
+    (!var.manage_global_settings && length(var.managed_sites) != 0 && try(transit.create_per_site, false) && try(transit.type, local.defaults.catalyst_center.fabric.transits.type, "") == "IP_BASED_TRANSIT") ||
+    contains(local.site_owned_sda_transits, transit.name)
   }
 
   name                              = each.key
