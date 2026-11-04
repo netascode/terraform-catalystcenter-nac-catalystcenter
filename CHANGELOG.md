@@ -1,6 +1,10 @@
 ## (unreleased)
 
+**New Features:**
+- Add StackWise Virtual Plug and Play onboarding through `inventory.devices[].svl`, with member discovery, active-only registration, SVL and optional DAD links. Requires provider `~> 0.6.6` and Catalyst Center 3.2.3 or later.
+
 **Bug Fixes:**
+- Resolve normalized ONBOARDING template associations and parameters consistently for standard and SVL claims, wait for managed templates to be committed, and reject unresolved template references before claiming a device.
 - Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
 - Fix a fabric device whose only role is `CONTROL_PLANE_NODE` being silently skipped when `use_bulk_api` is `false`; it is now added to its fabric site via the new `catalystcenter_fabric_device.control_plane_device` resource
 - Fix an `SDA_LISP_PUB_SUB_TRANSIT` never being created in multi-state deployments when its control plane devices are provisioned by a site state; the global state only sees its own inventory, so the transit is now created by the site state (`managed_sites`) that provisions all of its control plane devices, and looked up by name in every other state
