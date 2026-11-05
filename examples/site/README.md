@@ -27,7 +27,9 @@ catalyst_center:
   sites:
     areas:
       - name: Site1
-        parent_name: Global
+        areas:
+          - name: Site1a
+          - name: Site1b
 ```
 
 #### `main.tf`
@@ -35,7 +37,7 @@ catalyst_center:
 ```hcl
 module "catalystcenter" {
   source  = "netascode/nac-catalystcenter/catalystcenter"
-  version = "0.5.1"
+  version = "0.6.0"
 
   yaml_files = ["area.yaml"]
 }

@@ -1,4 +1,10 @@
-## 0.5.2 (unreleased)
+## 0.6.0
+
+- Refactor the data model around a nested site hierarchy, with network settings and IP pool reservations defined under their owning sites
+- Group network profiles under `design.network_profiles` and CLI template definitions under `cli_templates`, with deployment associations in `template_device_association`
+- Define fabric devices within their owning fabric sites, separating fabric configuration from device inventory
+
+## 0.5.2
 
 **New Features:**
 - Add StackWise Virtual (SVL) day-0 onboarding via `inventory.devices[].svl` on `state: PNP` devices, including member, SVL link and optional DAD link configuration. Requires provider `~> 0.6.6` and Catalyst Center 3.2.3 or later

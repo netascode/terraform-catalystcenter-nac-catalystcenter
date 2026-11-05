@@ -24,7 +24,7 @@ locals {
             if contains([for variable in variables : variable.name], "${item.name}_version_secure")
           }
           params_wo_versions = {
-            for item in variables : trimsuffix(item.name, "_version_secure") => item.value
+            for item in variables : trimsuffix(item.name, "_version_secure") => tonumber(try(one(tolist(item.value)), item.value))
             if endswith(item.name, "_version_secure") && contains([for variable in variables : variable.name], trimsuffix(item.name, "_version_secure"))
           }
         }
@@ -59,22 +59,28 @@ locals {
   }
 
   # Omit empty secret inputs so existing deployment state stays unchanged on upgrade.
-  regular_template_secret_params = {
-    for template_key, devices in local.templates_by_device : template_key => [
-      for device in devices : {
-        target_id = coalesce(
-          try(lookup(local.device_name_to_id, device.device_name, null), null),
-          try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-          try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-        )
-        params_wo          = sensitive(local.template_parameters[device.name][device.template][""].params_wo)
-        params_wo_versions = local.template_parameters[device.name][device.template][""].params_wo_versions
-      } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE")) &&
-      length(try(local.template_parameters[device.name][device.template][""].params_wo_versions, {})) > 0
-    ]
-    if try(local.template_lookup_extended[template_key].composite, false) == false &&
-    try(local.template_lookup_extended[template_key].template_type, null) == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+  regular_template_secret_params_by_phase = {
+    for phase, templates in {
+      unordered     = local.templates_by_device_unordered
+      before_fabric = local.templates_by_device_before_fabric
+      after_fabric  = local.templates_by_device_after_fabric
+      } : phase => {
+      for template_key, devices in templates : template_key => [
+        for device in devices : {
+          target_id = coalesce(
+            try(lookup(local.device_name_to_id, device.device_name, null), null),
+            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+          )
+          params_wo          = sensitive(local.template_parameters[device.name][device.template][""].params_wo)
+          params_wo_versions = local.template_parameters[device.name][device.template][""].params_wo_versions
+        } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE")) &&
+        length(try(local.template_parameters[device.name][device.template][""].params_wo_versions, {})) > 0
+      ]
+      if try(local.template_lookup_extended[template_key].composite, false) == false &&
+      try(local.template_lookup_extended[template_key].template_type, null) == "dayn" &&
+      length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+    }
   }
 
   managed_composite_secret_params = {
@@ -118,32 +124,4 @@ locals {
     length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
-  # Keep the public model output useful without exporting write-only values.
-  exported_inventory_devices = [
-    for device in try(local.catalyst_center.inventory.devices, []) : merge(device,
-      try(device.dayn_templates, null) == null ? {} : {
-        dayn_templates = merge(device.dayn_templates, {
-          for kind, templates in device.dayn_templates : kind => [
-            for template in templates : merge(template,
-              try(template.variables, null) == null ? {} : {
-                variables = [
-                  for item in template.variables : merge(item,
-                    contains(keys(try(local.template_parameters[device.name][try("${template.project_name}#${template.name}", template.name)][kind == "composite" ? try(item.template_name, "") : ""].params_wo_versions, {})), item.name) ? { value = null } : {}
-                  )
-                ]
-              }
-            )
-          ] if contains(["regular", "composite"], kind)
-        })
-      }
-    )
-  ]
-
-  exported_model = merge(local.model,
-    try(local.catalyst_center.inventory.devices, null) == null ? {} : {
-      catalyst_center = merge(local.catalyst_center, {
-        inventory = merge(local.catalyst_center.inventory, { devices = local.exported_inventory_devices })
-      })
-    }
-  )
 }

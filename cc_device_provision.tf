@@ -41,7 +41,8 @@ locals {
               copying_config      = try(template.copying_config, null)
               force_push_template = try(template.force_push_template, null)
             }
-          }
+          },
+          try(local.provisioning_dayn_templates_map_by_device[device.name], {})
         )
       }
     )
@@ -104,7 +105,7 @@ locals {
     for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => {
       name      = d.name
-      fqdn_name = d.fqdn_name
+      fqdn_name = try(d.fqdn_name, d.name)
       device_ip = try(d.device_ip, null)
     }... if d.state == "ASSIGN" && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) != "AccessPoint"
     && (
@@ -118,7 +119,7 @@ locals {
     for d in try(local.catalyst_center.inventory.devices, []) :
     d.site => {
       name      = d.name
-      fqdn_name = d.fqdn_name
+      fqdn_name = try(d.fqdn_name, d.name)
       device_ip = try(d.device_ip, null)
     }... if(strcontains(d.state, "PROVISION")) && try(d.type, null) == "WirelessController" && !contains(try(d.fabric_roles, []), "EMBEDDED_WIRELESS_CONTROLLER_NODE") && contains(local.sites, try(d.site, "NONE"))
     && (
@@ -328,7 +329,7 @@ resource "catalystcenter_device_role" "role" {
   role        = try(each.value.device_role, local.defaults.catalyst_center.inventory.devices.device_role, null)
   role_source = try(each.value.role_source, local.defaults.catalyst_center.inventory.devices.role_source, null)
 
-  depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, data.catalystcenter_sites.created_sites]
+  depends_on = [data.catalystcenter_network_devices.all_devices, catalystcenter_floor.floor, catalystcenter_building.building, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_area.area_10, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_provision_device" "provision_device" {
@@ -392,7 +393,7 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   )
   reprovision = try(each.value.state, null) == "REPROVISION" ? true : false
 
-  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, time_sleep.wait_for_managed_ap_locations, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile, data.catalystcenter_sites.created_sites]
+  depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_area.area_10, time_sleep.wait_for_managed_ap_locations, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile, data.catalystcenter_sites.created_sites]
 }
 
 resource "catalystcenter_assign_managed_ap_locations" "managed_ap_locations" {

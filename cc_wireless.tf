@@ -9,26 +9,22 @@ locals {
     "5GHz and 6GHz"   = "5 and 6 GHz"
   }
 
-  cleanair_radio_band_mapping = {
-    "2.4GHz" = "2_4GHZ"
-    "5GHz"   = "5GHZ"
-    "6GHz"   = "6GHZ"
-  }
-
-  # Maps data-model radio band labels to provider API enum values.
-  rrm_fra_radio_band_mapping = {
-    "2.4GHz_5GHz" = "2_4GHZ_5GHZ"
-    "5GHz_6GHz"   = "5GHZ_6GHZ"
-  }
-
-  rrm_fra_sensitivity_mapping = {
-    LOW         = "Low"
-    MEDIUM      = "Medium"
-    HIGH        = "High"
-    HIGHER      = "Higher"
-    EVEN_HIGHER = "Even Higher"
-    SUPER_HIGH  = "Super High"
-  }
+  # Normalize rf_profile radio-band keys to the module's internal A/B/C names.
+  # The ported (flat) DM names bands by frequency (enable_radio_type_5ghz / _2_4ghz / _6ghz
+  # and radio_type_5ghz/2_4ghz/6ghz_properties); the resource block below and the provider
+  # consume A (5 GHz) / B (2.4 GHz) / C (6 GHz). Backfill each A/B/C key from its frequency
+  # equivalent, with the legacy A/B/C key taking precedence when both are present. This keeps
+  # the ~90-line resource body reading each.value.<A/B/C> untouched.
+  rf_profiles_normalized = [
+    for rf in try(local.catalyst_center.wireless.rf_profiles, []) : merge(rf, {
+      enable_radio_type_a     = try(rf.enable_radio_type_a, rf.enable_radio_type_5ghz, null)
+      enable_radio_type_b     = try(rf.enable_radio_type_b, rf.enable_radio_type_2_4ghz, null)
+      enable_radio_type_c     = try(rf.enable_radio_type_c, rf.enable_radio_type_6ghz, null)
+      radio_type_a_properties = try(rf.radio_type_a_properties, rf.radio_type_5ghz_properties, null)
+      radio_type_b_properties = try(rf.radio_type_b_properties, rf.radio_type_2_4ghz_properties, null)
+      radio_type_c_properties = try(rf.radio_type_c_properties, rf.radio_type_6ghz_properties, null)
+    })
+  ]
 
   # Dedicated fabric WLC or embedded WLC (eWLC / FIAB).
   wireless_controllers = length({
@@ -75,51 +71,6 @@ data "catalystcenter_dot11be_profile" "dot11be_profile" {
   for_each = toset(local.dot11be_profile_names_existing)
 
   profile_name = each.key
-}
-
-resource "catalystcenter_wireless_cleanair_configuration" "cleanair" {
-  for_each = { for template in try(local.catalyst_center.feature_templates.wireless.cleanair, []) : template.name => template if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
-
-  design_name                   = each.key
-  description                   = try(each.value.description, local.defaults.catalyst_center.feature_templates.wireless.cleanair.description, null)
-  radio_band                    = try(local.cleanair_radio_band_mapping[each.value.radio_band], each.value.radio_band, null)
-  clean_air                     = try(each.value.enable, local.defaults.catalyst_center.feature_templates.wireless.cleanair.enable, null)
-  clean_air_device_reporting    = try(each.value.device_reporting, local.defaults.catalyst_center.feature_templates.wireless.cleanair.device_reporting, null)
-  persistent_device_propagation = try(each.value.persistent_device_propagation, local.defaults.catalyst_center.feature_templates.wireless.cleanair.persistent_device_propagation, null)
-
-  ble_beacon                          = try(each.value.interferers.ble_beacon, null)
-  bluetooth_paging_inquiry            = try(each.value.interferers.bluetooth_paging_inquiry, null)
-  bluetooth_sco_acl                   = try(each.value.interferers.bluetooth_sco_acl, null)
-  continuous_transmitter              = try(each.value.interferers.continuous_transmitter, null)
-  generic_dect                        = try(each.value.interferers.generic_dect, null)
-  generic_tdd                         = try(each.value.interferers.generic_tdd, null)
-  jammer                              = try(each.value.interferers.jammer, null)
-  microwave_oven                      = try(each.value.interferers.microwave_oven, null)
-  motorola_canopy                     = try(each.value.interferers.motorola_canopy, null)
-  si_fhss                             = try(each.value.interferers.si_fhss, null)
-  spectrum_80211_fh                   = try(each.value.interferers.spectrum_80211_fh, null)
-  spectrum_80211_non_standard_channel = try(each.value.interferers.spectrum_80211_non_standard_channel, null)
-  spectrum_802154                     = try(each.value.interferers.spectrum_802154, null)
-  spectrum_inverted                   = try(each.value.interferers.spectrum_inverted, null)
-  super_ag                            = try(each.value.interferers.super_ag, null)
-  video_camera                        = try(each.value.interferers.video_camera, null)
-  wimax_fixed                         = try(each.value.interferers.wimax_fixed, null)
-  wimax_mobile                        = try(each.value.interferers.wimax_mobile, null)
-  xbox                                = try(each.value.interferers.xbox, null)
-}
-
-resource "catalystcenter_wireless_rrm_fra_configuration" "rrm_fra" {
-  for_each = { for template in try(local.catalyst_center.feature_templates.wireless.rrm_fra, []) : template.name => template if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
-
-  design_name  = each.key
-  radio_band   = try(local.rrm_fra_radio_band_mapping[each.value.radio_band], each.value.radio_band, null)
-  fra_freeze   = try(each.value.fra_freeze, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_freeze, null)
-  fra_status   = try(each.value.fra_status, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_status, null)
-  fra_interval = try(each.value.fra_interval, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_interval, null)
-  fra_sensitivity = try(each.value.radio_band, null) == "2.4GHz_5GHz" ? try(
-    local.rrm_fra_sensitivity_mapping[try(each.value.fra_sensitivity, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity, null)],
-    try(each.value.fra_sensitivity, local.defaults.catalyst_center.feature_templates.wireless.rrm_fra.fra_sensitivity, null)
-  ) : null
 }
 
 resource "catalystcenter_power_profile" "power_profile" {
@@ -261,7 +212,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   aaa_override                                = try(each.value.aaa_override, local.defaults.catalyst_center.wireless.ssids.aaa_override, null)
   acct_servers                                = try(each.value.acct_servers, local.defaults.catalyst_center.wireless.ssids.acct_servers, null)
   auth_servers                                = try(each.value.auth_servers, local.defaults.catalyst_center.wireless.ssids.auth_servers, null)
-  acl_name                                    = try(each.value.acl_name, local.defaults.catalyst_center.wireless.ssids.acl_name, null)
+  acl_name                                    = try(each.value.pre_auth_acl, each.value.acl_name, local.defaults.catalyst_center.wireless.ssids.pre_auth_acl, local.defaults.catalyst_center.wireless.ssids.acl_name, null)
   ap_beacon_protection                        = try(each.value.ap_beacon_protection, local.defaults.catalyst_center.wireless.ssids.ap_beacon_protection, null)
   auth_key8021x                               = try(each.value.auth_key8021x, local.defaults.catalyst_center.wireless.ssids.auth_key8021x, null)
   auth_key8021x_plus_ft                       = try(each.value.auth_key8021x_plus_ft, local.defaults.catalyst_center.wireless.ssids.auth_key8021x_plus_ft, null)
@@ -282,7 +233,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   basic_service_set_client_idle_timeout       = try(each.value.basic_service_set_client_idle_timeout, local.defaults.catalyst_center.wireless.ssids.basic_service_set_client_idle_timeout, null)
   broadcast_ssid                              = try(each.value.broadcast_ssid, local.defaults.catalyst_center.wireless.ssids.broadcast_ssid, null)
   cckm                                        = try(each.value.cckm, local.defaults.catalyst_center.wireless.ssids.cckm, null)
-  cckm_tsf_tolerance                          = try(each.value.cckm_tsf_tolerance, 0) == 0 ? null : try(each.value.cckm_tsf_tolerance, local.defaults.catalyst_center.wireless.ssids.cckm_tsf_tolerance, null)
+  cckm_tsf_tolerance                          = try(each.value.cckm, local.defaults.catalyst_center.wireless.ssids.cckm, false) == false || try(each.value.cckm_tsf_tolerance, 0) == 0 ? null : try(each.value.cckm_tsf_tolerance, local.defaults.catalyst_center.wireless.ssids.cckm_tsf_tolerance, null)
   client_exclusion                            = try(each.value.client_exclusion, local.defaults.catalyst_center.wireless.ssids.client_exclusion, null)
   client_exclusion_timeout                    = try(each.value.client_exclusion_timeout, local.defaults.catalyst_center.wireless.enterprise_ssids.client_exclusion_timeout, null)
   client_rate_limit                           = try(each.value.client_rate_limit, 0) == 0 ? null : try(each.value.client_rate_limit, local.defaults.catalyst_center.wireless.ssids.client_rate_limit, null)
@@ -301,36 +252,44 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   l3_auth_type                                = try(each.value.l3_auth_type, local.defaults.catalyst_center.wireless.ssids.l3_auth_type, null)
   mac_filtering                               = try(each.value.mac_filtering, local.defaults.catalyst_center.wireless.ssids.mac_filtering, null)
   mft_client_protection                       = try(each.value.mft_client_protection, local.defaults.catalyst_center.wireless.ssids.mft_client_protection, null)
-  multi_psk_settings                          = sensitive(try(each.value.multi_psk_settings, local.defaults.catalyst_center.wireless.ssids.multi_psk_settings, null))
-  nas_options                                 = try(each.value.nas_options, local.defaults.catalyst_center.wireless.ssids.nas_options, null)
-  neighbor_list                               = try(each.value.neighbor_list, local.defaults.catalyst_center.wireless.ssids.neighbor_list, null)
-  open_ssid                                   = try(each.value.open_ssid, local.defaults.catalyst_center.wireless.ssids.open_ssid, null)
-  passphrase                                  = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null)) : null
-  passphrase_wo                               = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? null : sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
-  passphrase_wo_version                       = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null)
-  policy_profile_name                         = try(each.value.policy_profile_name, local.defaults.catalyst_center.wireless.ssids.policy_profile_name, null)
-  posturing                                   = try(each.value.posturing, local.defaults.catalyst_center.wireless.ssids.posturing, null)
-  profile_name                                = try(each.value.profile_name, local.defaults.catalyst_center.wireless.ssids.profile_name, null)
-  protected_management_frame                  = try(each.value.protected_management_frame, local.defaults.catalyst_center.wireless.ssids.protected_management_frame, null)
-  radius_profiling                            = try(each.value.radius_profiling, local.defaults.catalyst_center.wireless.ssids.radius_profiling, null)
-  random_mac_filter                           = try(each.value.random_mac_filter, local.defaults.catalyst_center.wireless.ssids.random_mac_filter, null)
-  rsn_cipher_suite_ccmp128                    = try(each.value.rsn_cipher_suite_ccmp128, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_ccmp128, null)
-  rsn_cipher_suite_gcmp128                    = try(each.value.rsn_cipher_suite_gcmp128, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_gcmp128, null)
-  rsn_cipher_suite_ccmp256                    = try(each.value.rsn_cipher_suite_ccmp256, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_ccmp256, null)
-  rsn_cipher_suite_gcmp256                    = try(each.value.rsn_cipher_suite_gcmp256, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_gcmp256, null)
-  session_timeout                             = try(each.value.session_timeout, 0) == 0 ? null : try(each.value.session_timeout, local.defaults.catalyst_center.wireless.ssids.session_timeout, null)
-  session_timeout_enable                      = try(each.value.session_timeout_enable, local.defaults.catalyst_center.wireless.ssids.session_timeout_enable, null)
-  sleeping_client                             = try(each.value.sleeping_client, local.defaults.catalyst_center.wireless.ssids.sleeping_client, null)
-  sleeping_client_timeout                     = try(each.value.sleeping_client_timeout, local.defaults.catalyst_center.wireless.ssids.sleeping_client_timeout, null)
-  ssid_radio_type                             = try(local.ssid_radio_type_mapping[each.value.ssid_radio_type], local.defaults.catalyst_center.wireless.ssids.ssid_radio_type, null)
-  web_passthrough                             = try(each.value.web_passthrough, local.defaults.catalyst_center.wireless.ssids.web_passthrough, null)
-  wlan_band_select                            = try(each.value.wlan_band_select, local.defaults.catalyst_center.wireless.ssids.wlan_band_select, null)
+  multi_psk_settings = sensitive(try([
+    for setting in try(each.value.multi_psk_settings, local.defaults.catalyst_center.wireless.ssids.multi_psk_settings) : {
+      priority              = setting.priority
+      passphrase_type       = try(setting.passphrase_type, null)
+      passphrase            = try(setting.passphrase_version, null) == null ? try(setting.passphrase, null) : null
+      passphrase_wo         = try(setting.passphrase_version, null) == null ? null : try(setting.passphrase, null)
+      passphrase_wo_version = try(setting.passphrase_version, null)
+    }
+  ], null))
+  nas_options                = try(each.value.nas_options, local.defaults.catalyst_center.wireless.ssids.nas_options, null)
+  neighbor_list              = try(each.value.neighbor_list, local.defaults.catalyst_center.wireless.ssids.neighbor_list, null)
+  open_ssid                  = try(each.value.open_ssid, local.defaults.catalyst_center.wireless.ssids.open_ssid, null)
+  passphrase                 = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null)) : null
+  passphrase_wo              = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null) == null ? null : sensitive(try(each.value.passphrase, local.defaults.catalyst_center.wireless.ssids.passphrase, null))
+  passphrase_wo_version      = try(each.value.passphrase_version, local.defaults.catalyst_center.wireless.ssids.passphrase_version, null)
+  policy_profile_name        = try(each.value.policy_profile_name, local.defaults.catalyst_center.wireless.ssids.policy_profile_name, null)
+  posturing                  = try(each.value.posturing, local.defaults.catalyst_center.wireless.ssids.posturing, null)
+  profile_name               = try(each.value.profile_name, local.defaults.catalyst_center.wireless.ssids.profile_name, null)
+  protected_management_frame = try(each.value.protected_management_frame, local.defaults.catalyst_center.wireless.ssids.protected_management_frame, null)
+  radius_profiling           = try(each.value.radius_profiling, local.defaults.catalyst_center.wireless.ssids.radius_profiling, null)
+  random_mac_filter          = try(each.value.random_mac_filter, local.defaults.catalyst_center.wireless.ssids.random_mac_filter, null)
+  rsn_cipher_suite_ccmp128   = try(each.value.rsn_cipher_suite_ccmp128, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_ccmp128, null)
+  rsn_cipher_suite_gcmp128   = try(each.value.rsn_cipher_suite_gcmp128, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_gcmp128, null)
+  rsn_cipher_suite_ccmp256   = try(each.value.rsn_cipher_suite_ccmp256, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_ccmp256, null)
+  rsn_cipher_suite_gcmp256   = try(each.value.rsn_cipher_suite_gcmp256, local.defaults.catalyst_center.wireless.ssids.rsn_cipher_suite_gcmp256, null)
+  session_timeout            = try(each.value.session_timeout, 0) == 0 ? null : try(each.value.session_timeout, local.defaults.catalyst_center.wireless.ssids.session_timeout, null)
+  session_timeout_enable     = try(each.value.session_timeout_enable, local.defaults.catalyst_center.wireless.ssids.session_timeout_enable, null)
+  sleeping_client            = try(each.value.sleeping_client, local.defaults.catalyst_center.wireless.ssids.sleeping_client, null)
+  sleeping_client_timeout    = try(each.value.sleeping_client_timeout, local.defaults.catalyst_center.wireless.ssids.sleeping_client_timeout, null)
+  ssid_radio_type            = try(local.ssid_radio_type_mapping[each.value.ssid_radio_type], local.defaults.catalyst_center.wireless.ssids.ssid_radio_type, null)
+  web_passthrough            = try(each.value.web_passthrough, local.defaults.catalyst_center.wireless.ssids.web_passthrough, null)
+  wlan_band_select           = try(each.value.wlan_band_select, local.defaults.catalyst_center.wireless.ssids.wlan_band_select, null)
 
-  depends_on = [catalystcenter_wireless_pre_auth_acl.pre_auth_acl]
+  depends_on = [catalystcenter_wireless_pre_auth_acl.pre_auth_acl, catalystcenter_authentication_policy_server.aaa]
 }
 
 resource "catalystcenter_wireless_rf_profile" "rf_profile" {
-  for_each = { for rf_profile in try(local.catalyst_center.wireless.rf_profiles, []) : rf_profile.name => rf_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
+  for_each = { for rf_profile in local.rf_profiles_normalized : rf_profile.name => rf_profile if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
   rf_profile_name         = each.key
   default_rf_profile      = try(each.value.default_rf_profile, local.defaults.catalyst_center.wireless.rf_profiles.default_rf_profile, null)
@@ -534,7 +493,11 @@ resource "catalystcenter_wireless_profile_site_tag" "site_tag" {
     if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
-  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile]
+  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, catalystcenter_ap_profile.ap_profile, time_sleep.wireless_profile_tag_assignment]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.wireless_profile_tag_assignment[each.key]]
+  }
 }
 
 locals {
@@ -562,7 +525,35 @@ resource "catalystcenter_wireless_profile_policy_tag" "policy_tag" {
     if contains(local.sites, site) && (var.use_bulk_api ? try(local.data_source_created_sites_list[site], null) != null : coalesce(try(local.site_id_list[site], null), try(local.data_source_site_list[site], null), try(local.data_source_created_sites_list[site], null), null) != null)
   ])
 
-  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile]
+  depends_on = [catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile, time_sleep.wireless_profile_tag_assignment]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.wireless_profile_tag_assignment[each.key]]
+  }
+}
+
+# Removing an ancestor assignment deletes its site/policy tags on the controller.
+# Schedule recreation in the same apply; site order alone must not trigger it.
+resource "terraform_data" "wireless_profile_tag_assignment" {
+  for_each = {
+    for key, tag in merge(local.wireless_profile_site_tags, local.wireless_profile_policy_tags) : key => tag
+    if length(try(tag.sites, [])) > 0 && anytrue([for site in tag.sites : contains(local.sites, site)])
+  }
+
+  triggers_replace = sort([
+    for site in try(catalystcenter_network_profile_for_sites_assignments.site_to_wireless_network_profile[each.value.wireless_profile_name].items, []) : site.id
+  ])
+}
+
+# Assignment task completion precedes the controller's cascaded tag cleanup.
+# Allow that cleanup to settle before recreating tags for the retained sites.
+resource "time_sleep" "wireless_profile_tag_assignment" {
+  for_each = terraform_data.wireless_profile_tag_assignment
+
+  create_duration = "60s"
+  triggers = {
+    assignment = each.value.id
+  }
 }
 
 resource "catalystcenter_wireless_interface" "interface" {
@@ -571,3 +562,100 @@ resource "catalystcenter_wireless_interface" "interface" {
   interface_name = try(each.value.name, local.defaults.catalyst_center.wireless.interfaces.name, null)
   vlan_id        = try(each.value.vlan_id, local.defaults.catalyst_center.wireless.interfaces.vlan_id, null)
 }
+
+# ============================================================================
+# Leg-2 (site-level SSID enablement) VALIDATION — Issue #526 three-way SSID model
+#
+# The wireless SSID model is split across three files:
+#   1. Global definition  -> wireless.ssids[]                     (drives catalystcenter_wireless_ssid, above)
+#   2. Site enablement     -> sites…network_settings.wireless.ssids[] (validated here — drives NO resource)
+#   3. Fabric VLAN mapping -> fabric.fabric_sites[].wireless_ssids[]  (drives catalystcenter_fabric_vlan_to_ssid)
+#
+# The provider's catalystcenter_wireless_ssid is Global-only and there is no per-site SSID
+# resource; "enable an SSID at a site" is expressed only through a wireless network profile
+# (network_profiles.wireless[].ssid_details + site assignment, wired above). Leg 2 is therefore
+# validation/cross-check only: it stays as declarative intent and is checked against the global
+# definitions (leg 1) and the profile-based enablement, failing the plan on inconsistency.
+# ============================================================================
+locals {
+  # Every site.wireless.ssids[] entry surfaced by #523's flattened site tree, keyed by full
+  # hierarchy path. site_key is the "Parent/…/Name" string used everywhere else in the module.
+  site_enabled_ssids = flatten([
+    for site_key, settings in try(local.sites_to_settings_map, {}) : [
+      for entry in try(settings.wireless.ssids, []) : {
+        site      = site_key
+        ssid_name = entry.name
+        entry     = entry
+      }
+    ]
+  ])
+
+  # Leg-1 global SSID names (the only SSIDs that can legitimately be enabled anywhere).
+  global_ssid_names = toset([for s in try(local.catalyst_center.wireless.ssids, []) : s.name])
+
+  # Global SSID definitions keyed by name, for attribute cross-checks (leg-1 source of truth).
+  global_ssids_by_name = { for s in try(local.catalyst_center.wireless.ssids, []) : s.name => s }
+
+  # site -> set(ssid_name) actually delivered there by a wireless network profile assigned to
+  # the site or any ancestor. A profile assigned at Global/Poland credits Global/Poland and its
+  # descendants, but not siblings sharing a name prefix such as Global/Poland2 (same
+  # full-segment match as cc_sites.tf).
+  profile_ssid_enablement = {
+    for site_key in local.sites : site_key => toset(flatten([
+      for np in try(local.catalyst_center.network_profiles.wireless, []) : [
+        for np_site in try(np.sites, []) : [
+          for ssid in try(np.ssid_details, []) : ssid.name
+        ]
+        if site_key == np_site || startswith(site_key, "${np_site}/")
+      ]
+    ]))
+  }
+
+  # Gate all validation to sites actually in scope (manage_global_settings / managed_sites),
+  # exactly like the resources above.
+  site_enabled_ssids_in_scope = [for e in local.site_enabled_ssids : e if contains(local.sites, e.site)]
+
+  # (a) undefined-global: a site enables an SSID with no matching global definition (leg 1).
+  wireless_ssid_errors_undefined = [
+    for e in local.site_enabled_ssids_in_scope :
+    "  • Site '${e.site}' enables SSID '${e.ssid_name}', which is not defined in wireless.ssids (global definitions)."
+    if !contains(local.global_ssid_names, e.ssid_name)
+  ]
+
+  # (b) not-enabled-by-profile: the SSID is globally defined but no wireless network profile
+  # assigned to the site (or an ancestor) lists it — the site-level enablement is inert.
+  wireless_ssid_errors_no_profile = [
+    for e in local.site_enabled_ssids_in_scope :
+    "  • Site '${e.site}' enables SSID '${e.ssid_name}', but no wireless network profile assigned to this site (or an ancestor) delivers it — the enablement is inert. Add it to a network_profiles.wireless[].ssid_details and assign that profile to the site."
+    if contains(local.global_ssid_names, e.ssid_name) && !contains(try(local.profile_ssid_enablement[e.site], []), e.ssid_name)
+  ]
+
+  # (c) attribute contradiction (hard): where the site entry pins wlan_type or auth_type, it must
+  # match the global definition. Radio/broadcast fields are advisory (provider can't apply them
+  # per-site) and are NOT checked.
+  wireless_ssid_errors_contradiction = flatten([
+    for e in local.site_enabled_ssids_in_scope : [
+      for attr in ["wlan_type", "auth_type"] :
+      "  • Site '${e.site}' sets ${attr}='${try(e.entry[attr], "")}' for SSID '${e.ssid_name}', contradicting the global definition (${attr}='${try(local.global_ssids_by_name[e.ssid_name][attr], "")}')."
+      if contains(local.global_ssid_names, e.ssid_name) && try(e.entry[attr], null) != null && try(local.global_ssids_by_name[e.ssid_name][attr], null) != null && try(e.entry[attr], null) != try(local.global_ssids_by_name[e.ssid_name][attr], null)
+    ]
+  ])
+
+  wireless_ssid_validation_errors = concat(
+    local.wireless_ssid_errors_undefined,
+    local.wireless_ssid_errors_no_profile,
+    local.wireless_ssid_errors_contradiction,
+  )
+
+  wireless_ssid_validation_error = length(local.wireless_ssid_validation_errors) > 0 ? "❌ Site-level wireless SSID enablement (network_settings.wireless.ssids) is inconsistent with the global definitions and/or wireless network profiles:\n\n${join("\n", local.wireless_ssid_validation_errors)}\n\nAction required: ensure each site-enabled SSID is defined in wireless.ssids, is delivered by a wireless network profile assigned to that site, and does not contradict the global wlan_type/auth_type." : ""
+}
+
+resource "terraform_data" "wireless_site_ssid_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.wireless_ssid_validation_errors) == 0
+      error_message = local.wireless_ssid_validation_error
+    }
+  }
+}
+

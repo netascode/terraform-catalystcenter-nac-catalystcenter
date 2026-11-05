@@ -13,7 +13,7 @@ content: |-
 
   ## Examples
 
-  Configuring an area under `Design -> Network Hierarchy` using YAML:
+  Configuring a nested area hierarchy under `Design -> Network Hierarchy` using YAML.
 
   #### `area.yaml`
 

@@ -1,27 +1,21 @@
-# Credential IDs for discovery jobs.
-# - Global / single-state applies resolve IDs from managed credential resources.
-# - Per-site applies (`create_per_site`) do not manage credentials, so IDs are
-#   resolved from data sources: site-assigned credentials already looked up in
-#   cc_network_settings.tf, plus any extra names defined under
-#   network_settings.device_credentials in the site YAML.
-
+# Credential IDs for discovery jobs. Per-site states resolve their explicitly
+# requested credentials through data sources; global states use module-managed IDs.
 locals {
   per_site_mode = !var.manage_global_settings && length(var.managed_sites) != 0
 
   per_site_discovery_credential_names = toset(flatten([
-    for d in try(local.catalyst_center.inventory.discovery, []) :
-    try(d.global_credential_list, [])
-    if local.per_site_mode && try(d.create_per_site, false)
+    for discovery in try(local.catalyst_center.inventory.discovery, []) :
+    try(discovery.global_credential_list, [])
+    if local.per_site_mode && try(discovery.create_per_site, false)
   ]))
 
-  yaml_cli_credential_names          = toset([for c in try(local.catalyst_center.network_settings.device_credentials.cli_credentials, []) : c.name])
-  yaml_https_read_credential_names   = toset([for c in try(local.catalyst_center.network_settings.device_credentials.https_read_credentials, []) : c.name])
-  yaml_https_write_credential_names  = toset([for c in try(local.catalyst_center.network_settings.device_credentials.https_write_credentials, []) : c.name])
-  yaml_snmpv2_read_credential_names  = toset([for c in try(local.catalyst_center.network_settings.device_credentials.snmpv2_read_credentials, []) : c.name])
-  yaml_snmpv2_write_credential_names = toset([for c in try(local.catalyst_center.network_settings.device_credentials.snmpv2_write_credentials, []) : c.name])
-  yaml_snmpv3_credential_names       = toset([for c in try(local.catalyst_center.network_settings.device_credentials.snmpv3_credentials, []) : c.name])
+  yaml_cli_credential_names          = toset([for credential in try(local.global_device_credentials.cli_credentials, []) : credential.name])
+  yaml_https_read_credential_names   = toset([for credential in try(local.global_device_credentials.https_read_credentials, []) : credential.name])
+  yaml_https_write_credential_names  = toset([for credential in try(local.global_device_credentials.https_write_credentials, []) : credential.name])
+  yaml_snmpv2_read_credential_names  = toset([for credential in try(local.global_device_credentials.snmpv2_read_credentials, []) : credential.name])
+  yaml_snmpv2_write_credential_names = toset([for credential in try(local.global_device_credentials.snmpv2_write_credentials, []) : credential.name])
+  yaml_snmpv3_credential_names       = toset([for credential in try(local.global_device_credentials.snmpv3_credentials, []) : credential.name])
 
-  # Do not duplicate the site-assignment credential data sources in cc_network_settings.tf.
   discovery_cli_lookup          = setsubtract(setintersection(local.per_site_discovery_credential_names, local.yaml_cli_credential_names), local.multi_state_non_global_cli_creds)
   discovery_https_read_lookup   = setsubtract(setintersection(local.per_site_discovery_credential_names, local.yaml_https_read_credential_names), local.multi_state_non_global_https_read_creds)
   discovery_https_write_lookup  = setsubtract(setintersection(local.per_site_discovery_credential_names, local.yaml_https_write_credential_names), local.multi_state_non_global_https_write_creds)
@@ -30,18 +24,18 @@ locals {
   discovery_snmpv3_lookup       = setsubtract(setintersection(local.per_site_discovery_credential_names, local.yaml_snmpv3_credential_names), local.multi_state_non_global_snmpv3_creds)
 
   all_credential_ids = merge(
-    try({ for name, cred in data.catalystcenter_credentials_cli.multi_state_non_global_credentials : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_snmpv2_read.multi_state_non_global_credentials : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_snmpv2_write.multi_state_non_global_credentials : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_snmpv3.multi_state_non_global_credentials : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_https_read.multi_state_non_global_credentials : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_https_write.multi_state_non_global_credentials : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_cli.discovery : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_snmpv2_read.discovery : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_snmpv2_write.discovery : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_snmpv3.discovery : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_https_read.discovery : name => cred.id }, {}),
-    try({ for name, cred in data.catalystcenter_credentials_https_write.discovery : name => cred.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_cli.multi_state_non_global_credentials : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_snmpv2_read.multi_state_non_global_credentials : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_snmpv2_write.multi_state_non_global_credentials : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_snmpv3.multi_state_non_global_credentials : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_https_read.multi_state_non_global_credentials : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_https_write.multi_state_non_global_credentials : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_cli.discovery : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_snmpv2_read.discovery : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_snmpv2_write.discovery : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_snmpv3.discovery : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_https_read.discovery : name => credential.id }, {}),
+    try({ for name, credential in data.catalystcenter_credentials_https_write.discovery : name => credential.id }, {}),
     try({ for name, cred in catalystcenter_credentials_cli.cli_credentials : name => cred.id }, {}),
     try({ for name, cred in catalystcenter_credentials_snmpv2_read.snmpv2_read_credentials : name => cred.id }, {}),
     try({ for name, cred in catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials : name => cred.id }, {}),
@@ -82,10 +76,6 @@ data "catalystcenter_credentials_snmpv3" "discovery" {
 }
 
 resource "catalystcenter_discovery" "discovery" {
-  # Per-site creation (`create_per_site`) lets a discovery job defined in site data be
-  # created from a site state. Jobs without the flag stay global (created only when
-  # manage_global_settings is true, or in a single-state apply with empty managed_sites).
-  # Discovery names must be unique across site states.
   for_each = { for discovery in try(local.catalyst_center.inventory.discovery, []) : discovery.name => discovery if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) ||
     (local.per_site_mode && try(discovery.create_per_site, false))
   }
@@ -132,3 +122,4 @@ resource "catalystcenter_discovery" "discovery" {
     catalystcenter_credentials_https_write.https_write_credentials
   ]
 }
+

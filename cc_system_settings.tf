@@ -1,14 +1,15 @@
 locals {
-  ise_auth_policy_server_tacacs = can(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.tacacs, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.tacacs))
-  ise_auth_policy_server_radius = can(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius))
+  # Protocol choice comes from the configured blocks only; defaults supply ports.
+  ise_auth_policy_server_tacacs = can(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.tacacs)
+  ise_auth_policy_server_radius = can(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius)
 }
 
 resource "catalystcenter_authentication_policy_server" "ise" {
 
   count = length(try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise, [])) > 0 && (var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0)) ? 1 : 0
 
-  authentication_port       = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.authentication_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.authentication_port, null)
-  accounting_port           = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.accounting_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.accounting_port, null)
+  authentication_port       = !local.ise_auth_policy_server_radius ? null : try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.authentication_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.authentication_port, null)
+  accounting_port           = !local.ise_auth_policy_server_radius ? null : try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.accounting_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.protocols.radius.accounting_port, null)
   ip_address                = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.ip_address, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.ip_address, null)
   pxgrid_enabled            = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.pxgrid_enabled, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.pxgrid_enabled, null)
   use_dnac_cert_for_pxgrid  = try(local.catalyst_center.system_settings.authentication_and_policy_servers.ise.use_catc_cert_for_pxgrid, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.ise.use_catc_cert_for_pxgrid, null)
@@ -53,10 +54,10 @@ resource "catalystcenter_authentication_policy_server" "aaa" {
 
   for_each = { for aaa in try(local.catalyst_center.system_settings.authentication_and_policy_servers.aaa, []) : aaa.ip_address => aaa if var.manage_global_settings || (!var.manage_global_settings && length(var.managed_sites) == 0) }
 
-  authentication_port       = try(each.value.protocols.radius.authentication_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.authentication_port, null)
-  accounting_port           = try(each.value.protocols.radius.accounting_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.accounting_port, null)
+  authentication_port       = !can(each.value.protocols.radius) ? null : try(each.value.protocols.radius.authentication_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.authentication_port, null)
+  accounting_port           = !can(each.value.protocols.radius) ? null : try(each.value.protocols.radius.accounting_port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.radius.accounting_port, null)
   ip_address                = each.key
-  port                      = try(each.value.protocols.tacacs.port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.tacacs.port, null)
+  port                      = !can(each.value.protocols.tacacs) ? null : try(each.value.protocols.tacacs.port, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.protocols.tacacs.port, null)
   protocol                  = can(each.value.protocols.tacacs) && can(each.value.protocols.radius) ? "RADIUS_TACACS" : can(each.value.protocols.tacacs) ? "TACACS" : can(each.value.protocols.radius) ? "RADIUS" : null
   retries                   = try(each.value.retries, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.retries, null)
   timeout_seconds           = try(each.value.timeout, local.defaults.catalyst_center.system_settings.authentication_and_policy_servers.aaa.timeout, null)

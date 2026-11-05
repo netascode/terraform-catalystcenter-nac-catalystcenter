@@ -13,6 +13,44 @@ locals {
     if device.state == "PNP"
   }
 
+  pnp_onboarding_template_names = {
+    for name, device in local.pnp_managed_devices : name => try(
+      local.provisioning_onboarding_templates_by_device[name].template_key,
+      device.onboarding_template.name,
+      null,
+    )
+  }
+
+  # Standard and SVL claims use the same normalized associations and legacy
+  # fallback, including templates managed by another Terraform state.
+  pnp_onboarding_template_ids = {
+    for name, template in local.pnp_onboarding_template_names : name => try(
+      catalystcenter_template.regular_template[template].id,
+      catalystcenter_template.regular_template[local.template_name_to_key[template]].id,
+      data.catalystcenter_template.template[template].id,
+      data.catalystcenter_template.template[local.resource_key_to_template_key[template]].id,
+      data.catalystcenter_template.template[local.resource_key_to_template_key[local.template_name_to_key[template]]].id,
+      data.catalystcenter_template.unmanaged[template].id,
+      null,
+    )
+  }
+
+  pnp_onboarding_template_parameters = {
+    for name, device in local.pnp_managed_devices : name => (
+      contains(keys(local.provisioning_onboarding_templates_by_device), name) ? [
+        for variable in local.provisioning_onboarding_templates_by_device[name].variables : {
+          name  = variable.name
+          value = one(variable.value)
+        }
+      ] : try(device.onboarding_template.variables, local.defaults.catalyst_center.onboarding_templates.variables, null)
+    )
+  }
+
+  pnp_unresolved_onboarding_templates = [
+    for name, template in local.pnp_onboarding_template_names : "${name}: ${template}"
+    if template != null && local.pnp_onboarding_template_ids[name] == null
+  ]
+
   # A Catalyst 9800 registers in PnP as deviceType "Catalyst WLC" and is claimed
   # as CatalystWLC; any other claim type is rejected with NCOB01296. An embedded
   # controller is a Catalyst 9000 switch and claims as Default. Every non-embedded
@@ -138,6 +176,15 @@ data "catalystcenter_pnp_device" "svl_member" {
   serial_number = each.value.serial_number
 }
 
+resource "terraform_data" "pnp_template_validation" {
+  lifecycle {
+    precondition {
+      condition     = length(local.pnp_unresolved_onboarding_templates) == 0
+      error_message = "Cannot resolve the requested PnP onboarding templates: ${join(", ", local.pnp_unresolved_onboarding_templates)}. Declare a managed template or reference an existing controller template using project_name and name (project#template for legacy onboarding_template.name)."
+    }
+  }
+}
+
 resource "terraform_data" "pnp_svl_validation" {
   lifecycle {
     precondition {
@@ -179,8 +226,8 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   rf_profile                 = try(each.value.rf_profile, local.defaults.catalyst_center.pnp.devices.rf_profile, null)
   image_id                   = try(each.value.image_id, local.image_name_to_id[each.value.image_name], local.defaults.catalyst_center.pnp.devices.image_id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
   image_skip                 = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, null)
-  config_id                  = try(catalystcenter_template.regular_template[each.value.onboarding_template.name].id, catalystcenter_template.regular_template[local.template_name_to_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[each.value.onboarding_template.name].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[local.resource_key_to_template_key[local.template_name_to_key[each.value.onboarding_template.name]]].id, data.catalystcenter_template.unmanaged[each.value.onboarding_template.name].id, length(split(",", each.value.serial_number)) > 1 ? "" : null)
-  config_parameters          = try(each.value.onboarding_template.variables, local.defaults.catalyst_center.onboarding_templates.variables, null)
+  config_id                  = local.pnp_onboarding_template_ids[each.key] != null ? local.pnp_onboarding_template_ids[each.key] : (length(split(",", each.value.serial_number)) > 1 ? "" : null)
+  config_parameters          = local.pnp_onboarding_template_parameters[each.key]
   top_of_stack_serial_number = try(each.value.stack.top_of_stack_serial_number, null)
   cabling_scheme             = try(each.value.stack.cabling_scheme, local.defaults.catalyst_center.pnp.devices.cabling_scheme, null)
   static_ip                  = try(each.value.wireless_management.ip_address, local.defaults.catalyst_center.inventory.devices.wireless_management.ip_address, null)
@@ -189,7 +236,7 @@ resource "catalystcenter_pnp_device_claim_site" "claim_device" {
   vlan_id                    = try(tostring(each.value.wireless_management.vlan_id), tostring(local.defaults.catalyst_center.inventory.devices.wireless_management.vlan_id), null)
   ip_interface_name          = try(each.value.wireless_management.interface_name, local.defaults.catalyst_center.inventory.devices.wireless_management.interface_name, null)
 
-  depends_on = [catalystcenter_network_profile.switching_network_profile]
+  depends_on = [catalystcenter_network_profile.switching_network_profile, catalystcenter_template_version.regular_commit_version, terraform_data.pnp_template_validation]
 }
 
 resource "catalystcenter_pnp_config_preview" "config_preview" {
@@ -216,6 +263,8 @@ resource "catalystcenter_pnp_device" "pnp_svl_member" {
   lifecycle {
     ignore_changes = [hostname]
   }
+
+  depends_on = [terraform_data.pnp_svl_validation]
 }
 
 resource "catalystcenter_pnp_network_device_claim" "claim_svl" {
@@ -228,8 +277,8 @@ resource "catalystcenter_pnp_network_device_claim" "claim_svl" {
   # Unlike the standard claim, this resource has no image_skip attribute, so
   # image_skip only selects whether image_id is sent at all.
   image_id            = try(each.value.image_skip, local.defaults.catalyst_center.pnp.devices.image_skip, true) ? null : try(each.value.image_id, local.image_name_to_id[each.value.image_name], local.defaults.catalyst_center.pnp.devices.image_id, null)
-  template_id         = try(catalystcenter_template.regular_template[each.value.onboarding_template.name].id, catalystcenter_template.regular_template[local.template_name_to_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[each.value.onboarding_template.name].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.value.onboarding_template.name]].id, data.catalystcenter_template.template[local.resource_key_to_template_key[local.template_name_to_key[each.value.onboarding_template.name]]].id, data.catalystcenter_template.unmanaged[each.value.onboarding_template.name].id, null)
-  template_parameters = try(each.value.onboarding_template.variables, local.defaults.catalyst_center.onboarding_templates.variables, null)
+  template_id         = local.pnp_onboarding_template_ids[each.key]
+  template_parameters = local.pnp_onboarding_template_parameters[each.key]
   domain              = each.value.svl.domain
 
   svl_members = [
@@ -247,5 +296,5 @@ resource "catalystcenter_pnp_network_device_claim" "claim_svl" {
     }
   ]
 
-  depends_on = [catalystcenter_pnp_device.pnp_svl_member, catalystcenter_network_profile.switching_network_profile]
+  depends_on = [catalystcenter_pnp_device.pnp_svl_member, catalystcenter_network_profile.switching_network_profile, catalystcenter_template_version.regular_commit_version, terraform_data.pnp_template_validation]
 }

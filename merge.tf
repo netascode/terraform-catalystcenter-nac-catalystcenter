@@ -1,7 +1,7 @@
 locals {
   yaml_strings_directories = flatten([
     for dir in var.yaml_directories : [
-      for file in fileset(".", "${dir}/**/*.{yml,yaml}") : file(file)
+      for file in fileset(dir, "**/*.{yml,yaml}") : file("${dir}/${file}")
     ]
   ])
   yaml_strings_files = [
@@ -24,6 +24,13 @@ resource "terraform_data" "validation" {
     precondition {
       condition     = length(var.yaml_directories) != 0 || length(var.yaml_files) != 0 || length(keys(var.model)) != 0
       error_message = "Either `yaml_directories`,`yaml_files` or a non-empty `model` value must be provided."
+    }
+    precondition {
+      condition = alltrue([
+        for template in local.tp_template_blocks : !try(template.unmanaged, false) ||
+        !contains(keys(local.tp_managed_template_keys), "${template.project_name}#${template.template_name}")
+      ])
+      error_message = "A template association with unmanaged: true must not also have a definition under cli_templates.projects. Remove its definition to use the existing controller template, or omit unmanaged to manage it."
     }
   }
 }
