@@ -1,17 +1,21 @@
-## (unreleased)
+## 0.6.0
+
+- Refactor the data model around a nested site hierarchy, with network settings and IP pool reservations defined under their owning sites
+- Group network profiles under `design.network_profiles` and CLI template definitions under `cli_templates`, with deployment associations in `template_device_association`
+- Define fabric devices within their owning fabric sites, separating fabric configuration from device inventory
+
+## 0.5.2
 
 **New Features:**
-- Add StackWise Virtual Plug and Play onboarding through `inventory.devices[].svl`, with member discovery, active-only registration, SVL and optional DAD links. Requires provider `~> 0.6.6` and Catalyst Center 3.2.3 or later.
+- Add StackWise Virtual (SVL) day-0 onboarding via `inventory.devices[].svl` on `state: PNP` devices, including member, SVL link and optional DAD link configuration. Requires provider `~> 0.6.6` and Catalyst Center 3.2.3 or later
 
 **Bug Fixes:**
-- Resolve normalized ONBOARDING template associations and parameters consistently for standard and SVL claims, wait for managed templates to be committed, and reject unresolved template references before claiming a device.
-- Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
 - Fix a fabric device whose only role is `CONTROL_PLANE_NODE` being silently skipped when `use_bulk_api` is `false`; it is now added to its fabric site via the new `catalystcenter_fabric_device.control_plane_device` resource
-- Fix an `SDA_LISP_PUB_SUB_TRANSIT` never being created in multi-state deployments when its control plane devices are provisioned by a site state; the global state only sees its own inventory, so the transit is now created by the site state (`managed_sites`) that provisions all of its control plane devices, and looked up by name in every other state
-- Fix `Global` in `network_profiles.switching[].sites` and `network_profiles.wireless[].sites` being silently ignored; the profile is now assigned to the Global site by the state that manages global settings
-- Fix deep areas missing from the non-bulk site ID lookup; network profile assignments and site-level network settings now resolve all supported area tiers, including the refactored model's `area_10`
-- Fix `Inconsistent conditional result types` when fabric sites with `wireless_ssids` have different attributes; VLAN-to-SSID mappings are projected independently of each site's other settings
-- Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping, device provisioning grouping and SSID enablement
+- Fix `Global` in `network_profiles.switching[].sites` and `network_profiles.wireless[].sites` being silently ignored, or failing the plan with `Invalid index` for switching profiles when an area has no `parent_name`; the profile is now assigned to the Global site by the state that manages global settings
+- Fix areas nested five or more levels below `Global` (`area_4`..`area_9`) missing from the non-bulk site ID lookup: a switching network profile assigned to such an area failed the plan with `Invalid index`, and site-level network settings on such an area (credentials, NTP, DHCP, DNS, timezone, banner, telemetry, AAA) failed the first plan with a missing `site_id`
+- Fix `managed_sites` matching sibling sites that share a name prefix (e.g. `Global/Area/Site_A` also matched `Global/Area/Site_AB`); an entry now matches only that site and its descendants for site scoping and device provisioning grouping
+- Fix `Unsupported attribute` plan error for a device with `tags` but without `fqdn_name` (in `ASSIGN` or a provisioning state); the device is now added to its tags by `name` or `device_ip`
+- Fix `Inconsistent conditional result types` plan error when two or more fabric sites with `wireless_ssids` are not defined with the same set of attributes; their VLAN-to-SSID mappings are now planned
 
 **Breaking Changes:**
 - `managed_sites` now matches on full path segments. A state whose `managed_sites` entry is a name prefix of a sibling site previously also managed that sibling; after upgrading, its plan destroys the sibling's sites, site settings and device provisioning. Check the plan for destroys before applying, and remove those resources from the old state with `terraform state rm` (then `terraform import` them into the correct state if no other state manages them)
@@ -55,9 +59,6 @@
 - Fix `Invalid for_each argument` error during `terraform import`/plan on setups with provisioned devices by redesigning the RMA workflow so that all `catalystcenter_device_replacement` / `catalystcenter_device_replacement_workflow` `for_each` keys derive only from static data-model values instead of an apply-time-unknown data source
 - Fix wireless-controller provisioning being destroyed when a controller's managed AP locations are removed; provisioning is now keyed on `type: WirelessController` (non-embedded) and the `EMBEDDED_WIRELESS_CONTROLLER_NODE` role (embedded)
 
-**New Features:**
-- Add support for deploying built-in or pre-existing CLI templates that are not declared under `cli_templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
-
 **Breaking Changes:**
 - Require `inventory.devices[].type: WirelessController` on every non-embedded wireless controller — a standalone WLC, a Guest Anchor WLC, and a fabric device carrying `WIRELESS_CONTROLLER_NODE`. Controller provisioning (`catalystcenter_wireless_device_provision`) is now keyed on this attribute instead of on the presence of managed AP locations, so a device that defines `primary_managed_ap_locations`, `secondary_managed_ap_locations` or `anchor_managed_ap_locations`, or carries the `WIRELESS_CONTROLLER_NODE` role, but omits `type` is rejected at plan time. Migrate by adding `type: WirelessController` to each affected device; the resource key is unchanged, so this is a no-op on an existing deployment and does not replace or re-provision the controller.
 - Raise the minimum requirements to Terraform `>= 1.15.0`, provider `CiscoDevNet/catalystcenter ~> 0.6.1` and `netascode/utils >= 2.0.0`. Terraform 1.15 and provider 0.6.1 are required by the write-only secret support; `utils` 2.0 is a major upgrade of the YAML/model helper provider
@@ -88,16 +89,24 @@
 ## 0.4.4
 
 **Bug Fixes:**
-- Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. Requires provider `~> 0.5.18`, where the `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
+- Fix device credential objects failing to delete with `NCIM01100` when they are still assigned to a site. The `catalystcenter_assign_credentials` resource now unassigns credentials when they are removed from the data model.
 - Fix `fabric_zones[].l2_virtual_networks` being silently ignored; L2 virtual networks listed by name under a fabric zone are now deployed to the zone (parallel to the existing `l3_virtual_networks` and `anycast_gateways` inheritance) using a new `catalystcenter_fabric_l2_virtual_network.l2_vn_zone` resource keyed `${name}#_#${zone_name}`. The vlan_name/traffic_type/wireless flag and L3 VN association are inherited from the matching site-level L2 VN definition.
 - Fix fabric-zone L2 virtual network creation failing with `NCHS20538` ("include the vlanId for this create on fabric zone request") when the parent site L2 VN has no explicit `vlan_id`. Catalyst Center auto-assigns the VLAN id on the fabric site, and the zone create requires the same id; the module now reads the parent site L2 VN's assigned `vlan_id` (via a `catalystcenter_fabric_l2_virtual_network` data source) and applies it to the zone when `vlan_id` is not set in the data model.
 - Fix `is_bpdu_guard_enabled` being set on the global authentication profile; the field is not settable at the global level in Catalyst Center (not exposed in the API or UI) and is now always `null` there, while remaining configurable per fabric-site `Closed Authentication` profile
+- Fix `catalystcenter_fabric_port_channel` on fabric-zone edge nodes being created before the zone's fabric device exists; `catalystcenter_fabric_devices.fabric_devices_zone` is now included in the resource `depends_on` so port channels on devices inside a fabric zone apply reliably
 - Fix credential assignment in multi-state deployments: site-level assignment no longer silently inherits the Global credential when global settings are managed in a separate state (named credentials are now resolved via `catalystcenter_credentials_*` data sources before the Global fallback), and sites/Global entries configured with only SNMPv2 credentials are no longer skipped by the `catalystcenter_assign_credentials` `for_each` filter
 - Fix imported L3 virtual networks with no associated fabric sites (e.g. `DEFAULT_VN`) showing a spurious `fabric_ids = []` in-place update on the first plan after import; `catalystcenter_fabric_l3_virtual_network.l3_vn` now emits `null` instead of an empty list when a VN has no fabric site/zone associations, matching the provider's read behavior (which maps an empty `fabricIds` response to `null`)
 - Fix PnP device claim `hostname` resolution in `catalystcenter_pnp_device_claim_site`; the device `name` (then `fqdn_name`, then the `defaults.yaml` value) is now used as the claim hostname instead of an unset `hostname` attribute, ensuring the device is named consistently in Catalyst Center inventory
+- Fix embedded Wireless Controller (eWLC) / Fabric-in-a-Box provisioning: `EMBEDDED_WIRELESS_CONTROLLER_NODE` devices managing AP locations are now provisioned via both the bulk and non-bulk paths (with `primary` and/or `secondary_managed_ap_locations`), managed-AP-location assignment now waits for provisioning to complete, and the fabric border device ignores `device_roles` changes to avoid a perpetual diff on FIAB deployments
 
 **New Features:**
+- Add RRM FRA feature template support under `feature_templates.wireless.rrm_fra[]` via `catalystcenter_wireless_rrm_fra_configuration` resources; data-model `radio_band` values `2.4GHz_5GHz` and `5GHz_6GHz` are mapped to provider enums through `rrm_fra_radio_band_mapping`, `fra_sensitivity` (only for `2.4GHz_5GHz`) is mapped to API title-case through `rrm_fra_sensitivity_mapping`, and templates can be associated with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates` (requires provider `>= 0.5.20`)
 - Add support for deploying built-in or pre-existing CLI templates that are not declared under `templates.projects[]`; reference them using the `<project_name>#<template_name>` form and the module resolves the template via Catalyst Center data sources, exactly like the existing built-in tag flow. Supported for Day-N **regular** (`inventory.devices[].dayn_templates.regular[].name`), Day-N **composite** (`inventory.devices[].dayn_templates.composite[].name`, with members and their versions discovered automatically and per-member variables matched on `template_name`), and **onboarding** (`inventory.devices[].onboarding_template.name`) templates
+- Add CleanAir feature template support under `feature_templates.wireless.cleanair[]` (creating `catalystcenter_wireless_cleanair_configuration` resources) and associate them with wireless network profiles by listing template names under `network_profiles.wireless[].feature_templates`.
+- Add `system_settings.external_authentication` data model support via `catalystcenter_external_authentication` and `catalystcenter_external_authentication_aaa_attribute` resources to enable external user login and configure the custom AAA attribute for role mapping
+
+**Improvements:**
+- Add plan-time pre-condition validation for wireless controllers via a new `terraform_data.wireless_validation` resource: a device with `primary_/secondary_managed_ap_locations` must carry exactly one wireless-controller role (`WIRELESS_CONTROLLER_NODE` or `EMBEDDED_WIRELESS_CONTROLLER_NODE`, never both or neither), and a device with a wireless-controller role must define at least one managed AP location; misconfigurations now fail early with an actionable error instead of a mid-apply failure
 
 ## 0.4.3
 
@@ -127,7 +136,7 @@
 ## 0.4.2
 
 **Bug Fixes:**
-- Fix AP provisioning for devices without IP address 
+- Fix AP provisioning for devices without IP address
 - Fix issue with provisioning the embedded wireless controller and enabling the edge role in a single Terraform run
 - Fix multicast rendezvous point IP addresses being sent for Fabric-internal RPs; `ipv4_address` and `ipv6_address` are now only populated when `rp_location` is not `FABRIC`
 - Fix extranet policy to only be managed when not using `manage_global_settings` with `managed_sites`, resolving incorrect state evaluation in single-state deployments
