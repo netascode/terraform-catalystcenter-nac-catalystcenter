@@ -235,7 +235,7 @@ resource "catalystcenter_wireless_ssid" "ssid" {
   cckm                                        = try(each.value.cckm, local.defaults.catalyst_center.wireless.ssids.cckm, null)
   cckm_tsf_tolerance                          = try(each.value.cckm, local.defaults.catalyst_center.wireless.ssids.cckm, false) == false || try(each.value.cckm_tsf_tolerance, 0) == 0 ? null : try(each.value.cckm_tsf_tolerance, local.defaults.catalyst_center.wireless.ssids.cckm_tsf_tolerance, null)
   client_exclusion                            = try(each.value.client_exclusion, local.defaults.catalyst_center.wireless.ssids.client_exclusion, null)
-  client_exclusion_timeout                    = try(each.value.client_exclusion_timeout, local.defaults.catalyst_center.wireless.enterprise_ssids.client_exclusion_timeout, null)
+  client_exclusion_timeout                    = try(each.value.client_exclusion_timeout, local.defaults.catalyst_center.wireless.ssids.client_exclusion_timeout, null)
   client_rate_limit                           = try(each.value.client_rate_limit, 0) == 0 ? null : try(each.value.client_rate_limit, local.defaults.catalyst_center.wireless.ssids.client_rate_limit, null)
   coverage_hole_detection                     = try(each.value.coverage_hole_detection, local.defaults.catalyst_center.wireless.ssids.coverage_hole_detection, null)
   directed_multicast_service                  = try(each.value.directed_multicast_service, local.defaults.catalyst_center.wireless.ssids.directed_multicast_service, null)
