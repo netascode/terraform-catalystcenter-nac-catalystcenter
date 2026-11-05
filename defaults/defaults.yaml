@@ -1,5 +1,4 @@
 ---
-# Canonical paths plus aliases for dm-refactor-1 module internal default lookups.
 defaults:
   catalyst_center:
     authentication_templates:
@@ -141,8 +140,8 @@ defaults:
           rules:
             source_prefix: 32
             destination_prefix: 32
-            source_ports: "1-65535"
-            destination_ports: "1-65535"
+            source_ports: 1-65535
+            destination_ports: 1-65535
       ap_profiles:
         remote_worker_enabled: false
         auth_type: NO-AUTH
@@ -161,23 +160,38 @@ defaults:
         time_zone_offset_hour: 0
         time_zone_offset_minutes: 0
         client_limit: 0
+      ssids:
+        basic_service_set_client_idle_timeout: 300
+        client_exclusion_timeout: 180
+        basic_service_set_max_idle: true
+        broadcast_ssid: true
+        client_exclusion: true
+        directed_multicast_service: true
+        fast_lane: false
+        mac_filtering: false
+        neighbor_list: true
+        session_timeout_enable: true
+        fast_transition: ADAPTIVE
+        mft_client_protection: OPTIONAL
+        nas_options: []
+        ssid_radio_type: Triple band operation(2.4GHz, 5GHz and 6GHz)
+        session_timeout: 1800
       enterprise_ssids:
         basic_service_set_client_idle_timeout: 300
         client_exclusion_timeout: 180
-        enable_basic_service_set_max_idle: true
-        enable_broadcast_ssid: true
-        enable_client_exclusion: true
-        enable_directed_multicast_service: true
-        enable_fast_lane: false
-        enable_mac_filtering: false
-        enable_neighbor_list: true
-        enable_session_time_out: true
-        fast_transition: Adaptive
-        mfp_client_protection: Optional
+        basic_service_set_max_idle: true
+        broadcast_ssid: true
+        client_exclusion: true
+        directed_multicast_service: true
+        fast_lane: false
+        mac_filtering: false
+        neighbor_list: true
+        session_timeout_enable: true
+        fast_transition: ADAPTIVE
+        mft_client_protection: OPTIONAL
         nas_options: []
-        radio_policy: Triple band operation(2.4GHz, 5GHz and 6GHz)
-        traffic_type: data
-        session_time_out: 1800
+        ssid_radio_type: Triple band operation(2.4GHz, 5GHz and 6GHz)
+        session_timeout: 1800
     design:
       network_profiles:
         wireless:
