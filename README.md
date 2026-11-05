@@ -29,7 +29,7 @@ catalyst_center:
 ```hcl
 module "catalystcenter" {
   source  = "netascode/nac-catalystcenter/catalystcenter"
-  version = "0.5.1"
+  version = "0.6.0"
 
   yaml_files = ["area.yaml"]
 }
@@ -63,13 +63,6 @@ module "catalystcenter" {
 
 | Name | Description |
 | ---- | ----------- |
-| <a name="output_debug_area_tiers"></a> [debug\_area\_tiers](#output\_debug\_area\_tiers) | Which area\_N tier each area maps to (depth of parent\_name) |
-| <a name="output_debug_bulk_area_map"></a> [debug\_bulk\_area\_map](#output\_debug\_bulk\_area\_map) | The areas map that would be sent to the bulk API |
-| <a name="output_debug_flat_areas"></a> [debug\_flat\_areas](#output\_debug\_flat\_areas) | All areas flattened, as full hierarchy strings |
-| <a name="output_debug_flat_areas_full"></a> [debug\_flat\_areas\_full](#output\_debug\_flat\_areas\_full) | Flattened areas with name + computed parent\_name |
-| <a name="output_debug_flat_buildings"></a> [debug\_flat\_buildings](#output\_debug\_flat\_buildings) | Flattened buildings with computed parent hierarchy |
-| <a name="output_debug_flat_floors"></a> [debug\_flat\_floors](#output\_debug\_flat\_floors) | Flattened floors with computed parent hierarchy |
-| <a name="output_debug_sites"></a> [debug\_sites](#output\_debug\_sites) | Final list of managed site hierarchies (drives contains() filters) |
 | <a name="output_default_values"></a> [default\_values](#output\_default\_values) | All default values. |
 | <a name="output_model"></a> [model](#output\_model) | Full model with write-only Day-N template parameter values omitted. |
 | <a name="output_sites"></a> [sites](#output\_sites) | List of sites to be managed |
