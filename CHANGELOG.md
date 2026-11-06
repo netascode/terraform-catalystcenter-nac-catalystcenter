@@ -1,8 +1,28 @@
 ## 0.6.0
 
-- Refactor the data model around a nested site hierarchy, with network settings and IP pool reservations defined under their owning sites
-- Group network profiles under `design.network_profiles` and CLI template definitions under `cli_templates`, with deployment associations in `template_device_association`
-- Define fabric devices within their owning fabric sites, separating fabric configuration from device inventory
+**Breaking Changes:**
+- Refactor the data model around a nested site hierarchy. YAML written for 0.5.x no longer validates or plans and must be migrated; see "New data model" in the nac-catalystcenter README and `scripts/migrate_legacy_dm.py` in nac-catalystcenter-terraform:
+  - Sites nest as `sites.areas[].areas[]`, `areas[].buildings[]` and `buildings[].floors[]`. `parent_name` is no longer accepted and full site paths are derived. Building `country` is required
+  - Global IP pools, device credentials, AAA, network and telemetry settings move under `sites.global.network_settings`; top-level `network_settings` is removed. AAA, network and telemetry settings are inline lists with at most one definition per site instead of named references
+  - IP pools use flat `ip_address_space` and `ip_pool_cidr`. Reservations are full entries with `global_pool` under each site's `network_settings.ip_pools_reservations`
+  - `templates` moves to `cli_templates`; template deployments move to `template_device_association`. `network_profiles` moves to `design.network_profiles`
+  - Fabric devices (roles, handoffs, port assignments) move under `fabric.fabric_sites[].fabric_devices`. `inventory.devices` only describes devices and requires `name` (was `device_name`). Fabric site L3 virtual network memberships are plain names, and anycast gateways are keyed by `ip_pool_name`
+  - LAN automation sessions move under `lan_automation.devices`
+  - Wireless SSID attributes are renamed to match the provider (for example `enable_broadcast_ssid` to `broadcast_ssid`, `session_time_out` to `session_timeout`, `fast_transition: Adaptive` to `ADAPTIVE`)
+- `defaults.catalyst_center.wireless.enterprise_ssids` is no longer read. Move any overrides, including `client_exclusion_timeout`, to `defaults.catalyst_center.wireless.ssids`
+- Check the plan before applying to a state created with 0.5.x: the module defines no `moved` blocks for the refactor
+
+**New Features:**
+- Add `template_device_association` for Day-N, composite and onboarding template deployments, with per-template and per-device `state`, variables and device lists
+- Add `deploy_order` (`BEFORE_FABRIC` or `AFTER_FABRIC`) on `template_device_association`, its templates and its devices, to deploy a template before or after fabric provisioning. Omit it to keep the existing deployment order
+- Add `template_device_association.templates[].unmanaged` to deploy an existing controller template without managing its definition. A plan-time check rejects a template that is both `unmanaged` and defined under `cli_templates.projects`
+- Add the `templates_var_directories` module variable to load CSV template variable files, referenced with `variables.type: csv`
+- Add `wireless.access_point_configurations[].access_points` to apply a named access point configuration (`admin_status`, `led_status`, `led_brightness_level`, `failover_priority`) to the listed access points by ethernet MAC address
+- Support areas nested up to 11 levels below `Global`
+- Allow device tags under both `cli_templates.tags` and `inventory.tags`; when a name appears in both, the `inventory.tags` definition is used
+
+**Bug Fixes:**
+- Fix `yaml_directories` entries given as relative paths outside the root module not being read
 
 ## 0.5.2
 
