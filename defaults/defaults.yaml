@@ -1,4 +1,7 @@
 ---
+# Canonical (schema) paths are used for the documentation. The flat legacy paths
+# (network_settings, network_profiles, templates) are what the module and the
+# tests read, so keep both copies in sync.
 defaults:
   catalyst_center:
     authentication_templates:
@@ -18,43 +21,54 @@ defaults:
           fra_status: false
           fra_freeze: false
           fra_interval: 3
-          # fra_sensitivity applies only when radio_band is 2.4GHz_5GHz
+          # Applies only to radio_band 2.4GHz_5GHz.
           fra_sensitivity: MEDIUM
-    network_profiles:
-      wireless:
-        ssid_details:
-          interface_name: management
-        site_tags:
-          flex_profile_name: default-flex-profile
-    templates:
-      force_push_template: true
-      description: ""
-      language: JINJA
-      composite: false
-      copying_config: true
-      redeploy_template: NEVER
-      deployment_timeout: 300
     pnp:
       devices:
         type: Default
         protocol: SSH2
         image_skip: true
     inventory:
+      tags:
+        system_tag: false
       devices:
         role_source: MANUAL
         access_point:
           manage_hostname: false
-      tags:
-        system_tag: false
     sites:
-      areas:
-        parent_name: Global
       floors:
         height: 3
         length: 30
         rf_model: Cubes And Walled Offices
         width: 30
         units_of_measure: feet
+      global:
+        network_settings:
+          device_credentials:
+            preserve_unmanaged_global: true
+            https_write_credentials:
+              port: 443
+            https_read_credentials:
+              port: 443
+            snmpv3_credentials:
+              auth_type: SHA
+              privacy_type: AES128
+          ip_pools:
+            type: Generic
+            ip_address_space: IPv4
+            ip_pools_reservations:
+              type: Generic
+              ipv4:
+                prefix: true
+              ipv6:
+                address_space: false
+          telemetry:
+            wired_data_collection: true
+            enable_netflow_collector_on_devices: false
+            wireless_telemetry: false
+            catalyst_center_as_snmp_server: true
+            catalyst_center_as_syslog_server: true
+            catalyst_center_as_network_collector: true
     network_settings:
       ip_pools:
         type: Generic
@@ -84,6 +98,21 @@ defaults:
     system_settings:
       external_authentication:
         enabled: false
+      authentication_and_policy_servers:
+        ise:
+          protocols:
+            radius:
+              authentication_port: 1812
+              accounting_port: 1813
+            tacacs:
+              port: 49
+        aaa:
+          protocols:
+            radius:
+              authentication_port: 1812
+              accounting_port: 1813
+            tacacs:
+              port: 49
     fabric:
       l3_virtual_networks:
         merge_fabric_sites: false
@@ -114,8 +143,8 @@ defaults:
           rules:
             source_prefix: 32
             destination_prefix: 32
-            source_ports: "1-65535"
-            destination_ports: "1-65535"
+            source_ports: 1-65535
+            destination_ports: 1-65535
       ap_profiles:
         remote_worker_enabled: false
         auth_type: NO-AUTH
@@ -134,20 +163,48 @@ defaults:
         time_zone_offset_hour: 0
         time_zone_offset_minutes: 0
         client_limit: 0
-      enterprise_ssids:
+      ssids:
         basic_service_set_client_idle_timeout: 300
         client_exclusion_timeout: 180
-        enable_basic_service_set_max_idle: true
-        enable_broadcast_ssid: true
-        enable_client_exclusion: true
-        enable_directed_multicast_service: true
-        enable_fast_lane: false
-        enable_mac_filtering: false
-        enable_neighbor_list: true
-        enable_session_time_out: true
-        fast_transition: Adaptive
-        mfp_client_protection: Optional
+        basic_service_set_max_idle: true
+        broadcast_ssid: true
+        client_exclusion: true
+        directed_multicast_service: true
+        fast_lane: false
+        mac_filtering: false
+        neighbor_list: true
+        session_timeout_enable: true
+        fast_transition: ADAPTIVE
+        mft_client_protection: OPTIONAL
         nas_options: []
-        radio_policy: Triple band operation(2.4GHz, 5GHz and 6GHz)
-        traffic_type: data
-        session_time_out: 1800
+        ssid_radio_type: Triple band operation(2.4GHz, 5GHz and 6GHz)
+        session_timeout: 1800
+    design:
+      network_profiles:
+        wireless:
+          ssid_details:
+            interface_name: management
+          site_tags:
+            flex_profile_name: default-flex-profile
+    cli_templates:
+      force_push_template: true
+      description: ''
+      language: JINJA
+      composite: false
+      copying_config: true
+      redeploy_template: NEVER
+      deployment_timeout: 300
+    network_profiles:
+      wireless:
+        ssid_details:
+          interface_name: management
+        site_tags:
+          flex_profile_name: default-flex-profile
+    templates:
+      force_push_template: true
+      description: ''
+      language: JINJA
+      composite: false
+      copying_config: true
+      redeploy_template: NEVER
+      deployment_timeout: 300
