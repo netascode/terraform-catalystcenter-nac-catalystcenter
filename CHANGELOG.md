@@ -1,7 +1,7 @@
 ## 0.6.0
 
 **Breaking Changes:**
-- Refactor the data model around a nested site hierarchy. YAML written for 0.5.x no longer validates or plans and must be migrated; see "New data model" in the nac-catalystcenter README and `scripts/migrate_legacy_dm.py` in nac-catalystcenter-terraform:
+- Refactor the data model around a nested site hierarchy. YAML written for 0.5.x no longer validates or plans and must be migrated:
   - Sites nest as `sites.areas[].areas[]`, `areas[].buildings[]` and `buildings[].floors[]`. `parent_name` is no longer accepted and full site paths are derived. Building `country` is required
   - Global IP pools, device credentials, AAA, network and telemetry settings move under `sites.global.network_settings`; top-level `network_settings` is removed. AAA, network and telemetry settings are inline lists with at most one definition per site instead of named references
   - IP pools use flat `ip_address_space` and `ip_pool_cidr`. Reservations are full entries with `global_pool` under each site's `network_settings.ip_pools_reservations`
