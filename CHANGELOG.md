@@ -4,6 +4,7 @@
 - Add StackWise Virtual (SVL) day-0 onboarding via `inventory.devices[].svl` on `state: PNP` devices, including member, SVL link and optional DAD link configuration. Requires provider `~> 0.6.6` and Catalyst Center 3.2.3 or later
 
 **Bug Fixes:**
+- Fix wireless controller provisioning omitting centrally switched VLANs by supporting `inventory.devices[].interfaces` for explicit per-controller interface names, VLAN IDs and optional addressing. Updating existing controllers requires the companion provider fix for interface-aware reprovisioning
 - Fix a fabric device whose only role is `CONTROL_PLANE_NODE` being silently skipped when `use_bulk_api` is `false`; it is now added to its fabric site via the new `catalystcenter_fabric_device.control_plane_device` resource
 - Fix `Global` in `network_profiles.switching[].sites` and `network_profiles.wireless[].sites` being silently ignored, or failing the plan with `Invalid index` for switching profiles when an area has no `parent_name`; the profile is now assigned to the Global site by the state that manages global settings
 - Fix areas nested five or more levels below `Global` (`area_4`..`area_9`) missing from the non-bulk site ID lookup: a switching network profile assigned to such an area failed the plan with `Invalid index`, and site-level network settings on such an area (credentials, NTP, DHCP, DNS, timezone, banner, telemetry, AAA) failed the first plan with a missing `site_id`
