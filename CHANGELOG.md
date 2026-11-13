@@ -22,6 +22,7 @@
 - Allow device tags under both `cli_templates.tags` and `inventory.tags`; when a name appears in both, the `inventory.tags` definition is used
 
 **Bug Fixes:**
+- Fix wireless controller provisioning omitting centrally switched VLANs by supporting `inventory.devices[].interfaces` for explicit per-controller interface names, VLAN IDs and optional addressing. Updating existing controllers requires the companion provider fix for interface-aware reprovisioning
 - Fix `yaml_directories` entries given as relative paths outside the root module not being read
 
 ## 0.5.2
