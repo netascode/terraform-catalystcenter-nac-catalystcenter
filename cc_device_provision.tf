@@ -393,6 +393,17 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   )
   reprovision = try(each.value.state, null) == "REPROVISION" ? true : false
 
+  # BEGIN wireless controller interfaces mapping (provider-free test boundary)
+  interfaces = try([for interface in each.value.interfaces : {
+    interface_name       = try(interface.interface_name, local.defaults.catalyst_center.inventory.devices.interfaces.interface_name, null)
+    vlan_id              = try(interface.vlan_id, local.defaults.catalyst_center.inventory.devices.interfaces.vlan_id, null)
+    interface_ip_address = try(interface.interface_ip_address, local.defaults.catalyst_center.inventory.devices.interfaces.interface_ip_address, null)
+    interface_netmask    = try(interface.interface_netmask, local.defaults.catalyst_center.inventory.devices.interfaces.interface_netmask, null)
+    interface_gateway    = try(interface.interface_gateway, local.defaults.catalyst_center.inventory.devices.interfaces.interface_gateway, null)
+    lag_or_port_number   = try(interface.lag_or_port_number, local.defaults.catalyst_center.inventory.devices.interfaces.lag_or_port_number, null)
+  }], null)
+  # END wireless controller interfaces mapping
+
   depends_on = [catalystcenter_building.building, catalystcenter_floor.floor, catalystcenter_area.area_0, catalystcenter_area.area_1, catalystcenter_area.area_2, catalystcenter_area.area_3, catalystcenter_area.area_4, catalystcenter_area.area_5, catalystcenter_area.area_6, catalystcenter_area.area_7, catalystcenter_area.area_8, catalystcenter_area.area_9, catalystcenter_area.area_10, time_sleep.wait_for_managed_ap_locations, catalystcenter_assign_managed_ap_locations.managed_ap_locations, catalystcenter_assign_anchor_managed_ap_locations.anchor_managed_ap_locations, catalystcenter_assign_device_to_site.wireless_devices_to_site, catalystcenter_wireless_ssid.ssid, catalystcenter_wireless_profile.wireless_profile, data.catalystcenter_sites.created_sites]
 }
 
