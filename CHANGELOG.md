@@ -1,4 +1,7 @@
-## 0.5.3
+## 0.5.3 (unreleased)
+
+**New Features:**
+- Add `skip_unreachable_targets` to Day-N and composite template deployments to deploy to the reachable devices when a device is unreachable. Requires provider `~> 0.6.8`
 
 **Bug Fixes:**
 - Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
