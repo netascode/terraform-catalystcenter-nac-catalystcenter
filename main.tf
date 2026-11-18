@@ -57,6 +57,8 @@ locals {
         deploy_order      = try(association.deploy_order, local.raw_catalyst_center.template_device_association.deploy_order, null)
         redeploy_template = try(association.state, "ON_CHANGE")
         variables_file    = try(association.variables.type, "") == "csv" ? association.variables.name : null
+        # Kept null when unset so the template definition and defaults apply.
+        skip_unreachable_targets = try(association.skip_unreachable_targets, null)
         devices = [
           for device in try(association.devices, []) : {
             name                = device.name

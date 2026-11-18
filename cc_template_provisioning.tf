@@ -88,6 +88,11 @@ locals {
     })
   ]
 
+  tp_skip_unreachable_targets = {
+    for block in local.tp_template_blocks : block._key => block.skip_unreachable_targets
+    if try(block.skip_unreachable_targets, null) != null
+  }
+
   # Per-(block, device) resolution of a DEVICE-level `variables_file:` into the
   # variable list, using the WIDE or TALL parser per block kind. Empty list when
   # the device has no `variables_file`. Keyed [block._key][device_name].
