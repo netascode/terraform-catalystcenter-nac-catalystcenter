@@ -3,6 +3,12 @@
 **New Features:**
 - Add `skip_unreachable_targets` to Day-N and composite template deployments to deploy to the reachable devices when a device is unreachable. Requires provider `~> 0.6.8`
 
+**Bug Fixes:**
+- Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
+
+**Breaking Changes:**
+- The module now requires provider `~> 0.6.8` (previously `~> 0.6.6`). Update any provider version constraint pinned below `0.6.8` before upgrading, otherwise `terraform init` fails
+
 ## 0.5.2
 
 **New Features:**
