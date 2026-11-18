@@ -1,3 +1,8 @@
+## 1.0.0 (unreleased)
+
+**New Features:**
+- Add `skip_unreachable_targets` to `cli_templates.projects` templates and `template_device_association.templates` to deploy to the reachable devices when a device is unreachable. Requires provider `~> 0.6.8`
+
 ## 0.6.0
 
 **Breaking Changes:**
