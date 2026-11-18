@@ -1,3 +1,8 @@
+## 1.0.0 (unreleased)
+
+**Bug Fixes:**
+- Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
+
 ## 0.6.0
 
 **Breaking Changes:**
