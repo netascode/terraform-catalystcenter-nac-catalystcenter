@@ -394,11 +394,11 @@ resource "catalystcenter_wireless_device_provision" "wireless_controller" {
   reprovision = try(each.value.state, null) == "REPROVISION" ? true : false
 
   interfaces = try([for interface in each.value.interfaces : {
-    interface_name       = try(interface.interface_name, local.defaults.catalyst_center.inventory.devices.interfaces.interface_name, null)
+    interface_name       = try(interface.name, local.defaults.catalyst_center.inventory.devices.interfaces.name, null)
     vlan_id              = try(interface.vlan_id, local.defaults.catalyst_center.inventory.devices.interfaces.vlan_id, null)
-    interface_ip_address = try(interface.interface_ip_address, local.defaults.catalyst_center.inventory.devices.interfaces.interface_ip_address, null)
-    interface_netmask    = try(interface.interface_netmask, local.defaults.catalyst_center.inventory.devices.interfaces.interface_netmask, null)
-    interface_gateway    = try(interface.interface_gateway, local.defaults.catalyst_center.inventory.devices.interfaces.interface_gateway, null)
+    interface_ip_address = try(interface.ip_address, local.defaults.catalyst_center.inventory.devices.interfaces.ip_address, null)
+    interface_netmask    = try(interface.netmask, local.defaults.catalyst_center.inventory.devices.interfaces.netmask, null)
+    interface_gateway    = try(interface.gateway, local.defaults.catalyst_center.inventory.devices.interfaces.gateway, null)
     lag_or_port_number   = try(interface.lag_or_port_number, local.defaults.catalyst_center.inventory.devices.interfaces.lag_or_port_number, null)
   }], null)
 

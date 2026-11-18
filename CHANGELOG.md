@@ -6,6 +6,9 @@
 **Bug Fixes:**
 - Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
 
+**Breaking Changes:**
+- Rename `inventory.devices[].interfaces[]` attributes `interface_name`, `interface_ip_address`, `interface_netmask` and `interface_gateway` to `name`, `ip_address`, `netmask` and `gateway`. Update interface entries and any matching defaults; `vlan_id` and `lag_or_port_number` are unchanged
+
 ## 0.6.0
 
 **Breaking Changes:**
