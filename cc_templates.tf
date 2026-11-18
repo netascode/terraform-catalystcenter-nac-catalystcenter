@@ -37,7 +37,9 @@ locals {
           template_file_name = contains(keys(local.templates_content), "${project.name}#${template.name}") ? "${project.name}#${template.name}" : template.name
           redeploy_template  = try(template.redeploy_template, local.defaults.catalyst_center.templates.redeploy_template, null)
           deployment_timeout = try(template.deployment_timeout, local.defaults.catalyst_center.templates.deployment_timeout, null)
-          template_type      = contains(try(project.onboarding_templates, []), template) ? "onboarding" : "dayn"
+          # Kept null when unset so existing deployments show no difference.
+          skip_unreachable_targets = try(template.skip_unreachable_targets, local.defaults.catalyst_center.templates.skip_unreachable_targets, null)
+          template_type            = contains(try(project.onboarding_templates, []), template) ? "onboarding" : "dayn"
         }
       )
     ]
@@ -166,17 +168,18 @@ locals {
     for device in try(local.catalyst_center.inventory.devices, []) : [
       for template in concat(try(device.dayn_templates.regular, []), try(device.dayn_templates.composite, [])) : [
         {
-          "template"            = try("${template.project_name}#${template.name}", template.name),
-          "template_name"       = try(template.name, null),
-          "name"                = try(device.name, null),
-          "state"               = try(device.state, null),
-          "site"                = try(device.site, null),
-          "device_ip"           = try(device.device_ip, null)
-          "device_name"         = try(device.name, null)
-          "redeploy_template"   = try(template.redeploy_template, device.dayn_templates.redeploy_template, local.template_lookup_extended[try("${template.project_name}#${template.name}", template.name)].redeploy_template, null)
-          "fqdn_name"           = try(device.fqdn_name, null)
-          "copying_config"      = try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
-          "force_push_template" = try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+          "template"                 = try("${template.project_name}#${template.name}", template.name),
+          "template_name"            = try(template.name, null),
+          "name"                     = try(device.name, null),
+          "state"                    = try(device.state, null),
+          "site"                     = try(device.site, null),
+          "device_ip"                = try(device.device_ip, null)
+          "device_name"              = try(device.name, null)
+          "redeploy_template"        = try(template.redeploy_template, device.dayn_templates.redeploy_template, local.template_lookup_extended[try("${template.project_name}#${template.name}", template.name)].redeploy_template, null)
+          "fqdn_name"                = try(device.fqdn_name, null)
+          "copying_config"           = try(template.copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+          "force_push_template"      = try(template.force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+          "skip_unreachable_targets" = try(template.skip_unreachable_targets, null)
         }
       ]
     ]
@@ -187,6 +190,18 @@ locals {
     for tmpl in distinct([for d in local.combined_templates : d.template]) : tmpl => [
       for d in local.combined_templates : d if d.template == tmpl
     ]
+  }
+
+  # skip_unreachable_targets set on the device entries that a deployment targets
+  # in this state overrides the template definition; true wins when they differ.
+  device_skip_unreachable_targets = {
+    for tmpl, devices in local.templates_by_device : tmpl => anytrue([
+      for d in devices : d.skip_unreachable_targets
+      if d.skip_unreachable_targets != null && strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE"))
+    ])
+    if anytrue([
+      for d in devices : d.skip_unreachable_targets != null && strcontains(d.state, "PROVISION") && contains(local.sites, try(d.site, "NONE"))
+    ])
   }
 
   # ---------------------------------------------------------------------------
@@ -284,15 +299,16 @@ locals {
   # device section the key was referenced in (see `unmanaged_composite_keys`).
   unmanaged_template_stubs = {
     for k in local.unmanaged_referenced_template_keys : k => {
-      project_name        = split("#", k)[0]
-      template_name       = split("#", k)[1]
-      template_key        = k
-      resource_key        = k
-      composite           = contains(local.unmanaged_composite_keys, k)
-      template_type       = "dayn"
-      redeploy_template   = try(local.defaults.catalyst_center.templates.redeploy_template, "NEVER")
-      force_push_template = try(local.defaults.catalyst_center.templates.force_push_template, null)
-      deployment_timeout  = try(local.defaults.catalyst_center.templates.deployment_timeout, null)
+      project_name             = split("#", k)[0]
+      template_name            = split("#", k)[1]
+      template_key             = k
+      resource_key             = k
+      composite                = contains(local.unmanaged_composite_keys, k)
+      template_type            = "dayn"
+      redeploy_template        = try(local.defaults.catalyst_center.templates.redeploy_template, "NEVER")
+      force_push_template      = try(local.defaults.catalyst_center.templates.force_push_template, null)
+      deployment_timeout       = try(local.defaults.catalyst_center.templates.deployment_timeout, null)
+      skip_unreachable_targets = try(local.defaults.catalyst_center.templates.skip_unreachable_targets, null)
     }
   }
 
@@ -536,12 +552,13 @@ resource "catalystcenter_deploy_template" "regular_template_deploy" {
     length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
-  template_id         = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
-  redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
-  deployment_timeout  = try(local.template_lookup_extended[each.key].deployment_timeout, null)
-  copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
-  force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-  is_composite        = false
+  template_id              = try(catalystcenter_template.regular_template[each.key].id, data.catalystcenter_template.template[each.key].id, data.catalystcenter_template.template[local.resource_key_to_template_key[each.key]].id, data.catalystcenter_template.unmanaged[each.key].id)
+  redeploy                 = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  deployment_timeout       = try(local.template_lookup_extended[each.key].deployment_timeout, null)
+  skip_unreachable_targets = try(local.device_skip_unreachable_targets[each.key], local.template_lookup_extended[each.key].skip_unreachable_targets, null)
+  copying_config           = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+  force_push_template      = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite             = false
 
   secret_params = length(local.regular_template_secret_params[each.key]) > 0 ? local.regular_template_secret_params[each.key] : null
 
@@ -581,12 +598,13 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
     length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
-  redeploy            = try(local.template_lookup[each.key].redeploy_template, "NEVER")
-  deployment_timeout  = try(local.template_lookup[each.key].deployment_timeout, null)
-  template_id         = try(catalystcenter_template_version.composite_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
-  main_template_id    = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
-  force_push_template = try(local.template_lookup[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-  is_composite        = true
+  redeploy                 = try(local.template_lookup[each.key].redeploy_template, "NEVER")
+  deployment_timeout       = try(local.template_lookup[each.key].deployment_timeout, null)
+  skip_unreachable_targets = try(local.device_skip_unreachable_targets[each.key], local.template_lookup[each.key].skip_unreachable_targets, null)
+  template_id              = try(catalystcenter_template_version.composite_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
+  main_template_id         = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
+  force_push_template      = try(local.template_lookup[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite             = true
 
   secret_params = length(local.managed_composite_secret_params[each.key]) > 0 ? local.managed_composite_secret_params[each.key] : null
 
@@ -667,12 +685,13 @@ resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" 
     length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
   }
 
-  redeploy            = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
-  deployment_timeout  = try(local.template_lookup_extended[each.key].deployment_timeout, null)
-  template_id         = try([for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
-  main_template_id    = data.catalystcenter_template.unmanaged[each.key].id
-  force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-  is_composite        = true
+  redeploy                 = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
+  deployment_timeout       = try(local.template_lookup_extended[each.key].deployment_timeout, null)
+  skip_unreachable_targets = try(local.device_skip_unreachable_targets[each.key], local.template_lookup_extended[each.key].skip_unreachable_targets, null)
+  template_id              = try([for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
+  main_template_id         = data.catalystcenter_template.unmanaged[each.key].id
+  force_push_template      = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+  is_composite             = true
 
   secret_params = length(local.discovered_composite_secret_params[each.key]) > 0 ? local.discovered_composite_secret_params[each.key] : null
 
