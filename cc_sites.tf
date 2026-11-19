@@ -405,6 +405,7 @@ resource "catalystcenter_map_archive_import" "map_archive" {
   for_each = { for site, path in local.area_map_archives : site => path if contains(local.sites, site) }
 
   source_path      = each.value
+  archive_sha256   = filesha256(each.value)
   accept_data_loss = true
 
   depends_on = [catalystcenter_building.building, catalystcenter_buildings.bulk_buildings, catalystcenter_floor.floor, catalystcenter_floors.bulk_floors]
