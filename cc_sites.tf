@@ -367,7 +367,7 @@ resource "catalystcenter_floor_image" "floor_image" {
   floor_id    = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk["${each.value.parent_name}/${each.value.name}"], null), local.data_source_created_sites_list["${each.value.parent_name}/${each.value.name}"]) : catalystcenter_floor.floor[each.key].id
   source_path = each.value.image_path
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors, catalystcenter_map_archive_import.map_archive]
 }
 
 resource "catalystcenter_planned_access_point_position" "planned_ap" {
@@ -398,7 +398,7 @@ resource "catalystcenter_planned_access_point_position" "planned_ap" {
     antenna_elevation = try(radio.antenna_elevation, null)
   }]
 
-  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors, catalystcenter_floor_image.floor_image]
+  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors, catalystcenter_floor_image.floor_image, catalystcenter_map_archive_import.map_archive]
 }
 
 resource "catalystcenter_map_archive_import" "map_archive" {

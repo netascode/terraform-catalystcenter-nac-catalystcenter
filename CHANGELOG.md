@@ -2,7 +2,7 @@
 
 **New Features:**
 - Add `skip_unreachable_targets` to `cli_templates.projects` templates and `template_device_association.templates` to deploy to the reachable devices when a device is unreachable. Requires provider `~> 0.6.8`
-- Add support for map archive import via `catalystcenter_map_archive_import` resource with `map_archive_path` on areas. The archive (Catalyst Center or Ekahau export) replaces the floor images, obstacles and planned access points of the floors under the area. Requires provider `~> 0.6.9`
+- Add `map_archive_path` to `sites.areas` to import a map archive (floor images, walls and planned APs) for the area. Requires provider `~> 0.6.9`
 
 **Bug Fixes:**
 - Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
