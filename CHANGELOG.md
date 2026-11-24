@@ -4,6 +4,7 @@
 - Add `variables` input to render YAML files with Terraform template syntax
 - Add `skip_unreachable_targets` to `cli_templates.projects` templates and `template_device_association.templates` to deploy to the reachable devices when a device is unreachable. Requires provider `~> 0.6.8`
 - Add `map_archive_path` to `sites.areas` to import a map archive (floor images, walls and planned APs) for the area. Requires provider `~> 0.6.9`
+- Add `planned_access_point` to `inventory.devices` access points to assign the AP to a planned AP on its floor, defined in `planned_access_points` or imported with a map archive, instead of assigning it to the site. Requires provider `~> 0.6.10`
 
 **Bug Fixes:**
 - Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
