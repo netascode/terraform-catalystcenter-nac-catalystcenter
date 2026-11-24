@@ -10,6 +10,23 @@ variable "yaml_files" {
   default     = []
 }
 
+variable "variables" {
+  description = "Variables for Terraform template interpolation in YAML files. A non-empty map enables rendering; an empty map preserves literal file contents. Values must be known and non-sensitive."
+  type        = map(string)
+  default     = {}
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for value in values(var.variables) : value != null])
+    error_message = "The variables map must not contain null values."
+  }
+
+  validation {
+    condition     = !issensitive(var.variables) && alltrue([for value in values(var.variables) : !issensitive(value)])
+    error_message = "variables must not be sensitive: the rendered model determines resource keys."
+  }
+}
+
 variable "templates_directories" {
   description = "List of paths to templates directories."
   type        = list(string)

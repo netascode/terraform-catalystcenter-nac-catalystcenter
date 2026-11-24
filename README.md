@@ -35,6 +35,35 @@ module "catalystcenter" {
 }
 ```
 
+## YAML variables
+
+A non-empty `variables` map enables Terraform template rendering for all files selected by `yaml_files` and `yaml_directories`, before they are merged. For example:
+
+```yaml
+# area.yaml
+catalyst_center:
+  sites:
+    areas:
+      - name: ${jsonencode(area_name)}
+```
+
+```hcl
+module "catalystcenter" {
+  source  = "netascode/nac-catalystcenter/catalystcenter"
+
+  yaml_files = ["area.yaml"]
+  variables = {
+    area_name = "Site1"
+  }
+}
+```
+
+Rendering uses Terraform's `${...}` interpolation syntax, not Jinja syntax. Use `${jsonencode(value)}` as a complete, unquoted YAML value to preserve quotes, backslashes, newlines, and strings that resemble numbers or booleans. For numeric or boolean fields, use a plain unquoted `${value}` (for example `vlan_id: ${vlan_id}`) so YAML parses the rendered value as a number or boolean; `jsonencode` would produce a string because all `variables` values are strings. Missing variables and invalid templates produce errors.
+
+Omit `variables` or leave it empty to preserve literal file contents. When rendering is enabled, escape literal `${` as `$${` and literal `%{` as `%%{` in YAML files, including embedded CLI content. Separately loaded CLI template and CSV files, native `model` values, and bundled defaults are not rendered. Directory files, explicit files, and native `model` retain their existing merge order.
+
+Values must be non-null, known at plan time, and non-sensitive: the rendered model determines resource instance keys. Passing sensitive values can cause Terraform sensitivity errors. Explicitly using `nonsensitive()` removes Terraform's sensitivity tracking; it does not redact values from model outputs, state, or diagnostics. This input does not provide write-only secret storage.
+
 ## Requirements
 
 | Name | Version |
@@ -56,6 +85,7 @@ module "catalystcenter" {
 | <a name="input_templates_directories"></a> [templates\_directories](#input\_templates\_directories) | List of paths to templates directories. | `list(string)` | `[]` | no |
 | <a name="input_templates_var_directories"></a> [templates\_var\_directories](#input\_templates\_var\_directories) | List of paths to template variable (CSV) directories. | `list(string)` | `[]` | no |
 | <a name="input_use_bulk_api"></a> [use\_bulk\_api](#input\_use\_bulk\_api) | Flag indicating whether to use the bulk API for faster operations. | `bool` | `false` | no |
+| <a name="input_variables"></a> [variables](#input\_variables) | Variables for Terraform template interpolation in YAML files. A non-empty map enables rendering; an empty map preserves literal file contents. Values must be known and non-sensitive. | `map(string)` | `{}` | no |
 | <a name="input_write_default_values_file"></a> [write\_default\_values\_file](#input\_write\_default\_values\_file) | Write all default values to a YAML file. Value is a path pointing to the file to be created. | `string` | `""` | no |
 | <a name="input_yaml_directories"></a> [yaml\_directories](#input\_yaml\_directories) | List of paths to YAML directories. | `list(string)` | `[]` | no |
 | <a name="input_yaml_files"></a> [yaml\_files](#input\_yaml\_files) | List of paths to YAML files. | `list(string)` | `[]` | no |

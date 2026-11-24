@@ -1,11 +1,13 @@
 locals {
   yaml_strings_directories = flatten([
     for dir in var.yaml_directories : [
-      for file in fileset(dir, "**/*.{yml,yaml}") : file("${dir}/${file}")
+      for file in fileset(dir, "**/*.{yml,yaml}") :
+      length(var.variables) > 0 ? templatefile("${dir}/${file}", var.variables) : file("${dir}/${file}")
     ]
   ])
   yaml_strings_files = [
-    for file in var.yaml_files : file(file)
+    for file in var.yaml_files :
+    length(var.variables) > 0 ? templatefile(file, var.variables) : file(file)
   ]
   model_strings   = length(keys(var.model)) != 0 ? [yamlencode(var.model)] : []
   model_string    = provider::utils::yaml_merge(concat(local.yaml_strings_directories, local.yaml_strings_files, local.model_strings))
