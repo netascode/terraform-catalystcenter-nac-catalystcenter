@@ -40,7 +40,7 @@ module "catalystcenter" {
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.15.0 |
-| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.6.9 |
+| <a name="requirement_catalystcenter"></a> [catalystcenter](#requirement\_catalystcenter) | ~> 0.6.10 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.3.0 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | >= 0.12.1 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 2.0.0 |
@@ -103,6 +103,7 @@ module "catalystcenter" {
 | [catalystcenter_assign_device_to_site.wireless_devices_to_site](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_device_to_site) | resource |
 | [catalystcenter_assign_devices_to_tag.device_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_devices_to_tag) | resource |
 | [catalystcenter_assign_managed_ap_locations.managed_ap_locations](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_managed_ap_locations) | resource |
+| [catalystcenter_assign_planned_access_points.planned_access_points](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_planned_access_points) | resource |
 | [catalystcenter_assign_templates_to_tag.template_to_tag](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/assign_templates_to_tag) | resource |
 | [catalystcenter_authentication_policy_server.aaa](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/authentication_policy_server) | resource |
 | [catalystcenter_authentication_policy_server.ise](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/authentication_policy_server) | resource |

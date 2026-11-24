@@ -72,6 +72,7 @@ locals {
       device_ip     = try(d.device_ip, null)
       serial_number = try(d.serial_number, null)
     }... if(strcontains(d.state, "PROVISION") || d.state == "ASSIGN") && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
+    && !contains(keys(local.planned_access_point_bindings), "${d.site}/${try(d.planned_access_point, "")}")
     && (
       lookup(local.device_serial_to_id, try(d.serial_number, ""), null) != null ||
       lookup(local.device_name_to_id, d.name, null) != null ||
@@ -100,6 +101,69 @@ check "access_point_discovery_validation" {
     condition     = length(local.missing_access_points) == 0
     error_message = local.missing_access_points_error
   }
+}
+
+locals {
+  # Access points bound to a planned access point on their floor with
+  # `planned_access_point`, keyed by "<floor>/<planned access point name>" like
+  # `floor_planned_access_points` in cc_sites.tf. The assignment moves the access
+  # point to the planned position and assigns it to the floor, so these access
+  # points are left out of `access_points_to_site`: an access point that is
+  # already assigned to the floor leaves a stray planned access point behind.
+  planned_access_point_bindings = {
+    for d in try(local.catalyst_center.inventory.devices, []) :
+    "${d.site}/${d.planned_access_point}" => {
+      floor                = d.site
+      planned_access_point = d.planned_access_point
+      access_point_id = coalesce(
+        lookup(local.device_serial_to_id, try(d.serial_number, ""), null),
+        lookup(local.device_name_to_id, d.name, null),
+        lookup(local.device_name_to_id, try(d.fqdn_name, ""), null),
+        lookup(local.device_ip_to_id, try(d.device_ip, ""), null)
+      )
+    }
+    if(strcontains(d.state, "PROVISION") || d.state == "ASSIGN") && contains(local.sites, try(d.site, "NONE")) && try(d.type, null) == "AccessPoint"
+    && try(d.planned_access_point, null) != null
+    && contains([for f in local.flat_floors : "${f.parent_name}/${f.name}"], d.site)
+    && (
+      lookup(local.device_serial_to_id, try(d.serial_number, ""), null) != null ||
+      lookup(local.device_name_to_id, d.name, null) != null ||
+      lookup(local.device_name_to_id, try(d.fqdn_name, ""), null) != null ||
+      lookup(local.device_ip_to_id, try(d.device_ip, ""), null) != null
+    )
+  }
+
+  # Planned access points that are not defined on the floor in the data model,
+  # such as those imported with a map archive, are referenced by name per floor.
+  imported_planned_access_point_bindings = {
+    for key, b in local.planned_access_point_bindings : b.floor => b...
+    if !contains(keys(local.floor_planned_access_points), key)
+  }
+
+  planned_access_point_bindings_not_on_floor = [
+    for d in try(local.catalyst_center.inventory.devices, []) : d
+    if try(d.type, null) == "AccessPoint" && try(d.planned_access_point, null) != null
+    && !contains([for f in local.flat_floors : "${f.parent_name}/${f.name}"], try(d.site, "NONE"))
+  ]
+}
+
+check "planned_access_point_binding_validation" {
+  assert {
+    condition     = length(local.planned_access_point_bindings_not_on_floor) == 0
+    error_message = "❌ The following access points set `planned_access_point` but their `site` is not a floor:\n\n${join("\n", [for d in local.planned_access_point_bindings_not_on_floor : "  • ${d.name} (Site: ${try(d.site, "N/A")})"])}\n\nAction required: Set `site` to the floor that holds the planned access point."
+  }
+}
+
+resource "catalystcenter_assign_planned_access_points" "planned_access_points" {
+  for_each = local.imported_planned_access_point_bindings
+
+  floor_id = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.key], null), local.data_source_created_sites_list[each.key]) : catalystcenter_floor.floor[each.key].id
+  assignments = [for b in each.value : {
+    planned_access_point_name = b.planned_access_point
+    access_point_id           = b.access_point_id
+  }]
+
+  depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors, catalystcenter_map_archive_import.map_archive]
 }
 
 resource "catalystcenter_assign_device_to_site" "access_points_to_site" {
@@ -152,7 +216,7 @@ resource "catalystcenter_provision_access_points" "access_points" {
   rf_profile_name = try(each.value[0].rf_profile)
   site_id         = try(var.use_bulk_api ? coalesce(local.site_id_list_bulk[each.key], local.data_source_created_sites_list[each.key]) : local.site_id_list[each.key], null)
 
-  depends_on = [catalystcenter_assign_device_to_site.access_points_to_site]
+  depends_on = [catalystcenter_assign_device_to_site.access_points_to_site, catalystcenter_planned_access_point_position.planned_ap, catalystcenter_assign_planned_access_points.planned_access_points]
 }
 
 # ---------------------------------------------------------------------------

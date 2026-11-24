@@ -370,8 +370,9 @@ resource "catalystcenter_floor_image" "floor_image" {
   depends_on = [catalystcenter_floor.floor, catalystcenter_floors.bulk_floors, catalystcenter_map_archive_import.map_archive]
 }
 
-resource "catalystcenter_planned_access_point_position" "planned_ap" {
-  for_each = {
+locals {
+  # Planned access points keyed by "<floor>/<planned access point name>".
+  floor_planned_access_points = {
     for ap in flatten([
       for floor in local.flat_floors : [
         for planned_ap in try(floor.planned_access_points, []) : merge(planned_ap, {
@@ -381,14 +382,19 @@ resource "catalystcenter_planned_access_point_position" "planned_ap" {
       if contains(local.sites, try("${floor.parent_name}/${floor.name}", ""))
     ]) : "${ap.floor_key}/${ap.name}" => ap
   }
+}
 
-  floor_id    = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.value.floor_key], null), local.data_source_created_sites_list[each.value.floor_key]) : catalystcenter_floor.floor[each.value.floor_key].id
-  name        = each.value.name
-  ap_type     = each.value.ap_type
-  position_x  = each.value.position_x
-  position_y  = each.value.position_y
-  position_z  = try(each.value.position_z, null)
-  mac_address = try(each.value.mac_address, null)
+resource "catalystcenter_planned_access_point_position" "planned_ap" {
+  for_each = local.floor_planned_access_points
+
+  floor_id        = var.use_bulk_api ? coalesce(try(local.site_id_list_bulk[each.value.floor_key], null), local.data_source_created_sites_list[each.value.floor_key]) : catalystcenter_floor.floor[each.value.floor_key].id
+  name            = each.value.name
+  ap_type         = each.value.ap_type
+  position_x      = each.value.position_x
+  position_y      = each.value.position_y
+  position_z      = try(each.value.position_z, null)
+  mac_address     = try(each.value.mac_address, null)
+  access_point_id = try(local.planned_access_point_bindings[each.key].access_point_id, null)
   radios = [for radio in try(each.value.radios, []) : {
     bands             = try([radio.band], null)
     channel           = try(radio.channel, null)
