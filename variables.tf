@@ -20,6 +20,11 @@ variable "variables" {
     condition     = alltrue([for value in values(var.variables) : value != null])
     error_message = "The variables map must not contain null values."
   }
+
+  validation {
+    condition     = !issensitive(var.variables) && alltrue([for value in values(var.variables) : !issensitive(value)])
+    error_message = "variables must not be sensitive: the rendered model determines resource keys."
+  }
 }
 
 variable "templates_directories" {

@@ -1,7 +1,7 @@
 ## 1.0.0 (unreleased)
 
 **New Features:**
-- Add `variables` input to render YAML files from `yaml_files` and `yaml_directories` with Terraform template syntax (`${...}`) before merging. Omitting it or leaving it empty keeps file contents literal
+- Add `variables` input to render YAML files with Terraform template syntax
 - Add `skip_unreachable_targets` to `cli_templates.projects` templates and `template_device_association.templates` to deploy to the reachable devices when a device is unreachable. Requires provider `~> 0.6.8`
 
 **Bug Fixes:**
