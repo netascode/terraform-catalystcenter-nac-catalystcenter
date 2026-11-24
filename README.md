@@ -50,7 +50,6 @@ catalyst_center:
 ```hcl
 module "catalystcenter" {
   source  = "netascode/nac-catalystcenter/catalystcenter"
-  version = "1.0.0"
 
   yaml_files = ["area.yaml"]
   variables = {
