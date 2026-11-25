@@ -5,6 +5,7 @@
 
 **Bug Fixes:**
 - Fix wireless controller provisioning not configuring interfaces and VLANs on the controller; set them with `inventory.devices[].interfaces`
+- Fix a `device_types`-only template change not committing a new template version, so devices of a newly added device type failed to deploy. The first apply after upgrading commits a new version of every managed template, which redeploys all composite template deployments and the regular template targets with `redeploy_template: ON_CHANGE`
 
 **Breaking Changes:**
 - The module now requires provider `~> 0.6.8` (previously `~> 0.6.6`). Update any provider version constraint pinned below `0.6.8` before upgrading, otherwise `terraform init` fails
