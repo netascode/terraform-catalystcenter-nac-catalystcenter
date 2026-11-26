@@ -58,13 +58,15 @@ locals {
     )
   }
 
+  templates_by_device_by_phase = {
+    unordered     = local.templates_by_device_unordered
+    before_fabric = local.templates_by_device_before_fabric
+    after_fabric  = local.templates_by_device_after_fabric
+  }
+
   # Omit empty secret inputs so existing deployment state stays unchanged on upgrade.
   regular_template_secret_params_by_phase = {
-    for phase, templates in {
-      unordered     = local.templates_by_device_unordered
-      before_fabric = local.templates_by_device_before_fabric
-      after_fabric  = local.templates_by_device_after_fabric
-      } : phase => {
+    for phase, templates in local.templates_by_device_by_phase : phase => {
       for template_key, devices in templates : template_key => [
         for device in devices : {
           target_id = coalesce(
@@ -83,45 +85,49 @@ locals {
     }
   }
 
-  managed_composite_secret_params = {
-    for template_key, devices in local.templates_by_device : template_key => flatten([
-      for tmpl in local.composite_templates_lookup[template_key] : [
-        for device in devices : {
-          target_id = coalesce(
-            try(lookup(local.device_name_to_id, device.device_name, null), null),
-            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-          )
-          member_template_id = local.regular_template_version_ids[tmpl]
-          params_wo          = sensitive(local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params_wo)
-          params_wo_versions = local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params_wo_versions
-        } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE")) &&
-        length(try(local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params_wo_versions, {})) > 0
-      ]
-    ])
-    if try(local.template_lookup[template_key].composite, false) == true &&
-    local.template_lookup[template_key].template_type == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+  managed_composite_secret_params_by_phase = {
+    for phase, templates in local.templates_by_device_by_phase : phase => {
+      for template_key, devices in templates : template_key => flatten([
+        for tmpl in local.composite_templates_lookup[template_key] : [
+          for device in devices : {
+            target_id = coalesce(
+              try(lookup(local.device_name_to_id, device.device_name, null), null),
+              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            )
+            member_template_id = local.regular_template_version_ids[tmpl]
+            params_wo          = sensitive(local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params_wo)
+            params_wo_versions = local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params_wo_versions
+          } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE")) &&
+          length(try(local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params_wo_versions, {})) > 0
+        ]
+      ])
+      if try(local.template_lookup[template_key].composite, false) == true &&
+      local.template_lookup[template_key].template_type == "dayn" &&
+      length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+    }
   }
 
-  discovered_composite_secret_params = {
-    for template_key, devices in local.templates_by_device : template_key => flatten([
-      for member in try(data.catalystcenter_template.unmanaged[template_key].containing_templates, []) : [
-        for device in devices : {
-          target_id = coalesce(
-            try(lookup(local.device_name_to_id, device.device_name, null), null),
-            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-          )
-          member_template_id = local.unmanaged_member_version_ids[member.id]
-          params_wo          = sensitive(local.template_parameters[device.name][device.template][member.name].params_wo)
-          params_wo_versions = local.template_parameters[device.name][device.template][member.name].params_wo_versions
-        } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE")) &&
-        length(try(local.template_parameters[device.name][device.template][member.name].params_wo_versions, {})) > 0
-      ]
-    ])
-    if contains(local.unmanaged_composite_keys, template_key) &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+  discovered_composite_secret_params_by_phase = {
+    for phase, templates in local.templates_by_device_by_phase : phase => {
+      for template_key, devices in templates : template_key => flatten([
+        for member in try(data.catalystcenter_template.unmanaged[template_key].containing_templates, []) : [
+          for device in devices : {
+            target_id = coalesce(
+              try(lookup(local.device_name_to_id, device.device_name, null), null),
+              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            )
+            member_template_id = local.unmanaged_member_version_ids[member.id]
+            params_wo          = sensitive(local.template_parameters[device.name][device.template][member.name].params_wo)
+            params_wo_versions = local.template_parameters[device.name][device.template][member.name].params_wo_versions
+          } if strcontains(device.state, "PROVISION") && contains(local.sites, try(device.site, "NONE")) &&
+          length(try(local.template_parameters[device.name][device.template][member.name].params_wo_versions, {})) > 0
+        ]
+      ])
+      if contains(local.unmanaged_composite_keys, template_key) &&
+      length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+    }
   }
 
 }

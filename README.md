@@ -147,10 +147,14 @@ Values must be non-null, known at plan time, and non-sensitive: the rendered mod
 | [catalystcenter_credentials_snmpv2_write.snmpv2_write_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/credentials_snmpv2_write) | resource |
 | [catalystcenter_credentials_snmpv3.snmpv3_credentials](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/credentials_snmpv3) | resource |
 | [catalystcenter_deploy_template.composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.composite_template_deploy_after_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.composite_template_deploy_before_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.regular_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.regular_template_deploy_after_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.regular_template_deploy_before_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_deploy_template.unmanaged_composite_template_deploy](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.unmanaged_composite_template_deploy_after_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
+| [catalystcenter_deploy_template.unmanaged_composite_template_deploy_before_fabric](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/deploy_template) | resource |
 | [catalystcenter_device_replacement.mark](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement) | resource |
 | [catalystcenter_device_replacement_workflow.rma](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_replacement_workflow) | resource |
 | [catalystcenter_device_role.role](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest/docs/resources/device_role) | resource |
