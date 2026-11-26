@@ -664,9 +664,11 @@ resource "catalystcenter_deploy_template" "regular_template_deploy_before_fabric
 
 # Aggregate pre-fabric deployments into one dependency for the fabric graph.
 resource "terraform_data" "before_fabric_template_deployments" {
-  input = {
-    for key, deployment in catalystcenter_deploy_template.regular_template_deploy_before_fabric : key => deployment.id
-  }
+  input = merge(
+    { for key, deployment in catalystcenter_deploy_template.regular_template_deploy_before_fabric : key => deployment.id },
+    { for key, deployment in catalystcenter_deploy_template.composite_template_deploy_before_fabric : key => deployment.id },
+    { for key, deployment in catalystcenter_deploy_template.unmanaged_composite_template_deploy_before_fabric : key => deployment.id },
+  )
 }
 
 resource "catalystcenter_deploy_template" "regular_template_deploy_after_fabric" {
@@ -715,84 +717,220 @@ resource "catalystcenter_deploy_template" "regular_template_deploy_after_fabric"
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.regular_commit_version, data.catalystcenter_template_versions.template_versions, terraform_data.fabric_configuration_complete]
 }
 
-resource "catalystcenter_deploy_template" "composite_template_deploy" {
-  for_each = {
-    for tmpl, devices in local.templates_by_device : tmpl => devices
-    if try(local.template_lookup[tmpl].composite, false) == true &&
-    local.template_lookup[tmpl].template_type == "dayn" &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+locals {
+  managed_composite_targets_by_phase = {
+    for phase, templates in local.templates_by_device_by_phase : phase => {
+      for tmpl, devices in templates : tmpl => devices
+      if try(local.template_lookup[tmpl].composite, false) == true &&
+      local.template_lookup[tmpl].template_type == "dayn" &&
+      length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+    }
   }
 
-  redeploy                 = try(local.template_lookup[each.key].redeploy_template, "NEVER")
-  deployment_timeout       = try(local.template_lookup[each.key].deployment_timeout, null)
-  skip_unreachable_targets = try(local.tp_skip_unreachable_targets[each.key], local.template_lookup[each.key].skip_unreachable_targets, null)
-  template_id              = try(catalystcenter_template_version.composite_commit_version[each.key].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[each.key], each.key)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
-  main_template_id         = try(catalystcenter_template.composite_template[each.key].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[each.key], each.key)].id)
-  force_push_template      = try(local.template_lookup[each.key].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-  is_composite             = true
+  managed_composite_deployments_by_phase = {
+    for phase, templates in local.managed_composite_targets_by_phase : phase => {
+      for tmpl, devices in templates : tmpl => {
+        redeploy                 = try(local.template_lookup[tmpl].redeploy_template, "NEVER")
+        deployment_timeout       = try(local.template_lookup[tmpl].deployment_timeout, null)
+        skip_unreachable_targets = try(local.tp_skip_unreachable_targets[tmpl], local.template_lookup[tmpl].skip_unreachable_targets, null)
+        template_id              = try(catalystcenter_template_version.composite_commit_version[tmpl].id, [for v in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[tmpl], tmpl)].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.template_versions[try(local.resource_key_to_template_key[tmpl], tmpl)].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.template[try(local.resource_key_to_template_key[tmpl], tmpl)].id)
+        main_template_id         = try(catalystcenter_template.composite_template[tmpl].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[tmpl], tmpl)].id)
+        force_push_template      = try(local.template_lookup[tmpl].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
 
-  secret_params = length(local.managed_composite_secret_params[each.key]) > 0 ? local.managed_composite_secret_params[each.key] : null
+        member_template_deployment_info = [for member in local.composite_templates_lookup[tmpl] : {
+          template_id         = local.regular_template_version_ids[member]
+          main_template_id    = try(catalystcenter_template.regular_template[member].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[member], member)].id)
+          force_push_template = try(devices[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+          is_composite        = try(local.templates_map[member].composite, local.defaults.catalyst_center.templates.composite, null)
+          copying_config      = try(devices[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+          target_info = flatten([
+            for device in devices : [
+              {
+                id = coalesce(
+                  try(lookup(local.device_name_to_id, device.device_name, null), null),
+                  try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                  try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+                )
+                type = "MANAGED_DEVICE_UUID"
 
-  member_template_deployment_info = [for tmpl in local.composite_templates_lookup[each.key] : {
-    template_id         = local.regular_template_version_ids[tmpl]
-    main_template_id    = try(catalystcenter_template.regular_template[tmpl].id, data.catalystcenter_template.template[try(local.resource_key_to_template_key[tmpl], tmpl)].id)
-    force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-    is_composite        = try(local.templates_map[tmpl].composite, local.defaults.catalyst_center.templates.composite, null)
-    copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
-    target_info = flatten([
-      for device in each.value : [
-        {
-          id = coalesce(
-            try(lookup(local.device_name_to_id, device.device_name, null), null),
-            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-          )
-          type = "MANAGED_DEVICE_UUID"
+                redeploy = try(device.redeploy_template, local.template_lookup[tmpl].redeploy_template, "NEVER")
 
-          redeploy = try(device.redeploy_template, local.template_lookup[each.key].redeploy_template, "NEVER")
+                params = try(local.template_parameters[device.name][device.template][local.templates_map[member].template_name].params, {})
+                resource_params = [
+                  {
+                    type  = "MANAGED_DEVICE_UUID"
+                    scope = "RUNTIME"
+                    value = coalesce(
+                      try(lookup(local.device_name_to_id, device.device_name, null), null),
+                      try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                      try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+                    )
+                  }
+                ]
+              }
+            ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
+          ])
+          }
+        ]
 
-          params = try(local.template_parameters[device.name][device.template][local.templates_map[tmpl].template_name].params, {})
-          resource_params = [
-            {
-              type  = "MANAGED_DEVICE_UUID"
-              scope = "RUNTIME"
-              value = coalesce(
-                try(lookup(local.device_name_to_id, device.device_name, null), null),
-                try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-                try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-              )
-            }
-          ]
-        }
-      ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
-    ])
+        target_info = [
+          for device in devices : {
+            id = coalesce(
+              try(lookup(local.device_name_to_id, device.device_name, null), null),
+              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            )
+            type   = "MANAGED_DEVICE_UUID"
+            params = {}
+            resource_params = [
+              {
+                type  = "MANAGED_DEVICE_UUID"
+                scope = "RUNTIME"
+                value = coalesce(
+                  try(lookup(local.device_name_to_id, device.device_name, null), null),
+                  try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                  try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+                )
+              }
+            ]
+          } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
+        ]
+      }
     }
-  ]
+  }
+}
 
-  target_info = [
-    for device in each.value : {
-      id = coalesce(
-        try(lookup(local.device_name_to_id, device.device_name, null), null),
-        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-      )
-      type   = "MANAGED_DEVICE_UUID"
-      params = {}
-      resource_params = [
-        {
-          type  = "MANAGED_DEVICE_UUID"
-          scope = "RUNTIME"
-          value = coalesce(
-            try(lookup(local.device_name_to_id, device.device_name, null), null),
-            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-          )
-        }
-      ]
-    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
-  ]
+resource "catalystcenter_deploy_template" "composite_template_deploy" {
+  for_each = local.managed_composite_targets_by_phase.unordered
+
+  redeploy                        = local.managed_composite_deployments_by_phase.unordered[each.key].redeploy
+  deployment_timeout              = local.managed_composite_deployments_by_phase.unordered[each.key].deployment_timeout
+  skip_unreachable_targets        = local.managed_composite_deployments_by_phase.unordered[each.key].skip_unreachable_targets
+  template_id                     = local.managed_composite_deployments_by_phase.unordered[each.key].template_id
+  main_template_id                = local.managed_composite_deployments_by_phase.unordered[each.key].main_template_id
+  force_push_template             = local.managed_composite_deployments_by_phase.unordered[each.key].force_push_template
+  is_composite                    = true
+  secret_params                   = length(local.managed_composite_secret_params_by_phase.unordered[each.key]) > 0 ? local.managed_composite_secret_params_by_phase.unordered[each.key] : null
+  member_template_deployment_info = local.managed_composite_deployments_by_phase.unordered[each.key].member_template_deployment_info
+  target_info                     = local.managed_composite_deployments_by_phase.unordered[each.key].target_info
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]
+}
+
+resource "catalystcenter_deploy_template" "composite_template_deploy_before_fabric" {
+  for_each = local.managed_composite_targets_by_phase.before_fabric
+
+  redeploy                        = local.managed_composite_deployments_by_phase.before_fabric[each.key].redeploy
+  deployment_timeout              = local.managed_composite_deployments_by_phase.before_fabric[each.key].deployment_timeout
+  skip_unreachable_targets        = local.managed_composite_deployments_by_phase.before_fabric[each.key].skip_unreachable_targets
+  template_id                     = local.managed_composite_deployments_by_phase.before_fabric[each.key].template_id
+  main_template_id                = local.managed_composite_deployments_by_phase.before_fabric[each.key].main_template_id
+  force_push_template             = local.managed_composite_deployments_by_phase.before_fabric[each.key].force_push_template
+  is_composite                    = true
+  secret_params                   = length(local.managed_composite_secret_params_by_phase.before_fabric[each.key]) > 0 ? local.managed_composite_secret_params_by_phase.before_fabric[each.key] : null
+  member_template_deployment_info = local.managed_composite_deployments_by_phase.before_fabric[each.key].member_template_deployment_info
+  target_info                     = local.managed_composite_deployments_by_phase.before_fabric[each.key].target_info
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions]
+}
+
+resource "catalystcenter_deploy_template" "composite_template_deploy_after_fabric" {
+  for_each = local.managed_composite_targets_by_phase.after_fabric
+
+  redeploy                        = local.managed_composite_deployments_by_phase.after_fabric[each.key].redeploy
+  deployment_timeout              = local.managed_composite_deployments_by_phase.after_fabric[each.key].deployment_timeout
+  skip_unreachable_targets        = local.managed_composite_deployments_by_phase.after_fabric[each.key].skip_unreachable_targets
+  template_id                     = local.managed_composite_deployments_by_phase.after_fabric[each.key].template_id
+  main_template_id                = local.managed_composite_deployments_by_phase.after_fabric[each.key].main_template_id
+  force_push_template             = local.managed_composite_deployments_by_phase.after_fabric[each.key].force_push_template
+  is_composite                    = true
+  secret_params                   = length(local.managed_composite_secret_params_by_phase.after_fabric[each.key]) > 0 ? local.managed_composite_secret_params_by_phase.after_fabric[each.key] : null
+  member_template_deployment_info = local.managed_composite_deployments_by_phase.after_fabric[each.key].member_template_deployment_info
+  target_info                     = local.managed_composite_deployments_by_phase.after_fabric[each.key].target_info
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, catalystcenter_template_version.composite_commit_version, data.catalystcenter_template_versions.template_versions, terraform_data.fabric_configuration_complete]
+}
+
+locals {
+  unmanaged_composite_targets_by_phase = {
+    for phase, templates in local.templates_by_device_by_phase : phase => {
+      for tmpl, devices in templates : tmpl => devices
+      if contains(local.unmanaged_composite_keys, tmpl) &&
+      length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
+    }
+  }
+
+  unmanaged_composite_deployments_by_phase = {
+    for phase, templates in local.unmanaged_composite_targets_by_phase : phase => {
+      for tmpl, devices in templates : tmpl => {
+        redeploy                 = try(local.template_lookup_extended[tmpl].redeploy_template, "NEVER")
+        deployment_timeout       = try(local.template_lookup_extended[tmpl].deployment_timeout, null)
+        skip_unreachable_targets = try(local.tp_skip_unreachable_targets[tmpl], local.template_lookup_extended[tmpl].skip_unreachable_targets, null)
+        template_id              = try([for v in data.catalystcenter_template_versions.unmanaged[tmpl].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[tmpl].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[tmpl].id)
+        main_template_id         = data.catalystcenter_template.unmanaged[tmpl].id
+        force_push_template      = try(devices[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+
+        member_template_deployment_info = [for m in try(data.catalystcenter_template.unmanaged[tmpl].containing_templates, []) : {
+          template_id         = local.unmanaged_member_version_ids[m.id]
+          main_template_id    = m.id
+          force_push_template = try(devices[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
+          is_composite        = false
+          copying_config      = try(devices[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
+          target_info = flatten([
+            for device in devices : [
+              {
+                id = coalesce(
+                  try(lookup(local.device_name_to_id, device.device_name, null), null),
+                  try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                  try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+                )
+                type = "MANAGED_DEVICE_UUID"
+
+                redeploy = try(device.redeploy_template, local.template_lookup_extended[tmpl].redeploy_template, "NEVER")
+
+                params = try(local.template_parameters[device.name][device.template][m.name].params, {})
+                resource_params = [
+                  {
+                    type  = "MANAGED_DEVICE_UUID"
+                    scope = "RUNTIME"
+                    value = coalesce(
+                      try(lookup(local.device_name_to_id, device.device_name, null), null),
+                      try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                      try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+                    )
+                  }
+                ]
+              }
+            ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
+          ])
+          }
+        ]
+
+        target_info = [
+          for device in devices : {
+            id = coalesce(
+              try(lookup(local.device_name_to_id, device.device_name, null), null),
+              try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+              try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+            )
+            type   = "MANAGED_DEVICE_UUID"
+            params = {}
+            resource_params = [
+              {
+                type  = "MANAGED_DEVICE_UUID"
+                scope = "RUNTIME"
+                value = coalesce(
+                  try(lookup(local.device_name_to_id, device.device_name, null), null),
+                  try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
+                  try(lookup(local.device_ip_to_id, device.device_ip, null), null)
+                )
+              }
+            ]
+          } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
+        ]
+      }
+    }
+  }
 }
 
 # Deploy a built-in / pre-existing COMPOSITE template that is referenced from a
@@ -804,81 +942,53 @@ resource "catalystcenter_deploy_template" "composite_template_deploy" {
 # device's composite `variables[]`, matched on `template_name` == member name
 # (same convention as managed composites).
 resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy" {
-  for_each = {
-    for tmpl, devices in local.templates_by_device : tmpl => devices
-    if contains(local.unmanaged_composite_keys, tmpl) &&
-    length([for d in devices : d if(strcontains(d.state, "PROVISION")) && contains(local.sites, try(d.site, "NONE"))]) > 0
-  }
+  for_each = local.unmanaged_composite_targets_by_phase.unordered
 
-  redeploy                 = try(local.template_lookup_extended[each.key].redeploy_template, "NEVER")
-  deployment_timeout       = try(local.template_lookup_extended[each.key].deployment_timeout, null)
-  skip_unreachable_targets = try(local.tp_skip_unreachable_targets[each.key], local.template_lookup_extended[each.key].skip_unreachable_targets, null)
-  template_id              = try([for v in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : v.id if v.version == tostring(max([for ver in data.catalystcenter_template_versions.unmanaged[each.key].template_versions : ver.version != null ? tonumber(ver.version) : 0]...))][0], data.catalystcenter_template.unmanaged[each.key].id)
-  main_template_id         = data.catalystcenter_template.unmanaged[each.key].id
-  force_push_template      = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-  is_composite             = true
-
-  secret_params = length(local.discovered_composite_secret_params[each.key]) > 0 ? local.discovered_composite_secret_params[each.key] : null
-
-  member_template_deployment_info = [for m in try(data.catalystcenter_template.unmanaged[each.key].containing_templates, []) : {
-    template_id         = local.unmanaged_member_version_ids[m.id]
-    main_template_id    = m.id
-    force_push_template = try(each.value[0].force_push_template, local.defaults.catalyst_center.templates.force_push_template, null)
-    is_composite        = false
-    copying_config      = try(each.value[0].copying_config, local.defaults.catalyst_center.templates.copying_config, null)
-    target_info = flatten([
-      for device in each.value : [
-        {
-          id = coalesce(
-            try(lookup(local.device_name_to_id, device.device_name, null), null),
-            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-          )
-          type = "MANAGED_DEVICE_UUID"
-
-          redeploy = try(device.redeploy_template, local.template_lookup_extended[each.key].redeploy_template, "NEVER")
-
-          params = try(local.template_parameters[device.name][device.template][m.name].params, {})
-          resource_params = [
-            {
-              type  = "MANAGED_DEVICE_UUID"
-              scope = "RUNTIME"
-              value = coalesce(
-                try(lookup(local.device_name_to_id, device.device_name, null), null),
-                try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-                try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-              )
-            }
-          ]
-        }
-      ] if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
-    ])
-    }
-  ]
-
-  target_info = [
-    for device in each.value : {
-      id = coalesce(
-        try(lookup(local.device_name_to_id, device.device_name, null), null),
-        try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-        try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-      )
-      type   = "MANAGED_DEVICE_UUID"
-      params = {}
-      resource_params = [
-        {
-          type  = "MANAGED_DEVICE_UUID"
-          scope = "RUNTIME"
-          value = coalesce(
-            try(lookup(local.device_name_to_id, device.device_name, null), null),
-            try(lookup(local.device_name_to_id, device.fqdn_name, null), null),
-            try(lookup(local.device_ip_to_id, device.device_ip, null), null)
-          )
-        }
-      ]
-    } if(strcontains(device.state, "PROVISION")) && contains(local.sites, try(device.site, "NONE"))
-  ]
+  redeploy                        = local.unmanaged_composite_deployments_by_phase.unordered[each.key].redeploy
+  deployment_timeout              = local.unmanaged_composite_deployments_by_phase.unordered[each.key].deployment_timeout
+  skip_unreachable_targets        = local.unmanaged_composite_deployments_by_phase.unordered[each.key].skip_unreachable_targets
+  template_id                     = local.unmanaged_composite_deployments_by_phase.unordered[each.key].template_id
+  main_template_id                = local.unmanaged_composite_deployments_by_phase.unordered[each.key].main_template_id
+  force_push_template             = local.unmanaged_composite_deployments_by_phase.unordered[each.key].force_push_template
+  is_composite                    = true
+  secret_params                   = length(local.discovered_composite_secret_params_by_phase.unordered[each.key]) > 0 ? local.discovered_composite_secret_params_by_phase.unordered[each.key] : null
+  member_template_deployment_info = local.unmanaged_composite_deployments_by_phase.unordered[each.key].member_template_deployment_info
+  target_info                     = local.unmanaged_composite_deployments_by_phase.unordered[each.key].target_info
 
   depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member]
+}
+
+resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy_before_fabric" {
+  for_each = local.unmanaged_composite_targets_by_phase.before_fabric
+
+  redeploy                        = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].redeploy
+  deployment_timeout              = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].deployment_timeout
+  skip_unreachable_targets        = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].skip_unreachable_targets
+  template_id                     = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].template_id
+  main_template_id                = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].main_template_id
+  force_push_template             = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].force_push_template
+  is_composite                    = true
+  secret_params                   = length(local.discovered_composite_secret_params_by_phase.before_fabric[each.key]) > 0 ? local.discovered_composite_secret_params_by_phase.before_fabric[each.key] : null
+  member_template_deployment_info = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].member_template_deployment_info
+  target_info                     = local.unmanaged_composite_deployments_by_phase.before_fabric[each.key].target_info
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member]
+}
+
+resource "catalystcenter_deploy_template" "unmanaged_composite_template_deploy_after_fabric" {
+  for_each = local.unmanaged_composite_targets_by_phase.after_fabric
+
+  redeploy                        = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].redeploy
+  deployment_timeout              = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].deployment_timeout
+  skip_unreachable_targets        = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].skip_unreachable_targets
+  template_id                     = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].template_id
+  main_template_id                = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].main_template_id
+  force_push_template             = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].force_push_template
+  is_composite                    = true
+  secret_params                   = length(local.discovered_composite_secret_params_by_phase.after_fabric[each.key]) > 0 ? local.discovered_composite_secret_params_by_phase.after_fabric[each.key] : null
+  member_template_deployment_info = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].member_template_deployment_info
+  target_info                     = local.unmanaged_composite_deployments_by_phase.after_fabric[each.key].target_info
+
+  depends_on = [catalystcenter_device_role.role, catalystcenter_provision_devices.provision_devices, catalystcenter_provision_device.provision_device, time_sleep.provision_device_wait, data.catalystcenter_template.unmanaged, data.catalystcenter_template_versions.unmanaged, data.catalystcenter_template_versions.unmanaged_member, terraform_data.fabric_configuration_complete]
 }
 
